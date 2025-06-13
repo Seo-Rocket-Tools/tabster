@@ -48,6 +48,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setupUserMenu();
     initializeApp();
 
+    // Connect to background script for disconnect detection
+    const port = chrome.runtime.connect({ name: 'popup' });
+
     function initializeTheme() {
         const savedTheme = localStorage.getItem('tabster-theme') || 'dark';
         applyTheme(savedTheme);
@@ -1476,7 +1479,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
-                </div>
+            </div>
                 <div class="new-space-text">
                     <span class="new-space-title">New Space</span>
                     <span class="new-space-subtitle">Organize your tabs</span>

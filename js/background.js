@@ -244,12 +244,10 @@ async function loadTabsFromSpace(space) {
     try {
         console.log('Background: Loading tabs from space:', space.name);
         
-        // Set flag to prevent saving during space switching
-        isSwitchingSpaces = true;
+        // Note: isSwitchingSpaces flag is managed by runtime messages from popup
         
         if (!space.tabs_data || !Array.isArray(space.tabs_data) || space.tabs_data.length === 0) {
             console.log('Background: No tabs data found for space');
-            isSwitchingSpaces = false; // Clear flag
             return;
         }
 
@@ -265,6 +263,12 @@ async function loadTabsFromSpace(space) {
         });
 
         console.log(`Background: Loading ${validTabs.length} valid tabs from space (filtered from ${space.tabs_data.length} total)`);
+
+        // Log detailed tab information for debugging
+        console.log('📋 Detailed tabs being restored:');
+        validTabs.forEach((tab, index) => {
+            console.log(`  ${index + 1}. ${tab.pinned ? '📌' : '📄'} "${tab.title}" - ${tab.url}`);
+        });
 
         // Get all current tabs
         const currentTabs = await chrome.tabs.query({});
@@ -283,7 +287,6 @@ async function loadTabsFromSpace(space) {
 
         if (validTabs.length === 0) {
             console.log('Background: No valid tabs to restore');
-            isSwitchingSpaces = false; // Clear flag
             return;
         }
 
@@ -310,13 +313,30 @@ async function loadTabsFromSpace(space) {
             }
 
             try {
-                await chrome.tabs.create({
-                    url: tabData.url,
+                // Add small delay between tab creations to prevent browser deduplication
+                if (successfulTabIndex > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+                }
+
+                // Special handling for Gmail URLs - add timestamp to prevent deduplication
+                let urlToCreate = tabData.url;
+                if (tabData.url.includes('mail.google.com')) {
+                    // Add a unique timestamp parameter to Gmail URLs to prevent browser deduplication
+                    const separator = tabData.url.includes('?') ? '&' : '?';
+                    urlToCreate = `${tabData.url}${separator}tabster_restore=${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                    console.log(`Background: 📧 Gmail URL modified to prevent deduplication: ${urlToCreate}`);
+                }
+
+                const createdTab = await chrome.tabs.create({
+                    url: urlToCreate,
                     active: successfulTabIndex === 0, // Make first successful tab active
                     pinned: tabData.pinned || false,
-                    index: successfulTabIndex
+                    index: successfulTabIndex,
+                    // Use additional properties if available
+                    cookieStoreId: tabData.cookieStoreId || undefined,
+                    openerTabId: tabData.openerTabId || undefined
                 });
-                console.log(`Background: ✅ Created tab: ${tabData.title || tabData.url}`);
+                console.log(`Background: ✅ Created tab ${successfulTabIndex + 1}: ${tabData.pinned ? '📌' : '📄'} "${tabData.title}" - ${tabData.url} (ID: ${createdTab.id}, UniqueId: ${tabData.uniqueId || 'N/A'})`);
                 successfulTabIndex++;
             } catch (error) {
                 console.error('Background: ❌ Error creating tab:', {
@@ -331,9 +351,6 @@ async function loadTabsFromSpace(space) {
 
     } catch (error) {
         console.error('Background: Error loading tabs from space:', error);
-    } finally {
-        // Clear flag when space switching is complete
-        isSwitchingSpaces = false;
     }
 }
 
@@ -358,13 +375,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             
         case 'space_switching_start':
             isSwitchingSpaces = true;
-            console.log('Space switching started - tab saving disabled');
+            console.log(`🔄 Space switching started - tab saving disabled (${new Date().toISOString()})`);
+            
+            // Safety timeout to prevent flag from getting stuck
+            setTimeout(() => {
+                if (isSwitchingSpaces) {
+                    console.log('⚠️  Space switching flag timeout - auto-clearing after 30 seconds');
+                    isSwitchingSpaces = false;
+                }
+            }, 30000); // 30 second timeout
+            
             sendResponse({ success: true });
             break;
             
         case 'space_switching_end':
             isSwitchingSpaces = false;
-            console.log('Space switching ended - tab saving re-enabled');
+            console.log(`✅ Space switching ended - tab saving re-enabled (${new Date().toISOString()})`);
             sendResponse({ success: true });
             break;
             
@@ -381,6 +407,21 @@ console.log('Background script initialized');
 
 // Flag to prevent saving during space switching
 let isSwitchingSpaces = false;
+
+// Initialize flag status on startup 
+function initializeFlagStatus() {
+    isSwitchingSpaces = false;
+    console.log('🔧 Initialized isSwitchingSpaces flag to false on startup');
+}
+
+// Call flag initialization
+initializeFlagStatus();
+
+// Debug function to check flag status
+function debugFlagStatus() {
+    console.log(`🔍 Debug: isSwitchingSpaces flag is currently: ${isSwitchingSpaces} at ${new Date().toISOString()}`);
+    return isSwitchingSpaces;
+}
 
 // Tab event listeners for monitoring tab activities
 console.log('Setting up tab event listeners...');
@@ -612,11 +653,12 @@ async function getActiveSpaceFromStorage() {
 
 // Function to save current tabs to database for active space
 async function saveTabsToActiveSpace() {
-    console.log('🔄 saveTabsToActiveSpace function triggered!');
+    const timestamp = new Date().toISOString();
+    console.log(`🔄 saveTabsToActiveSpace function triggered at ${timestamp}`);
     
     // Skip saving if we're currently switching spaces
     if (isSwitchingSpaces) {
-        console.log('Currently switching spaces, skipping tab save');
+        console.log(`⏸️  Currently switching spaces, skipping tab save (flag set at: ${timestamp})`);
         return;
     }
     
@@ -657,10 +699,27 @@ async function saveTabsToActiveSpace() {
             pinned: tab.pinned,
             windowId: tab.windowId,
             active: tab.active,
-            favIconUrl: tab.favIconUrl || null
+            favIconUrl: tab.favIconUrl || null,
+            // Additional unique identifiers to prevent tab deduplication
+            cookieStoreId: tab.cookieStoreId || null,
+            openerTabId: tab.openerTabId || null,
+            sessionId: tab.sessionId || null,
+            discarded: tab.discarded || false,
+            autoDiscardable: tab.autoDiscardable !== undefined ? tab.autoDiscardable : true,
+            groupId: tab.groupId || null,
+            // Store timestamp to make each save unique
+            savedAt: new Date().toISOString(),
+            // Store a unique identifier for this specific tab instance
+            uniqueId: `${tab.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         }));
 
         console.log(`Saving ${tabsData.length} tabs to space ${activeSpaceId}`);
+        
+        // Log detailed tab information for debugging
+        console.log('📋 Detailed tabs being saved:');
+        tabsData.forEach((tab, index) => {
+            console.log(`  ${index + 1}. ${tab.pinned ? '📌' : '📄'} "${tab.title}" - ${tab.url}`);
+        });
 
         // Update the space in the database with the current tabs
         const { data, error } = await updateSpace(activeSpaceId, {
@@ -677,4 +736,16 @@ async function saveTabsToActiveSpace() {
     } catch (error) {
         console.error('Error in saveTabsToActiveSpace:', error);
     }
-} 
+}
+
+// Handle popup disconnect (in case popup closes during space switching)
+chrome.runtime.onConnect.addListener((port) => {
+    if (port.name === 'popup') {
+        port.onDisconnect.addListener(() => {
+            if (isSwitchingSpaces) {
+                console.log('⚠️  Popup disconnected during space switching - clearing flag');
+                isSwitchingSpaces = false;
+            }
+        });
+    }
+}); 
