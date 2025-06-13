@@ -725,8 +725,6 @@ body {
     border-color: rgba(0, 0, 0, 0.6);
 }
 
-
-
 .workspace-icon.new {
     background: var(--bg-tertiary);
     border: 2px dashed var(--border-color);
@@ -820,5 +818,81 @@ body {
     
     .section-header {
         margin-bottom: 20px;
+    }
+}
+
+/* Workspace switching and active state styles */
+.workspace-card.loading {
+    position: relative;
+}
+
+.workspace-card.loading .workspace-action {
+    position: relative;
+}
+
+.workspace-card.loading .workspace-action svg {
+    display: none;
+}
+
+.workspace-card.loading .workspace-action::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid var(--text-muted);
+    border-top: 2px solid var(--text-primary);
+    border-radius: 50%;
+    animation: workspaceSpinner 0.8s linear infinite;
+}
+
+.workspaces-disabled .workspace-card:not(.loading) {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.workspaces-disabled .workspace-card:not(.loading) .workspace-icon {
+    opacity: 0.3;
+}
+
+.workspace-card.active-space {
+    border-color: var(--text-primary);
+    background: var(--hover-bg);
+}
+
+.workspace-card.active-space::before {
+    opacity: 0.3;
+}
+
+.workspace-card.active-space .workspace-icon {
+    opacity: 1;
+    border-color: var(--text-primary);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+:root.light-theme .workspace-card.active-space .workspace-icon {
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.workspace-card.active-space .workspace-content h4::after {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+@keyframes workspaceSpinner {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
     }
 } 

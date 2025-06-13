@@ -281,6 +281,10 @@ document.addEventListener('DOMContentLoaded', function() {
     async function handleLogout() {
         try {
             showLoading(true);
+            
+            // Clear active space from storage before logout
+            await clearActiveSpaceFromStorage();
+            
             await authHelpers.signOut();
             localStorage.removeItem('tabster-current-screen');
             showScreen('welcome');
@@ -306,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     avatarInitials.textContent = initials;
                 }
 
-                // Initialize dashboard and load workspaces
+                // Initialize dashboard and restore active space
                 await initializeDashboard();
             }
         } catch (error) {
@@ -400,26 +404,212 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleWorkspaceClick(workspaceId) {
-        // For now, just show a message since we're not connecting to DB yet
-        console.log(`Opening workspace: ${workspaceId}`);
-        showMessage(`Opening ${workspaceId} workspace...`, 'success');
-        
-        // TODO: Navigate to workspace tabs view
-        // This is where you'll later implement the workspace navigation
+        console.log(`Opening space: ${workspaceId}`);
+        switchToWorkspace(workspaceId);
+    }
+
+    async function switchToWorkspace(spaceId) {
+        try {
+            // Add visual feedback - show spinner on clicked space and disable others
+            const workspaceCard = document.querySelector(`[data-workspace="${spaceId}"]`);
+            const workspacesGrid = document.getElementById('workspaces-grid');
+            
+            if (workspaceCard && workspacesGrid) {
+                workspaceCard.classList.add('loading');
+                workspacesGrid.classList.add('workspaces-disabled');
+            }
+
+            showMessage('Switching space...', 'success');
+
+            // Note: Database updates removed - not implemented yet
+
+            // Save the active space to Chrome storage
+            await saveActiveSpaceToStorage(spaceId);
+
+            // Get the space data including tabs
+            const { data: spaces, error: spacesError } = await authHelpers.getUserSpaces();
+            if (spacesError) {
+                throw new Error(`Failed to load spaces: ${spacesError.message}`);
+            }
+
+            const currentSpace = spaces.find(space => space.id === spaceId);
+            if (!currentSpace) {
+                throw new Error('Space not found');
+            }
+
+            // Load tabs from the space
+            await loadTabsFromSpace(currentSpace);
+
+            // Update UI to reflect active state
+            updateActiveSpaceIndicator(spaceId);
+
+            showMessage(`Switched to ${currentSpace.name}`, 'success');
+
+        } catch (error) {
+            console.error('Error switching workspace:', error);
+            showMessage(`Failed to switch space: ${error.message}`, 'error');
+        } finally {
+            // Remove visual feedback
+            const workspaceCard = document.querySelector(`[data-workspace="${spaceId}"]`);
+            const workspacesGrid = document.getElementById('workspaces-grid');
+            
+            if (workspaceCard && workspacesGrid) {
+                workspaceCard.classList.remove('loading');
+                workspacesGrid.classList.remove('workspaces-disabled');
+            }
+        }
+    }
+
+    async function saveActiveSpaceToStorage(spaceId) {
+        try {
+            const user = await authHelpers.getCurrentUser();
+            if (user) {
+                const storageKey = `tabster_active_space_${user.id}`;
+                await chrome.storage.local.set({ [storageKey]: spaceId });
+                console.log('Saved active space to storage:', spaceId);
+            }
+        } catch (error) {
+            console.error('Error saving active space to storage:', error);
+            // Don't throw error as this shouldn't block workspace switching
+        }
+    }
+
+    async function getActiveSpaceFromStorage() {
+        try {
+            const user = await authHelpers.getCurrentUser();
+            if (user) {
+                const storageKey = `tabster_active_space_${user.id}`;
+                const result = await chrome.storage.local.get([storageKey]);
+                return result[storageKey] || null;
+            }
+            return null;
+        } catch (error) {
+            console.error('Error getting active space from storage:', error);
+            return null;
+        }
+    }
+
+    async function clearActiveSpaceFromStorage() {
+        try {
+            const user = await authHelpers.getCurrentUser();
+            if (user) {
+                const storageKey = `tabster_active_space_${user.id}`;
+                await chrome.storage.local.remove([storageKey]);
+                console.log('Cleared active space from storage');
+            }
+        } catch (error) {
+            console.error('Error clearing active space from storage:', error);
+        }
+    }
+
+
+
+    async function loadTabsFromSpace(space) {
+        try {
+            console.log('Loading tabs from space:', space.name);
+            
+            if (!space.tabs_data || !Array.isArray(space.tabs_data) || space.tabs_data.length === 0) {
+                console.log('No tabs data found for space, closing all tabs');
+                await closeAllTabsExceptThis();
+                return;
+            }
+
+            console.log(`Loading ${space.tabs_data.length} tabs from space`);
+
+            // Close all current tabs except the extension popup
+            await closeAllTabsExceptThis();
+
+            // Sort tabs by order (pinned tabs first, then by index)
+            const sortedTabs = space.tabs_data.sort((a, b) => {
+                if (a.pinned && !b.pinned) return -1;
+                if (!a.pinned && b.pinned) return 1;
+                return (a.index || 0) - (b.index || 0);
+            });
+
+            // Create tabs in order
+            for (let i = 0; i < sortedTabs.length; i++) {
+                const tabData = sortedTabs[i];
+                await createTabFromData(tabData, i);
+            }
+
+            console.log('Successfully loaded tabs from space');
+
+        } catch (error) {
+            console.error('Error loading tabs from space:', error);
+            throw error;
+        }
+    }
+
+    async function createTabFromData(tabData, index) {
+        try {
+            const tab = await chrome.tabs.create({
+                url: tabData.url,
+                active: index === 0, // Make first tab active
+                pinned: tabData.pinned || false,
+                index: index
+            });
+
+            console.log(`Created tab: ${tabData.title || tabData.url}`);
+            return tab;
+
+        } catch (error) {
+            console.error('Error creating tab:', tabData, error);
+            // Continue with other tabs even if one fails
+        }
+    }
+
+    async function closeAllTabsExceptThis() {
+        try {
+            // Get all tabs in current window
+            const tabs = await chrome.tabs.query({ currentWindow: true });
+            
+            // Find tabs to close (everything except extension pages)
+            const tabsToClose = tabs.filter(tab => 
+                !tab.url.startsWith('chrome-extension://') &&
+                !tab.url.startsWith('chrome://') &&
+                !tab.url.startsWith('edge-extension://') &&
+                !tab.url.startsWith('moz-extension://')
+            );
+
+            // Close tabs
+            const tabIds = tabsToClose.map(tab => tab.id);
+            if (tabIds.length > 0) {
+                await chrome.tabs.remove(tabIds);
+                console.log(`Closed ${tabIds.length} tabs`);
+            }
+
+        } catch (error) {
+            console.error('Error closing tabs:', error);
+            throw error;
+        }
+    }
+
+    function updateActiveSpaceIndicator(activeSpaceId) {
+        // Remove active indicator from all cards
+        const allCards = document.querySelectorAll('.workspace-card');
+        allCards.forEach(card => {
+            card.classList.remove('active-space');
+        });
+
+        // Add active indicator to the current space
+        const activeCard = document.querySelector(`[data-workspace="${activeSpaceId}"]`);
+        if (activeCard) {
+            activeCard.classList.add('active-space');
+        }
     }
 
     function handleCreateWorkspace() {
-        // For now, just show a message since we're not connecting to DB yet
-        console.log('Creating new workspace');
-        showMessage('Create workspace feature coming soon!', 'success');
+        console.log('Creating new space');
+        showMessage('Create space feature coming soon!', 'success');
         
         // TODO: Show create workspace modal/form
-        // This is where you'll later implement the workspace creation flow
+        // This is where you'll implement the workspace creation flow
     }
 
     // Initialize workspace functionality
     setupWorkspaceCards();
 
+    // Load workspaces and set initial active state
     async function loadWorkspaces() {
         try {
             showLoading(true);
@@ -427,14 +617,28 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (error) {
                 console.error('Error loading spaces:', error);
-                showError('Failed to load workspaces. Please try again.');
+                showError('Failed to load spaces. Please try again.');
                 return;
             }
 
             renderWorkspaces(spaces);
+
+            // Set active space indicator based on browser storage
+            const activeSpaceId = await getActiveSpaceFromStorage();
+            if (activeSpaceId) {
+                // Verify the space still exists
+                const activeSpace = spaces.find(space => space.id === activeSpaceId);
+                if (activeSpace) {
+                    updateActiveSpaceIndicator(activeSpaceId);
+                } else {
+                    // Clear invalid space from storage
+                    await clearActiveSpaceFromStorage();
+                }
+            }
+
         } catch (error) {
             console.error('Error loading spaces:', error);
-            showError('Failed to load workspaces. Please try again.');
+            showError('Failed to load spaces. Please try again.');
         } finally {
             showLoading(false);
         }
@@ -511,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 ➕
             </div>
             <div class="workspace-content">
-                <h4>Create Workspace</h4>
+                <h4>Create Space</h4>
                 <p>Start organizing your tabs</p>
             </div>
         `;
@@ -536,25 +740,110 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function handleWorkspaceClick(workspaceId) {
-        console.log(`Opening workspace: ${workspaceId}`);
-        showMessage(`Opening workspace...`, 'success');
-        
-        // TODO: Navigate to workspace tabs view
-        // This is where you'll implement the workspace navigation
+    // Check if current tabs match the saved space
+    async function currentTabsMatchSpace(space) {
+        try {
+            if (!space.tabs_data || !Array.isArray(space.tabs_data)) {
+                return false;
+            }
+
+            const currentTabs = await chrome.tabs.query({ currentWindow: true });
+            const nonExtensionTabs = currentTabs.filter(tab => 
+                !tab.url.startsWith('chrome-extension://') &&
+                !tab.url.startsWith('chrome://') &&
+                !tab.url.startsWith('edge-extension://') &&
+                !tab.url.startsWith('moz-extension://')
+            );
+
+            // If tab counts don't match, it's not the same space
+            if (nonExtensionTabs.length !== space.tabs_data.length) {
+                return false;
+            }
+
+            // If both are empty, consider it a match
+            if (nonExtensionTabs.length === 0 && space.tabs_data.length === 0) {
+                return true;
+            }
+
+            // Sort both arrays by URL for comparison
+            const currentUrls = nonExtensionTabs.map(tab => tab.url).sort();
+            const spaceUrls = space.tabs_data.map(tab => tab.url).sort();
+
+            // Compare URLs - if they match, it's likely the same space
+            return JSON.stringify(currentUrls) === JSON.stringify(spaceUrls);
+
+        } catch (error) {
+            console.error('Error comparing tabs with space:', error);
+            return false;
+        }
     }
 
-    function handleCreateWorkspace() {
-        console.log('Creating new workspace');
-        showMessage('Create workspace feature coming soon!', 'success');
-        
-        // TODO: Show create workspace modal/form
-        // This is where you'll implement the workspace creation flow
+    // Check if we should restore active space from storage
+    async function checkAndRestoreActiveSpace() {
+        try {
+            const activeSpaceId = await getActiveSpaceFromStorage();
+            if (!activeSpaceId) {
+                console.log('No active space saved in storage');
+                return;
+            }
+
+            // Get spaces to verify the saved space still exists
+            const { data: spaces, error } = await authHelpers.getUserSpaces();
+            if (error || !spaces) {
+                console.error('Error loading spaces for restoration:', error);
+                return;
+            }
+
+            const savedSpace = spaces.find(space => space.id === activeSpaceId);
+            if (!savedSpace) {
+                console.log('Saved active space no longer exists, clearing storage');
+                await clearActiveSpaceFromStorage();
+                return;
+            }
+
+            console.log('Found saved active space:', savedSpace.name);
+
+            // Check if current tabs already match the saved space
+            const tabsMatch = await currentTabsMatchSpace(savedSpace);
+            if (tabsMatch) {
+                console.log('Current tabs already match saved space, no restoration needed');
+                updateActiveSpaceIndicator(activeSpaceId);
+                return;
+            }
+
+            console.log('Current tabs do not match saved space, checking if restoration is appropriate...');
+            
+            // Check if we have minimal tabs (safe to restore)
+            const currentTabs = await chrome.tabs.query({ currentWindow: true });
+            const nonExtensionTabs = currentTabs.filter(tab => 
+                !tab.url.startsWith('chrome-extension://') &&
+                !tab.url.startsWith('chrome://') &&
+                !tab.url.startsWith('edge-extension://') &&
+                !tab.url.startsWith('moz-extension://')
+            );
+
+            // Only restore if we have minimal tabs (like just new tab page)
+            if (nonExtensionTabs.length <= 1) {
+                console.log('Minimal tabs detected, restoring saved space:', savedSpace.name);
+                showMessage(`Restoring space: ${savedSpace.name}`, 'success');
+                await loadTabsFromSpace(savedSpace);
+                updateActiveSpaceIndicator(activeSpaceId);
+            } else {
+                console.log('Multiple tabs open, not auto-restoring but updating UI indicator');
+                updateActiveSpaceIndicator(activeSpaceId);
+            }
+
+        } catch (error) {
+            console.error('Error during active space restoration:', error);
+        }
     }
 
     // Load workspaces when dashboard is shown
     async function initializeDashboard() {
         await loadWorkspaces();
+        
+        // Check if we should restore the active space (only when popup first opens)
+        await checkAndRestoreActiveSpace();
     }
 
     // Call initialize when needed

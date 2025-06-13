@@ -182,64 +182,7 @@ const authHelpers = {
         }
     },
 
-    async setActiveSpace(spaceId) {
-        try {
-            const user = await this.getCurrentUser();
-            if (!user) return { error: new Error('Not authenticated') };
 
-            console.log('DB: Setting active space to:', spaceId);
-
-            // Use a single update with a WHERE clause for better atomicity
-            // First verify the space exists and belongs to the user
-            const { data: targetSpace, error: verifyError } = await supabaseClient
-                .from('spaces')
-                .select('id, name')
-                .eq('id', spaceId)
-                .eq('user_id', user.id)
-                .single();
-
-            if (verifyError || !targetSpace) {
-                console.error('DB: Target space not found or access denied:', verifyError);
-                return { error: new Error('Space not found or access denied') };
-            }
-
-            console.log('DB: Target space verified:', targetSpace.name);
-
-            // Deactivate all spaces for this user
-            const { error: deactivateError } = await supabaseClient
-                .from('spaces')
-                .update({ is_active: false })
-                .eq('user_id', user.id);
-
-            if (deactivateError) {
-                console.error('DB: Error deactivating spaces:', deactivateError);
-                return { error: deactivateError };
-            }
-
-            console.log('DB: All spaces deactivated');
-
-            // Activate the target space
-            const { error: activateError } = await supabaseClient
-                .from('spaces')
-                .update({ 
-                    is_active: true,
-                    last_accessed_at: new Date().toISOString()
-                })
-                .eq('id', spaceId)
-                .eq('user_id', user.id);
-
-            if (activateError) {
-                console.error('DB: Error activating space:', activateError);
-                return { error: activateError };
-            }
-
-            console.log('DB: Space activated successfully:', targetSpace.name);
-            return { error: null };
-        } catch (err) {
-            console.error('DB: Exception in setActiveSpace:', err);
-            return { error: err };
-        }
-    },
 
     async deleteSpace(spaceId) {
         try {
@@ -283,64 +226,7 @@ const authHelpers = {
         }
     },
 
-    // Save tabs data for a specific space
-    async saveTabsToSpace(spaceId, tabsData) {
-        try {
-            const user = await this.getCurrentUser();
-            if (!user) return { error: new Error('Not authenticated') };
 
-            console.log('DB: Saving tabs to space:', spaceId, 'Tab count:', tabsData.length);
-
-            const { error } = await supabaseClient
-                .from('spaces')
-                .update({ 
-                    tabs_data: tabsData,
-                    last_accessed_at: new Date().toISOString()
-                })
-                .eq('id', spaceId)
-                .eq('user_id', user.id);
-
-            if (error) {
-                console.error('DB: Error saving tabs to space:', error);
-                return { error };
-            }
-
-            console.log('DB: Successfully saved tabs to space');
-            return { error: null };
-        } catch (err) {
-            console.error('DB: Exception saving tabs to space:', err);
-            return { error: err };
-        }
-    },
-
-    // Save tabs data for the currently active space
-    async saveTabsToActiveSpace(tabsData) {
-        try {
-            const user = await this.getCurrentUser();
-            if (!user) return { error: new Error('Not authenticated') };
-
-            // Get the currently active space
-            const { data: spaces, error: spacesError } = await supabaseClient
-                .from('spaces')
-                .select('id, name')
-                .eq('user_id', user.id)
-                .eq('is_active', true)
-                .single();
-
-            if (spacesError || !spaces) {
-                console.error('DB: No active space found for tab saving:', spacesError);
-                return { error: new Error('No active space found') };
-            }
-
-            console.log('DB: Saving tabs to active space:', spaces.name, 'Tab count:', tabsData.length);
-
-            // Save tabs to the active space
-            return await this.saveTabsToSpace(spaces.id, tabsData);
-        } catch (err) {
-            console.error('DB: Exception saving tabs to active space:', err);
-            return { error: err };
-        }
-    },
 
     // Unsubscribe from realtime
     unsubscribeFromSpaces(subscription) {

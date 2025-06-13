@@ -1,6 +1,9 @@
 // Simplified Tabster Background Script
 console.log('Tabster background script loaded');
 
+// Track if we've already restored for this session
+let hasRestoredThisSession = false;
+
 // Extension installation and updates
 chrome.runtime.onInstalled.addListener((details) => {
     console.log('Tabster extension installed/updated:', details.reason);
@@ -14,10 +17,252 @@ chrome.runtime.onInstalled.addListener((details) => {
     }
 });
 
-// Handle extension startup
-chrome.runtime.onStartup.addListener(() => {
-    console.log('Tabster extension started');
+// Better approach: Detect browser startup via window creation
+chrome.windows.onCreated.addListener(async (window) => {
+    console.log('Window created:', window.id);
+    
+    // Only restore on the first window creation and if we haven't restored yet
+    if (!hasRestoredThisSession) {
+        console.log('First window created - checking for space restoration');
+        hasRestoredThisSession = true;
+        
+        // Delay to ensure browser is fully loaded
+        setTimeout(() => {
+            restoreActiveSpaceOnBrowserStartup();
+        }, 3000);
+    }
 });
+
+// Alternative: Detect via first tab creation after startup
+chrome.tabs.onCreated.addListener(async (tab) => {
+    // Only trigger on the first tab of a new session
+    if (!hasRestoredThisSession && tab.index === 0) {
+        console.log('First tab created - checking for space restoration');
+        hasRestoredThisSession = true;
+        
+        setTimeout(() => {
+            restoreActiveSpaceOnBrowserStartup();
+        }, 2000);
+    }
+});
+
+async function restoreActiveSpaceOnBrowserStartup() {
+    try {
+        console.log('Background: Checking for saved active space on startup...');
+        
+        // Check if user is logged in first
+        const result = await chrome.storage.local.get(['supabase.auth.token']);
+        if (!result['supabase.auth.token']) {
+            console.log('Background: No auth token found, checking for session...');
+        }
+
+        // Try to get user directly
+        const user = await getCurrentUser();
+        if (!user) {
+            console.log('Background: No user logged in, skipping restoration');
+            return;
+        }
+
+        console.log('Background: User found, checking for saved space...');
+
+        // Get saved active space from storage
+        const storageKey = `tabster_active_space_${user.id}`;
+        const storageResult = await chrome.storage.local.get([storageKey]);
+        const savedSpaceId = storageResult[storageKey];
+        
+        if (!savedSpaceId) {
+            console.log('Background: No saved active space found');
+            return;
+        }
+
+        console.log('Background: Found saved active space:', savedSpaceId);
+
+        // Get space data from database
+        const spaces = await getUserSpaces(user.id);
+        if (!spaces) {
+            console.error('Background: Error loading spaces');
+            return;
+        }
+
+        const savedSpace = spaces.find(space => space.id === savedSpaceId);
+        if (!savedSpace) {
+            console.log('Background: Saved space no longer exists, clearing storage');
+            await chrome.storage.local.remove([storageKey]);
+            return;
+        }
+
+        console.log('Background: Restoring active space:', savedSpace.name);
+
+        // Check if current tabs already match the saved space
+        const tabsMatch = await currentTabsMatchSpace(savedSpace);
+        if (tabsMatch) {
+            console.log('Background: Current tabs already match saved space, no restoration needed');
+            return;
+        }
+
+        // Check if we already have tabs that might be from this space
+        const currentTabs = await chrome.tabs.query({});
+        const nonExtensionTabs = currentTabs.filter(tab => 
+            !tab.url.startsWith('chrome-extension://') &&
+            !tab.url.startsWith('chrome://') &&
+            !tab.url.startsWith('edge-extension://') &&
+            !tab.url.startsWith('moz-extension://')
+        );
+
+        // Only restore if we have minimal tabs (like just new tab page)
+        if (nonExtensionTabs.length <= 1) {
+            console.log('Background: Minimal tabs detected, restoring space tabs');
+            await loadTabsFromSpace(savedSpace);
+        } else {
+            console.log('Background: Multiple tabs already open, skipping restoration');
+        }
+
+    } catch (error) {
+        console.error('Background: Error restoring active space:', error);
+    }
+}
+
+// Simplified Supabase functions for background script
+async function getCurrentUser() {
+    try {
+        // Get session from storage
+        const keys = await chrome.storage.local.get(null);
+        const sessionKey = Object.keys(keys).find(key => key.includes('supabase.auth.token'));
+        
+        if (!sessionKey) {
+            return null;
+        }
+
+        const session = keys[sessionKey];
+        if (session && session.user) {
+            return session.user;
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Background: Error getting user:', error);
+        return null;
+    }
+}
+
+async function getUserSpaces(userId) {
+    try {
+        const SUPABASE_URL = 'https://aodovkzddxblxjhiclci.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvZG92a3pkZHhibHhqaGljbGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0Nzc0MzEsImV4cCI6MjA2NDA1MzQzMX0.xjQlWkMoCMyNakjPuDOAreQ2P0EBOvT41ZNmYSudB0s';
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/spaces?user_id=eq.${userId}&is_archived=eq.false&order=order_index`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const spaces = await response.json();
+        return spaces;
+    } catch (error) {
+        console.error('Background: Error fetching spaces:', error);
+        return null;
+    }
+}
+
+// Check if current tabs match the saved space
+async function currentTabsMatchSpace(space) {
+    try {
+        if (!space.tabs_data || !Array.isArray(space.tabs_data)) {
+            return false;
+        }
+
+        const currentTabs = await chrome.tabs.query({});
+        const nonExtensionTabs = currentTabs.filter(tab => 
+            !tab.url.startsWith('chrome-extension://') &&
+            !tab.url.startsWith('chrome://') &&
+            !tab.url.startsWith('edge-extension://') &&
+            !tab.url.startsWith('moz-extension://')
+        );
+
+        // If tab counts don't match, it's not the same space
+        if (nonExtensionTabs.length !== space.tabs_data.length) {
+            return false;
+        }
+
+        // If both are empty, consider it a match
+        if (nonExtensionTabs.length === 0 && space.tabs_data.length === 0) {
+            return true;
+        }
+
+        // Sort both arrays by URL for comparison
+        const currentUrls = nonExtensionTabs.map(tab => tab.url).sort();
+        const spaceUrls = space.tabs_data.map(tab => tab.url).sort();
+
+        // Compare URLs - if they match, it's likely the same space
+        return JSON.stringify(currentUrls) === JSON.stringify(spaceUrls);
+
+    } catch (error) {
+        console.error('Background: Error comparing tabs with space:', error);
+        return false;
+    }
+}
+
+async function loadTabsFromSpace(space) {
+    try {
+        console.log('Background: Loading tabs from space:', space.name);
+        
+        if (!space.tabs_data || !Array.isArray(space.tabs_data) || space.tabs_data.length === 0) {
+            console.log('Background: No tabs data found for space');
+            return;
+        }
+
+        console.log(`Background: Loading ${space.tabs_data.length} tabs from space`);
+
+        // Get all current tabs
+        const currentTabs = await chrome.tabs.query({});
+        
+        // Close all non-extension tabs
+        const tabsToClose = currentTabs.filter(tab => 
+            !tab.url.startsWith('chrome-extension://') &&
+            !tab.url.startsWith('chrome://') &&
+            !tab.url.startsWith('edge-extension://') &&
+            !tab.url.startsWith('moz-extension://')
+        );
+
+        if (tabsToClose.length > 0) {
+            await chrome.tabs.remove(tabsToClose.map(tab => tab.id));
+        }
+
+        // Sort tabs by order (pinned tabs first, then by index)
+        const sortedTabs = space.tabs_data.sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return (a.index || 0) - (b.index || 0);
+        });
+
+        // Create tabs in order
+        for (let i = 0; i < sortedTabs.length; i++) {
+            const tabData = sortedTabs[i];
+            try {
+                await chrome.tabs.create({
+                    url: tabData.url,
+                    active: i === 0, // Make first tab active
+                    pinned: tabData.pinned || false,
+                    index: i
+                });
+                console.log(`Background: Created tab: ${tabData.title || tabData.url}`);
+            } catch (error) {
+                console.error('Background: Error creating tab:', tabData, error);
+            }
+        }
+
+        console.log('Background: Successfully loaded tabs from space');
+
+    } catch (error) {
+        console.error('Background: Error loading tabs from space:', error);
+    }
+}
 
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
