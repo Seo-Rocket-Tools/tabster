@@ -149,6 +149,118 @@
             </div>
         </div>
 
+        <!-- Create Space Screen -->
+        <div id="create-space-screen" class="screen">
+            <div class="dashboard-header">
+                <div class="header-brand">
+                    <img src="icons/tabster_logo.svg" alt="Tabster" class="header-icon">
+                    <h2>Create New Space</h2>
+                </div>
+                <button id="cancel-create-space" class="btn btn-text">Cancel</button>
+            </div>
+            <div class="dashboard-content">
+                <div class="create-space-section">
+                    <form id="create-space-form" class="create-space-form">
+                        <div class="form-group">
+                            <label for="space-name">Space Name *</label>
+                            <input type="text" id="space-name" name="spaceName" required placeholder="e.g., Work Projects, Research, Shopping">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="space-emoji">Emoji</label>
+                            <div class="emoji-input-container">
+                                <input type="text" id="space-emoji" name="spaceEmoji" readonly placeholder="Choose an emoji" class="emoji-input">
+                                <div id="emoji-dropdown" class="emoji-dropdown">
+                                    <div class="emoji-option" data-emoji="📁">📁</div>
+                                    <div class="emoji-option" data-emoji="💼">💼</div>
+                                    <div class="emoji-option" data-emoji="🎯">🎯</div>
+                                    <div class="emoji-option" data-emoji="🚀">🚀</div>
+                                    <div class="emoji-option" data-emoji="📚">📚</div>
+                                    <div class="emoji-option" data-emoji="🎨">🎨</div>
+                                    <div class="emoji-option" data-emoji="⚡">⚡</div>
+                                    <div class="emoji-option" data-emoji="🔥">🔥</div>
+                                    <div class="emoji-option" data-emoji="💡">💡</div>
+                                    <div class="emoji-option" data-emoji="🌟">🌟</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="space-description">Description</label>
+                            <textarea id="space-description" name="spaceDescription" placeholder="What is this space for? (optional)" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="space-color">Color Theme</label>
+                            <div class="color-input-container">
+                                <div class="color-input" id="space-color">
+                                    <div class="color-preview" id="color-preview"></div>
+                                    <span class="color-label" id="color-label">Choose a color</span>
+                                </div>
+                                <div id="color-dropdown" class="color-dropdown">
+                                    <div class="color-option" data-color="#3B82F6" data-name="Blue">
+                                        <div class="color-swatch" style="background: #3B82F6;"></div>
+                                        <span>Blue</span>
+                                    </div>
+                                    <div class="color-option" data-color="#10B981" data-name="Green">
+                                        <div class="color-swatch" style="background: #10B981;"></div>
+                                        <span>Green</span>
+                                    </div>
+                                    <div class="color-option" data-color="#F59E0B" data-name="Amber">
+                                        <div class="color-swatch" style="background: #F59E0B;"></div>
+                                        <span>Amber</span>
+                                    </div>
+                                    <div class="color-option" data-color="#EF4444" data-name="Red">
+                                        <div class="color-swatch" style="background: #EF4444;"></div>
+                                        <span>Red</span>
+                                    </div>
+                                    <div class="color-option" data-color="#8B5CF6" data-name="Purple">
+                                        <div class="color-swatch" style="background: #8B5CF6;"></div>
+                                        <span>Purple</span>
+                                    </div>
+                                    <div class="color-option" data-color="#EC4899" data-name="Pink">
+                                        <div class="color-swatch" style="background: #EC4899;"></div>
+                                        <span>Pink</span>
+                                    </div>
+                                    <div class="color-option" data-color="#06B6D4" data-name="Cyan">
+                                        <div class="color-swatch" style="background: #06B6D4;"></div>
+                                        <span>Cyan</span>
+                                    </div>
+                                    <div class="color-option" data-color="#84CC16" data-name="Lime">
+                                        <div class="color-swatch" style="background: #84CC16;"></div>
+                                        <span>Lime</span>
+                                    </div>
+                                    <div class="color-option" data-color="#F97316" data-name="Orange">
+                                        <div class="color-swatch" style="background: #F97316;"></div>
+                                        <span>Orange</span>
+                                    </div>
+                                    <div class="color-option" data-color="#6B7280" data-name="Gray">
+                                        <div class="color-swatch" style="background: #6B7280;"></div>
+                                        <span>Gray</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="include-current-tabs" name="includeCurrentTabs">
+                                <label for="include-current-tabs" class="checkbox-label">
+                                    <span class="checkbox-text">Add current tabs to this space</span>
+                                    <span class="checkbox-hint">Include all your currently open tabs in the new space</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="cancel-create-space-btn" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Create Space</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Loading overlay -->
         <div id="loading-overlay" class="loading-overlay" style="display: none;">
             <div class="loading-spinner"></div>

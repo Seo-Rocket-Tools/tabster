@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const signupScreen = document.getElementById('signup-screen');
     const forgotPasswordScreen = document.getElementById('forgot-password-screen');
     const dashboardScreen = document.getElementById('dashboard-screen');
+    const createSpaceScreen = document.getElementById('create-space-screen');
     const loadingOverlay = document.getElementById('loading-overlay');
     const messageContainer = document.getElementById('message-container');
 
@@ -141,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showScreen(screenName) {
-        const screens = [welcomeScreen, loginScreen, signupScreen, forgotPasswordScreen, dashboardScreen];
+        const screens = [welcomeScreen, loginScreen, signupScreen, forgotPasswordScreen, dashboardScreen, createSpaceScreen];
         
         screens.forEach(screen => {
             if (screen) {
@@ -166,6 +167,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             case 'dashboard':
                 targetScreen = dashboardScreen;
+                break;
+            case 'create-space-screen':
+                targetScreen = createSpaceScreen;
                 break;
             default:
                 targetScreen = welcomeScreen;
@@ -421,7 +425,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             showMessage('Switching space...', 'success');
 
-            // Note: Database updates removed - not implemented yet
+            // Notify background script that space switching is starting
+            chrome.runtime.sendMessage({ type: 'space_switching_start' });
 
             // Save the active space to Chrome storage
             await saveActiveSpaceToStorage(spaceId);
@@ -449,6 +454,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error switching workspace:', error);
             showMessage(`Failed to switch space: ${error.message}`, 'error');
         } finally {
+            // Notify background script that space switching is complete
+            chrome.runtime.sendMessage({ type: 'space_switching_end' });
+            
             // Remove visual feedback
             const workspaceCard = document.querySelector(`[data-workspace="${spaceId}"]`);
             const workspacesGrid = document.getElementById('workspaces-grid');
@@ -614,10 +622,202 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleCreateWorkspace() {
         console.log('Creating new space');
-        showMessage('Create space feature coming soon!', 'success');
+        showScreen('create-space-screen');
+        setupCreateSpaceForm();
+    }
+
+    function setupCreateSpaceForm() {
+        // Clear form
+        document.getElementById('space-name').value = '';
+        document.getElementById('space-emoji').value = '';
+        document.getElementById('space-description').value = '';
+        document.getElementById('include-current-tabs').checked = false;
         
-        // TODO: Show create workspace modal/form
-        // This is where you'll implement the workspace creation flow
+        // Reset color selection
+        const colorPreview = document.getElementById('color-preview');
+        const colorLabel = document.getElementById('color-label');
+        colorPreview.style.background = 'var(--bg-tertiary)';
+        colorLabel.textContent = 'Choose a color';
+        colorLabel.className = 'color-label placeholder';
+        
+        // Store selected values
+        let selectedEmoji = null;
+        let selectedColor = null;
+        let selectedColorName = null;
+
+        // Emoji field interactions
+        const emojiInput = document.getElementById('space-emoji');
+        const emojiDropdown = document.getElementById('emoji-dropdown');
+        
+        emojiInput.addEventListener('click', () => {
+            emojiDropdown.classList.toggle('show');
+            hideColorDropdown();
+        });
+
+        // Emoji selection
+        const emojiOptions = document.querySelectorAll('.emoji-option');
+        emojiOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                selectedEmoji = option.dataset.emoji;
+                emojiInput.value = selectedEmoji;
+                emojiDropdown.classList.remove('show');
+            });
+        });
+
+        // Color field interactions
+        const colorInput = document.getElementById('space-color');
+        const colorDropdown = document.getElementById('color-dropdown');
+        
+        colorInput.addEventListener('click', () => {
+            colorDropdown.classList.toggle('show');
+            colorInput.classList.toggle('focused');
+            hideEmojiDropdown();
+        });
+
+        // Color selection
+        const colorOptions = document.querySelectorAll('.color-option');
+        colorOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                selectedColor = option.dataset.color;
+                selectedColorName = option.dataset.name;
+                
+                // Update preview
+                colorPreview.style.background = selectedColor;
+                colorLabel.textContent = selectedColorName;
+                colorLabel.className = 'color-label';
+                
+                colorDropdown.classList.remove('show');
+                colorInput.classList.remove('focused');
+            });
+        });
+
+        // Hide dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.emoji-input-container')) {
+                hideEmojiDropdown();
+            }
+            if (!e.target.closest('.color-input-container')) {
+                hideColorDropdown();
+            }
+        });
+
+        function hideEmojiDropdown() {
+            emojiDropdown.classList.remove('show');
+        }
+
+        function hideColorDropdown() {
+            colorDropdown.classList.remove('show');
+            colorInput.classList.remove('focused');
+        }
+
+        // Cancel buttons
+        const cancelButtons = [
+            document.getElementById('cancel-create-space'),
+            document.getElementById('cancel-create-space-btn')
+        ];
+        
+        cancelButtons.forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    showScreen('dashboard');
+                });
+            }
+        });
+
+        // Form submission
+        const createSpaceForm = document.getElementById('create-space-form');
+        createSpaceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await handleCreateSpaceSubmit(selectedEmoji, selectedColor);
+        });
+    }
+
+    async function handleCreateSpaceSubmit(selectedEmoji, selectedColor) {
+        try {
+            const spaceName = document.getElementById('space-name').value.trim();
+            const spaceDescription = document.getElementById('space-description').value.trim();
+            const includeCurrentTabs = document.getElementById('include-current-tabs').checked;
+
+            if (!spaceName) {
+                showMessage('Please enter a space name', 'error');
+                return;
+            }
+
+            // Show loading state
+            const submitBtn = document.querySelector('#create-space-form button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Creating...';
+            submitBtn.disabled = true;
+
+            // Prepare space data
+            const spaceData = {
+                name: spaceName,
+                description: spaceDescription || null,
+                emoji: selectedEmoji || '📁',
+                color: selectedColor || '#6B7280'
+            };
+
+            // Get current tabs if checkbox is checked
+            let tabsData = null;
+            if (includeCurrentTabs) {
+                const currentTabs = await chrome.tabs.query({});
+                const nonExtensionTabs = currentTabs.filter(tab => 
+                    !tab.url.startsWith('chrome-extension://') &&
+                    !tab.url.startsWith('chrome://') &&
+                    !tab.url.startsWith('edge-extension://') &&
+                    !tab.url.startsWith('moz-extension://')
+                );
+
+                tabsData = nonExtensionTabs.map(tab => ({
+                    id: tab.id,
+                    url: tab.url,
+                    title: tab.title,
+                    index: tab.index,
+                    pinned: tab.pinned,
+                    windowId: tab.windowId,
+                    active: tab.active,
+                    favIconUrl: tab.favIconUrl || null
+                }));
+                
+                spaceData.tabs_data = tabsData;
+            }
+
+            // Create the space
+            console.log('Creating space with data:', spaceData);
+            const { data: newSpace, error } = await authHelpers.createSpace(spaceData);
+
+            if (error) {
+                throw new Error(error.message || 'Failed to create space');
+            }
+
+            console.log('Space created successfully:', newSpace);
+            showMessage(`Space "${spaceName}" created successfully!`, 'success');
+
+            // Switch to the new space
+            await saveActiveSpaceToStorage(newSpace.id);
+            
+            if (!includeCurrentTabs) {
+                // Close all current tabs and open a new tab
+                await closeAllTabsExceptThis();
+                await chrome.tabs.create({ url: 'chrome://newtab/', active: true });
+            }
+
+            // Go back to dashboard and refresh
+            showScreen('dashboard');
+            await loadWorkspaces();
+            updateActiveSpaceIndicator(newSpace.id);
+
+        } catch (error) {
+            console.error('Error creating space:', error);
+            showMessage(`Failed to create space: ${error.message}`, 'error');
+        } finally {
+            // Reset button
+            const submitBtn = document.querySelector('#create-space-form button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.textContent = 'Create Space';
+                submitBtn.disabled = false;
+            }
+        }
     }
 
     // Initialize workspace functionality
