@@ -626,10 +626,13 @@ document.addEventListener('DOMContentLoaded', function() {
         setupCreateSpaceForm();
     }
 
+    // Store the document click listener so we can remove it
+    let documentClickListener = null;
+
     function setupCreateSpaceForm() {
         // Clear form
         document.getElementById('space-name').value = '';
-        document.getElementById('space-emoji').value = '';
+        document.getElementById('space-emoji').value = '📦';
         document.getElementById('space-description').value = '';
         document.getElementById('include-current-tabs').checked = false;
         
@@ -641,65 +644,20 @@ document.addEventListener('DOMContentLoaded', function() {
         colorLabel.className = 'color-label placeholder';
         
         // Store selected values
-        let selectedEmoji = null;
+        let selectedEmoji = '📦'; // Default to 📦
         let selectedColor = null;
         let selectedColorName = null;
 
-        // Emoji field interactions
+        // Remove previous document click listener if exists
+        if (documentClickListener) {
+            document.removeEventListener('click', documentClickListener);
+        }
+
+        // Get elements
         const emojiInput = document.getElementById('space-emoji');
         const emojiDropdown = document.getElementById('emoji-dropdown');
-        
-        emojiInput.addEventListener('click', () => {
-            emojiDropdown.classList.toggle('show');
-            hideColorDropdown();
-        });
-
-        // Emoji selection
-        const emojiOptions = document.querySelectorAll('.emoji-option');
-        emojiOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                selectedEmoji = option.dataset.emoji;
-                emojiInput.value = selectedEmoji;
-                emojiDropdown.classList.remove('show');
-            });
-        });
-
-        // Color field interactions
         const colorInput = document.getElementById('space-color');
         const colorDropdown = document.getElementById('color-dropdown');
-        
-        colorInput.addEventListener('click', () => {
-            colorDropdown.classList.toggle('show');
-            colorInput.classList.toggle('focused');
-            hideEmojiDropdown();
-        });
-
-        // Color selection
-        const colorOptions = document.querySelectorAll('.color-option');
-        colorOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                selectedColor = option.dataset.color;
-                selectedColorName = option.dataset.name;
-                
-                // Update preview
-                colorPreview.style.background = selectedColor;
-                colorLabel.textContent = selectedColorName;
-                colorLabel.className = 'color-label';
-                
-                colorDropdown.classList.remove('show');
-                colorInput.classList.remove('focused');
-            });
-        });
-
-        // Hide dropdowns when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.emoji-input-container')) {
-                hideEmojiDropdown();
-            }
-            if (!e.target.closest('.color-input-container')) {
-                hideColorDropdown();
-            }
-        });
 
         function hideEmojiDropdown() {
             emojiDropdown.classList.remove('show');
@@ -710,6 +668,64 @@ document.addEventListener('DOMContentLoaded', function() {
             colorInput.classList.remove('focused');
         }
 
+        // Clear any existing 'show' classes
+        hideEmojiDropdown();
+        hideColorDropdown();
+
+        // Emoji field interactions - use onclick to replace any existing handlers
+        emojiInput.onclick = (e) => {
+            e.stopPropagation();
+            emojiDropdown.classList.toggle('show');
+            hideColorDropdown();
+        };
+
+        // Emoji selection
+        const emojiOptions = document.querySelectorAll('.emoji-option');
+        emojiOptions.forEach(option => {
+            option.onclick = (e) => {
+                e.stopPropagation();
+                selectedEmoji = option.dataset.emoji;
+                emojiInput.value = selectedEmoji;
+                hideEmojiDropdown();
+            };
+        });
+
+        // Color field interactions
+        colorInput.onclick = (e) => {
+            e.stopPropagation();
+            colorDropdown.classList.toggle('show');
+            colorInput.classList.toggle('focused');
+            hideEmojiDropdown();
+        };
+
+        // Color selection
+        const colorOptions = document.querySelectorAll('.color-option');
+        colorOptions.forEach(option => {
+            option.onclick = (e) => {
+                e.stopPropagation();
+                selectedColor = option.dataset.color;
+                selectedColorName = option.dataset.name;
+                
+                // Update preview
+                colorPreview.style.background = selectedColor;
+                colorLabel.textContent = selectedColorName;
+                colorLabel.className = 'color-label';
+                
+                hideColorDropdown();
+            };
+        });
+
+        // Hide dropdowns when clicking outside
+        documentClickListener = (e) => {
+            if (!e.target.closest('.emoji-input-container')) {
+                hideEmojiDropdown();
+            }
+            if (!e.target.closest('.color-input-container')) {
+                hideColorDropdown();
+            }
+        };
+        document.addEventListener('click', documentClickListener);
+
         // Cancel buttons
         const cancelButtons = [
             document.getElementById('cancel-create-space'),
@@ -718,18 +734,23 @@ document.addEventListener('DOMContentLoaded', function() {
         
         cancelButtons.forEach(btn => {
             if (btn) {
-                btn.addEventListener('click', () => {
+                btn.onclick = () => {
+                    // Clean up document listener when canceling
+                    if (documentClickListener) {
+                        document.removeEventListener('click', documentClickListener);
+                        documentClickListener = null;
+                    }
                     showScreen('dashboard');
-                });
+                };
             }
         });
 
         // Form submission
         const createSpaceForm = document.getElementById('create-space-form');
-        createSpaceForm.addEventListener('submit', async (e) => {
+        createSpaceForm.onsubmit = async (e) => {
             e.preventDefault();
             await handleCreateSpaceSubmit(selectedEmoji, selectedColor);
-        });
+        };
     }
 
     async function handleCreateSpaceSubmit(selectedEmoji, selectedColor) {

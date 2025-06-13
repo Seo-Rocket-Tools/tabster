@@ -161,35 +161,41 @@
             <div class="dashboard-content">
                 <div class="create-space-section">
                     <form id="create-space-form" class="create-space-form">
-                        <div class="form-group">
-                            <label for="space-name">Space Name *</label>
-                            <input type="text" id="space-name" name="spaceName" required placeholder="e.g., Work Projects, Research, Shopping">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="space-emoji">Emoji</label>
-                            <div class="emoji-input-container">
-                                <input type="text" id="space-emoji" name="spaceEmoji" readonly placeholder="Choose an emoji" class="emoji-input">
-                                <div id="emoji-dropdown" class="emoji-dropdown">
-                                    <div class="emoji-option" data-emoji="📁">📁</div>
-                                    <div class="emoji-option" data-emoji="💼">💼</div>
-                                    <div class="emoji-option" data-emoji="🎯">🎯</div>
-                                    <div class="emoji-option" data-emoji="🚀">🚀</div>
-                                    <div class="emoji-option" data-emoji="📚">📚</div>
-                                    <div class="emoji-option" data-emoji="🎨">🎨</div>
-                                    <div class="emoji-option" data-emoji="⚡">⚡</div>
-                                    <div class="emoji-option" data-emoji="🔥">🔥</div>
-                                    <div class="emoji-option" data-emoji="💡">💡</div>
-                                    <div class="emoji-option" data-emoji="🌟">🌟</div>
+                        <!-- Row 1: Emoji + Space Name -->
+                        <div class="form-row">
+                            <div class="form-group emoji-group">
+                                <label for="space-emoji">Emoji</label>
+                                <div class="emoji-input-container">
+                                    <input type="text" id="space-emoji" name="spaceEmoji" readonly placeholder="📦" class="emoji-input square">
+                                    <div id="emoji-dropdown" class="emoji-dropdown">
+                                        <div class="emoji-option" data-emoji="📦">📦</div>
+                                        <div class="emoji-option" data-emoji="📁">📁</div>
+                                        <div class="emoji-option" data-emoji="💼">💼</div>
+                                        <div class="emoji-option" data-emoji="🎯">🎯</div>
+                                        <div class="emoji-option" data-emoji="🚀">🚀</div>
+                                        <div class="emoji-option" data-emoji="📚">📚</div>
+                                        <div class="emoji-option" data-emoji="🎨">🎨</div>
+                                        <div class="emoji-option" data-emoji="⚡">⚡</div>
+                                        <div class="emoji-option" data-emoji="🔥">🔥</div>
+                                        <div class="emoji-option" data-emoji="💡">💡</div>
+                                        <div class="emoji-option" data-emoji="🌟">🌟</div>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div class="form-group name-group">
+                                <label for="space-name">Space Name *</label>
+                                <input type="text" id="space-name" name="spaceName" required placeholder="e.g., Work Projects, Research, Shopping">
                             </div>
                         </div>
 
+                        <!-- Row 2: Description -->
                         <div class="form-group">
                             <label for="space-description">Description</label>
                             <textarea id="space-description" name="spaceDescription" placeholder="What is this space for? (optional)" rows="3"></textarea>
                         </div>
 
+                        <!-- Row 3: Color -->
                         <div class="form-group">
                             <label for="space-color">Color Theme</label>
                             <div class="color-input-container">
@@ -242,6 +248,7 @@
                             </div>
                         </div>
 
+                        <!-- Row 4: Add Current Tabs Checkbox -->
                         <div class="form-group">
                             <div class="checkbox-container">
                                 <input type="checkbox" id="include-current-tabs" name="includeCurrentTabs">

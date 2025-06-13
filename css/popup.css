@@ -973,9 +973,18 @@ body {
 }
 
 /* Create Space Screen */
+#create-space-screen {
+    padding: 0;
+}
+
+#create-space-screen .dashboard-content {
+    padding: 0;
+}
+
 .create-space-section {
     max-width: 480px;
     margin: 0 auto;
+    padding: 24px 20px;
 }
 
 .create-space-form {
@@ -986,6 +995,19 @@ body {
 
 .create-space-form .form-group {
     margin-bottom: 0;
+}
+
+.form-row {
+    display: flex;
+    gap: 16px;
+}
+
+.form-row .emoji-group {
+    flex: 0 0 80px;
+}
+
+.form-row .name-group {
+    flex: 1;
 }
 
 .create-space-form textarea {
@@ -1022,6 +1044,17 @@ body {
 .emoji-input {
     cursor: pointer;
     padding-right: 40px !important;
+}
+
+.emoji-input.square {
+    width: 80px;
+    height: 44px;
+    text-align: center;
+    font-size: 1.2rem;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .emoji-dropdown {
