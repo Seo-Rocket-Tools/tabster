@@ -253,7 +253,18 @@ async function loadTabsFromSpace(space) {
             return;
         }
 
-        console.log(`Background: Loading ${space.tabs_data.length} tabs from space`);
+        // Filter out extension/invalid URLs before processing
+        const validTabs = space.tabs_data.filter(tab => {
+            if (!tab.url) return false;
+            if (tab.url.startsWith('chrome-extension://') ||
+                tab.url.startsWith('chrome://') ||
+                tab.url.startsWith('edge-extension://') ||
+                tab.url.startsWith('moz-extension://')) return false;
+            if (tab.url === 'about:blank' || tab.url === '') return false;
+            return true;
+        });
+
+        console.log(`Background: Loading ${validTabs.length} valid tabs from space (filtered from ${space.tabs_data.length} total)`);
 
         // Get all current tabs
         const currentTabs = await chrome.tabs.query({});
@@ -270,30 +281,53 @@ async function loadTabsFromSpace(space) {
             await chrome.tabs.remove(tabsToClose.map(tab => tab.id));
         }
 
+        if (validTabs.length === 0) {
+            console.log('Background: No valid tabs to restore');
+            isSwitchingSpaces = false; // Clear flag
+            return;
+        }
+
         // Sort tabs by order (pinned tabs first, then by index)
-        const sortedTabs = space.tabs_data.sort((a, b) => {
+        const sortedTabs = validTabs.sort((a, b) => {
             if (a.pinned && !b.pinned) return -1;
             if (!a.pinned && b.pinned) return 1;
             return (a.index || 0) - (b.index || 0);
         });
 
-        // Create tabs in order
-        for (let i = 0; i < sortedTabs.length; i++) {
-            const tabData = sortedTabs[i];
+        // Create tabs in order, tracking successful creations
+        let successfulTabIndex = 0;
+        for (const tabData of sortedTabs) {
+            // Validate URL before creating tab
+            if (!tabData.url || 
+                tabData.url.startsWith('chrome-extension://') ||
+                tabData.url.startsWith('chrome://') ||
+                tabData.url.startsWith('edge-extension://') ||
+                tabData.url.startsWith('moz-extension://') ||
+                tabData.url === 'about:blank' ||
+                tabData.url === '') {
+                console.log('Background: Skipping invalid tab:', tabData.url);
+                continue;
+            }
+
             try {
                 await chrome.tabs.create({
                     url: tabData.url,
-                    active: i === 0, // Make first tab active
+                    active: successfulTabIndex === 0, // Make first successful tab active
                     pinned: tabData.pinned || false,
-                    index: i
+                    index: successfulTabIndex
                 });
-                console.log(`Background: Created tab: ${tabData.title || tabData.url}`);
+                console.log(`Background: ✅ Created tab: ${tabData.title || tabData.url}`);
+                successfulTabIndex++;
             } catch (error) {
-                console.error('Background: Error creating tab:', tabData, error);
+                console.error('Background: ❌ Error creating tab:', {
+                    url: tabData.url,
+                    title: tabData.title,
+                    error: error.message
+                });
             }
         }
 
-        console.log('Background: Successfully loaded tabs from space');
+        console.log(`Background: ✅ Successfully loaded ${successfulTabIndex} tabs from space`);
 
     } catch (error) {
         console.error('Background: Error loading tabs from space:', error);
@@ -596,20 +630,29 @@ async function saveTabsToActiveSpace() {
         
         const { spaceId: activeSpaceId, userToken } = activeSpaceData;
 
-        // Get all current tabs (excluding extension pages)
+        // Get all current tabs (excluding extension pages and invalid URLs)
         const allTabs = await chrome.tabs.query({});
-        const currentTabs = allTabs.filter(tab => 
-            !tab.url.startsWith('chrome-extension://') &&
-            !tab.url.startsWith('chrome://') &&
-            !tab.url.startsWith('edge-extension://') &&
-            !tab.url.startsWith('moz-extension://')
-        );
+        const currentTabs = allTabs.filter(tab => {
+            // Skip if no URL
+            if (!tab.url) return false;
+            
+            // Skip extension and browser URLs
+            if (tab.url.startsWith('chrome-extension://') ||
+                tab.url.startsWith('chrome://') ||
+                tab.url.startsWith('edge-extension://') ||
+                tab.url.startsWith('moz-extension://')) return false;
+            
+            // Skip blank/empty tabs
+            if (tab.url === 'about:blank' || tab.url === '') return false;
+            
+            return true;
+        });
 
         // Convert tabs to the format expected by the database
         const tabsData = currentTabs.map(tab => ({
             id: tab.id,
             url: tab.url,
-            title: tab.title,
+            title: tab.title || 'Untitled',
             index: tab.index,
             pinned: tab.pinned,
             windowId: tab.windowId,

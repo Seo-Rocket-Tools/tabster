@@ -540,25 +540,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            console.log(`Loading ${space.tabs_data.length} tabs from space`);
+            // Filter out extension/invalid URLs before processing
+            const validTabs = space.tabs_data.filter(tab => {
+                if (!tab.url) return false;
+                if (tab.url.startsWith('chrome-extension://') ||
+                    tab.url.startsWith('chrome://') ||
+                    tab.url.startsWith('edge-extension://') ||
+                    tab.url.startsWith('moz-extension://')) return false;
+                if (tab.url === 'about:blank' || tab.url === '') return false;
+                return true;
+            });
+
+            console.log(`Loading ${validTabs.length} valid tabs from space (filtered from ${space.tabs_data.length} total)`);
 
             // Close all current tabs except the extension popup
             await closeAllTabsExceptThis();
 
+            if (validTabs.length === 0) {
+                console.log('No valid tabs to restore');
+                return;
+            }
+
             // Sort tabs by order (pinned tabs first, then by index)
-            const sortedTabs = space.tabs_data.sort((a, b) => {
+            const sortedTabs = validTabs.sort((a, b) => {
                 if (a.pinned && !b.pinned) return -1;
                 if (!a.pinned && b.pinned) return 1;
                 return (a.index || 0) - (b.index || 0);
             });
 
-            // Create tabs in order
-            for (let i = 0; i < sortedTabs.length; i++) {
-                const tabData = sortedTabs[i];
-                await createTabFromData(tabData, i);
+            // Create tabs in order, tracking successful creations
+            let successfulTabIndex = 0;
+            for (const tabData of sortedTabs) {
+                const createdTab = await createTabFromData(tabData, successfulTabIndex);
+                if (createdTab) {
+                    successfulTabIndex++;
+                }
             }
 
-            console.log('Successfully loaded tabs from space');
+            console.log(`✅ Successfully loaded ${successfulTabIndex} tabs from space`);
 
         } catch (error) {
             console.error('Error loading tabs from space:', error);
@@ -568,6 +587,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function createTabFromData(tabData, index) {
         try {
+            // Validate URL before creating tab
+            if (!tabData.url) {
+                console.warn('Skipping tab with no URL:', tabData);
+                return null;
+            }
+
+            // Skip extension URLs that shouldn't be restored
+            if (tabData.url.startsWith('chrome-extension://') ||
+                tabData.url.startsWith('chrome://') ||
+                tabData.url.startsWith('edge-extension://') ||
+                tabData.url.startsWith('moz-extension://')) {
+                console.log('Skipping extension/chrome tab:', tabData.url);
+                return null;
+            }
+
+            // Skip empty or invalid URLs
+            if (tabData.url === 'about:blank' || tabData.url === '') {
+                console.log('Skipping blank/empty tab');
+                return null;
+            }
+
+            console.log(`Creating tab: ${tabData.title || tabData.url}`);
+
             const tab = await chrome.tabs.create({
                 url: tabData.url,
                 active: index === 0, // Make first tab active
@@ -575,12 +617,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 index: index
             });
 
-            console.log(`Created tab: ${tabData.title || tabData.url}`);
+            console.log(`✅ Successfully created tab: ${tabData.title || tabData.url}`);
             return tab;
 
         } catch (error) {
-            console.error('Error creating tab:', tabData, error);
+            console.error('❌ Error creating tab:', {
+                url: tabData.url,
+                title: tabData.title,
+                error: error.message
+            });
             // Continue with other tabs even if one fails
+            return null;
         }
     }
 
@@ -1375,11 +1422,11 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <div class="workspace-action">
                 <div class="workspace-options-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
                         <circle cx="12" cy="6" r="1.5" fill="currentColor"/>
                         <circle cx="12" cy="18" r="1.5" fill="currentColor"/>
-                    </svg>
+                </svg>
                 </div>
                 <div class="workspace-options-dropdown">
                     <div class="workspace-option edit-option" data-action="edit" data-workspace="${space.id}">
@@ -1423,12 +1470,17 @@ document.addEventListener('DOMContentLoaded', function() {
         card.dataset.action = 'create';
         
         card.innerHTML = `
-            <div class="workspace-icon new">
-                ➕
-            </div>
-            <div class="workspace-content">
-                <h4>Create Space</h4>
-                <p>Start organizing your tabs</p>
+            <div class="new-space-container">
+                <div class="new-space-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="new-space-text">
+                    <span class="new-space-title">New Space</span>
+                    <span class="new-space-subtitle">Organize your tabs</span>
+                </div>
             </div>
         `;
 
