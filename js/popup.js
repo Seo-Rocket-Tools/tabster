@@ -142,7 +142,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showScreen(screenName) {
-        const screens = [welcomeScreen, loginScreen, signupScreen, forgotPasswordScreen, dashboardScreen, createSpaceScreen];
+        const editSpaceScreen = document.getElementById('edit-space-screen');
+        const screens = [welcomeScreen, loginScreen, signupScreen, forgotPasswordScreen, dashboardScreen, createSpaceScreen, editSpaceScreen];
         
         screens.forEach(screen => {
             if (screen) {
@@ -170,6 +171,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             case 'create-space-screen':
                 targetScreen = createSpaceScreen;
+                break;
+            case 'edit-space-screen':
+                targetScreen = editSpaceScreen;
                 break;
             default:
                 targetScreen = welcomeScreen;
@@ -626,8 +630,229 @@ document.addEventListener('DOMContentLoaded', function() {
         setupCreateSpaceForm();
     }
 
+    async function handleDeleteSpace(spaceId) {
+        try {
+            // Close any open dropdowns
+            document.querySelectorAll('.workspace-options-dropdown.show').forEach(dropdown => {
+                dropdown.classList.remove('show');
+                dropdown.closest('.workspace-card').classList.remove('dropdown-open');
+            });
+
+            // Get space details for confirmation
+            const { data: spaces, error: fetchError } = await authHelpers.getUserSpaces();
+            if (fetchError) {
+                showMessage('Failed to load space details', 'error');
+                return;
+            }
+
+            const space = spaces.find(s => s.id === spaceId);
+            if (!space) {
+                showMessage('Space not found', 'error');
+                return;
+            }
+
+            // Show custom confirmation modal
+            showDeleteConfirmationModal(space, spaceId);
+
+        } catch (error) {
+            console.error('Error deleting space:', error);
+            showMessage(`Failed to load space details: ${error.message}`, 'error');
+        }
+    }
+
+    function showDeleteConfirmationModal(space, spaceId) {
+        const modal = document.getElementById('delete-confirmation-modal');
+        const spaceNameDisplay = document.getElementById('space-name-display');
+        const confirmationInput = document.getElementById('space-name-confirmation');
+        const confirmationError = document.getElementById('confirmation-error');
+        const cancelBtn = document.getElementById('cancel-delete');
+        const confirmBtn = document.getElementById('confirm-delete');
+
+        // Set the space name to match
+        spaceNameDisplay.textContent = space.name;
+        
+        // Reset form state
+        confirmationInput.value = '';
+        confirmationError.style.display = 'none';
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Delete Space';
+
+        // Show modal
+        modal.style.display = 'flex';
+        setTimeout(() => confirmationInput.focus(), 100);
+
+        // Real-time validation
+        function validateInput() {
+            const inputValue = confirmationInput.value;
+            const isMatch = inputValue === space.name;
+            
+            confirmBtn.disabled = !isMatch;
+            
+            if (inputValue && !isMatch) {
+                confirmationError.style.display = 'block';
+            } else {
+                confirmationError.style.display = 'none';
+            }
+        }
+
+        // Event listeners
+        const inputHandler = () => validateInput();
+        const cancelHandler = () => hideDeleteConfirmationModal();
+        const confirmHandler = () => confirmDeleteSpace(space, spaceId);
+        const keypressHandler = (e) => {
+            if (e.key === 'Enter' && !confirmBtn.disabled) {
+                confirmDeleteSpace(space, spaceId);
+            } else if (e.key === 'Escape') {
+                hideDeleteConfirmationModal();
+            }
+        };
+        const overlayHandler = (e) => {
+            if (e.target === modal) {
+                hideDeleteConfirmationModal();
+            }
+        };
+
+        // Add event listeners
+        confirmationInput.addEventListener('input', inputHandler);
+        confirmationInput.addEventListener('keydown', keypressHandler);
+        cancelBtn.addEventListener('click', cancelHandler);
+        confirmBtn.addEventListener('click', confirmHandler);
+        modal.addEventListener('click', overlayHandler);
+
+        // Store cleanup function
+        window.deleteModalCleanup = () => {
+            confirmationInput.removeEventListener('input', inputHandler);
+            confirmationInput.removeEventListener('keydown', keypressHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+            confirmBtn.removeEventListener('click', confirmHandler);
+            modal.removeEventListener('click', overlayHandler);
+        };
+    }
+
+    function hideDeleteConfirmationModal() {
+        const modal = document.getElementById('delete-confirmation-modal');
+        modal.style.display = 'none';
+        
+        // Clean up event listeners
+        if (window.deleteModalCleanup) {
+            window.deleteModalCleanup();
+            delete window.deleteModalCleanup;
+        }
+    }
+
+    async function confirmDeleteSpace(space, spaceId) {
+        const confirmBtn = document.getElementById('confirm-delete');
+        
+        try {
+            // Show loading state
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Deleting...';
+
+            // Show loading state for the specific card
+            const card = document.querySelector(`[data-workspace="${spaceId}"]`);
+            if (card) {
+                card.classList.add('loading');
+            }
+
+            // Delete the space
+            const { error: deleteError } = await authHelpers.deleteSpace(spaceId);
+            
+            if (deleteError) {
+                throw new Error(deleteError.message || 'Failed to delete space');
+            }
+
+            // Check if we're deleting the currently active space
+            const activeSpaceId = await getActiveSpaceFromStorage();
+            const wasActiveSpace = activeSpaceId === spaceId;
+
+            if (wasActiveSpace) {
+                await clearActiveSpaceFromStorage();
+            }
+
+            // Hide modal
+            hideDeleteConfirmationModal();
+
+            // Show success message and reload workspaces
+            showMessage(`Space "${space.name}" deleted successfully`, 'success');
+            await loadWorkspaces();
+
+            // If we deleted the active space, switch to the topmost remaining space
+            if (wasActiveSpace) {
+                await switchToTopmostSpace();
+            }
+
+        } catch (error) {
+            console.error('Error deleting space:', error);
+            showMessage(`Failed to delete space: ${error.message}`, 'error');
+            
+            // Remove loading state on error
+            const card = document.querySelector(`[data-workspace="${spaceId}"]`);
+            if (card) {
+                card.classList.remove('loading');
+            }
+
+            // Reset button state
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Delete Space';
+        }
+    }
+
+    async function switchToTopmostSpace() {
+        try {
+            // Get all remaining spaces
+            const { data: spaces, error } = await authHelpers.getUserSpaces();
+            if (error) {
+                console.error('Error loading spaces for auto-switch:', error);
+                return;
+            }
+
+            // If there are spaces remaining, switch to the first one (topmost)
+            if (spaces && spaces.length > 0) {
+                const topmostSpace = spaces[0]; // Spaces are ordered by order_index ascending
+                console.log(`Auto-switching to topmost space: ${topmostSpace.name}`);
+                await switchToWorkspace(topmostSpace.id);
+            } else {
+                console.log('No spaces remaining after deletion');
+            }
+        } catch (error) {
+            console.error('Error auto-switching to topmost space:', error);
+        }
+    }
+
+    async function handleEditSpace(spaceId) {
+        try {
+            // Close any open dropdowns
+            document.querySelectorAll('.workspace-options-dropdown.show').forEach(dropdown => {
+                dropdown.classList.remove('show');
+                dropdown.closest('.workspace-card').classList.remove('dropdown-open');
+            });
+
+            // Get space details
+            const { data: spaces, error } = await authHelpers.getUserSpaces();
+            if (error) {
+                showMessage('Failed to load space details', 'error');
+                return;
+            }
+
+            const space = spaces.find(s => s.id === spaceId);
+            if (!space) {
+                showMessage('Space not found', 'error');
+                return;
+            }
+
+            // Show edit screen and setup form
+            showScreen('edit-space-screen');
+            setupEditSpaceForm(space);
+
+        } catch (error) {
+            console.error('Error editing space:', error);
+            showMessage(`Failed to load space details: ${error.message}`, 'error');
+        }
+    }
+
     // Store the document click listener so we can remove it
     let documentClickListener = null;
+    let editDocumentClickListener = null;
 
     function setupCreateSpaceForm() {
         // Clear form
@@ -717,10 +942,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Hide dropdowns when clicking outside
         documentClickListener = (e) => {
-            if (!e.target.closest('.emoji-input-container')) {
+            if (!e.target.closest('#create-space-screen .emoji-input-container')) {
                 hideEmojiDropdown();
             }
-            if (!e.target.closest('.color-input-container')) {
+            if (!e.target.closest('#create-space-screen .color-input-container')) {
                 hideColorDropdown();
             }
         };
@@ -751,6 +976,200 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             await handleCreateSpaceSubmit(selectedEmoji, selectedColor);
         };
+    }
+
+    function setupEditSpaceForm(space) {
+        // Pre-populate form with space data
+        document.getElementById('edit-space-name').value = space.name || '';
+        document.getElementById('edit-space-emoji').value = space.emoji || '📦';
+        document.getElementById('edit-space-description').value = space.description || '';
+
+        // Set up color preview
+        const colorPreview = document.getElementById('edit-color-preview');
+        const colorLabel = document.getElementById('edit-color-label');
+        if (space.color) {
+            colorPreview.style.background = space.color;
+            // Find color name from the color options
+            const colorOption = document.querySelector(`#edit-color-dropdown [data-color="${space.color}"]`);
+            if (colorOption) {
+                colorLabel.textContent = colorOption.dataset.name;
+                colorLabel.className = 'color-label';
+            } else {
+                colorLabel.textContent = space.color;
+                colorLabel.className = 'color-label';
+            }
+        } else {
+            colorPreview.style.background = 'var(--bg-tertiary)';
+            colorLabel.textContent = 'Choose a color';
+            colorLabel.className = 'color-label placeholder';
+        }
+
+        // Store selected values (initialized with current space data)
+        let selectedEmoji = space.emoji || '📦';
+        let selectedColor = space.color || null;
+        let selectedColorName = colorLabel.textContent;
+
+        // Remove previous document click listener if exists
+        if (editDocumentClickListener) {
+            document.removeEventListener('click', editDocumentClickListener);
+        }
+
+        // Get elements
+        const emojiInput = document.getElementById('edit-space-emoji');
+        const emojiDropdown = document.getElementById('edit-emoji-dropdown');
+        const colorInput = document.getElementById('edit-space-color');
+        const colorDropdown = document.getElementById('edit-color-dropdown');
+
+        function hideEmojiDropdown() {
+            emojiDropdown.classList.remove('show');
+        }
+
+        function hideColorDropdown() {
+            colorDropdown.classList.remove('show');
+            colorInput.classList.remove('focused');
+        }
+
+        // Clear any existing 'show' classes
+        hideEmojiDropdown();
+        hideColorDropdown();
+
+        // Emoji field interactions
+        emojiInput.onclick = (e) => {
+            e.stopPropagation();
+            emojiDropdown.classList.toggle('show');
+            hideColorDropdown();
+        };
+
+        // Emoji selection
+        const emojiOptions = document.querySelectorAll('#edit-emoji-dropdown .emoji-option');
+        emojiOptions.forEach(option => {
+            option.onclick = (e) => {
+                e.stopPropagation();
+                selectedEmoji = option.dataset.emoji;
+                emojiInput.value = selectedEmoji;
+                hideEmojiDropdown();
+            };
+        });
+
+        // Color field interactions
+        colorInput.onclick = (e) => {
+            e.stopPropagation();
+            colorDropdown.classList.toggle('show');
+            colorInput.classList.toggle('focused');
+            hideEmojiDropdown();
+        };
+
+        // Color selection
+        const colorOptions = document.querySelectorAll('#edit-color-dropdown .color-option');
+        colorOptions.forEach(option => {
+            option.onclick = (e) => {
+                e.stopPropagation();
+                selectedColor = option.dataset.color;
+                selectedColorName = option.dataset.name;
+
+                // Update preview
+                colorPreview.style.background = selectedColor;
+                colorLabel.textContent = selectedColorName;
+                colorLabel.className = 'color-label';
+
+                hideColorDropdown();
+            };
+        });
+
+        // Hide dropdowns when clicking outside
+        editDocumentClickListener = (e) => {
+            if (!e.target.closest('#edit-space-screen .emoji-input-container')) {
+                hideEmojiDropdown();
+            }
+            if (!e.target.closest('#edit-space-screen .color-input-container')) {
+                hideColorDropdown();
+            }
+        };
+        document.addEventListener('click', editDocumentClickListener);
+
+        // Cancel buttons
+        const cancelButtons = [
+            document.getElementById('cancel-edit-space'),
+            document.getElementById('cancel-edit-space-btn')
+        ];
+
+        cancelButtons.forEach(btn => {
+            if (btn) {
+                btn.onclick = () => {
+                    // Clean up document listener when canceling
+                    if (editDocumentClickListener) {
+                        document.removeEventListener('click', editDocumentClickListener);
+                        editDocumentClickListener = null;
+                    }
+                    showScreen('dashboard');
+                };
+            }
+        });
+
+        // Form submission
+        const editSpaceForm = document.getElementById('edit-space-form');
+        editSpaceForm.onsubmit = async (e) => {
+            e.preventDefault();
+            await handleEditSpaceSubmit(space.id, selectedEmoji, selectedColor);
+        };
+    }
+
+    async function handleEditSpaceSubmit(spaceId, selectedEmoji, selectedColor) {
+        const nameInput = document.getElementById('edit-space-name');
+        const descriptionInput = document.getElementById('edit-space-description');
+        const submitButton = document.querySelector('#edit-space-form button[type="submit"]');
+
+        try {
+            // Show loading state
+            showLoading(true);
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Saving...';
+            }
+
+            // Validate required fields
+            if (!nameInput.value.trim()) {
+                throw new Error('Space name is required');
+            }
+
+            // Prepare space data
+            const spaceData = {
+                name: nameInput.value.trim(),
+                description: descriptionInput.value.trim() || null,
+                emoji: selectedEmoji,
+                color: selectedColor
+            };
+
+            // Update space in database
+            const { error: updateError } = await authHelpers.updateSpace(spaceId, spaceData);
+            
+            if (updateError) {
+                throw updateError;
+            }
+
+            // Clean up document listener
+            if (editDocumentClickListener) {
+                document.removeEventListener('click', editDocumentClickListener);
+                editDocumentClickListener = null;
+            }
+
+            // Show success and return to dashboard
+            showMessage('Space updated successfully!', 'success');
+            showScreen('dashboard');
+            
+            // Refresh the workspace list to show updated space
+            await loadWorkspaces();
+
+        } catch (error) {
+            console.error('Error updating space:', error);
+            showMessage(`Failed to update space: ${error.message}`, 'error');
+        } finally {
+            showLoading(false);
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Save Changes';
+            }
+        }
     }
 
     async function handleCreateSpaceSubmit(selectedEmoji, selectedColor) {
@@ -955,9 +1374,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p>${space.description || 'No description'}</p>
             </div>
             <div class="workspace-action">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <div class="workspace-options-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                        <circle cx="12" cy="6" r="1.5" fill="currentColor"/>
+                        <circle cx="12" cy="18" r="1.5" fill="currentColor"/>
+                    </svg>
+                </div>
+                <div class="workspace-options-dropdown">
+                    <div class="workspace-option edit-option" data-action="edit" data-workspace="${space.id}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M18.5 2.5C18.8978 2.10218 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10218 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10218 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Edit Space
+                    </div>
+                    <div class="workspace-option delete-option" data-action="delete" data-workspace="${space.id}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Delete Space
+                    </div>
+                </div>
             </div>
         `;
 
@@ -1000,7 +1439,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const workspaceCards = document.querySelectorAll('.workspace-card');
         
         workspaceCards.forEach(card => {
-            card.addEventListener('click', function() {
+            // Handle card clicks (for switching spaces)
+            card.addEventListener('click', function(e) {
+                // Don't trigger if clicking on options button or dropdown
+                if (e.target.closest('.workspace-action')) {
+                    return;
+                }
+                
                 const workspaceId = this.dataset.workspace;
                 const action = this.dataset.action;
                 
@@ -1010,7 +1455,66 @@ document.addEventListener('DOMContentLoaded', function() {
                     handleWorkspaceClick(workspaceId);
                 }
             });
+
+            // Handle options button clicks
+            const optionsBtn = card.querySelector('.workspace-options-btn');
+            if (optionsBtn) {
+                optionsBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    
+                    // Close all other dropdowns first and remove dropdown-open class
+                    document.querySelectorAll('.workspace-options-dropdown.show').forEach(dropdown => {
+                        dropdown.classList.remove('show');
+                        dropdown.closest('.workspace-card').classList.remove('dropdown-open');
+                    });
+                    
+                    // Toggle this dropdown
+                    const dropdown = this.nextElementSibling;
+                    const isShowing = dropdown.classList.toggle('show');
+                    
+                    // Add or remove dropdown-open class for z-index management
+                    if (isShowing) {
+                        card.classList.add('dropdown-open');
+                    } else {
+                        card.classList.remove('dropdown-open');
+                    }
+                });
+            }
+
+            // Handle edit option clicks
+            const editOption = card.querySelector('.edit-option');
+            if (editOption) {
+                editOption.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const workspaceId = this.dataset.workspace;
+                    handleEditSpace(workspaceId);
+                });
+            }
+
+            // Handle delete option clicks
+            const deleteOption = card.querySelector('.delete-option');
+            if (deleteOption) {
+                deleteOption.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const workspaceId = this.dataset.workspace;
+                    handleDeleteSpace(workspaceId);
+                });
+            }
         });
+
+        // Close dropdowns when clicking outside (use a named function to avoid conflicts)
+        function closeWorkspaceDropdowns(e) {
+            if (!e.target.closest('.workspace-action')) {
+                document.querySelectorAll('.workspace-options-dropdown.show').forEach(dropdown => {
+                    dropdown.classList.remove('show');
+                    dropdown.closest('.workspace-card').classList.remove('dropdown-open');
+                });
+            }
+        }
+        
+        // Remove any existing workspace dropdown listeners
+        document.removeEventListener('click', closeWorkspaceDropdowns);
+        document.addEventListener('click', closeWorkspaceDropdowns);
     }
 
     // Check if current tabs match the saved space

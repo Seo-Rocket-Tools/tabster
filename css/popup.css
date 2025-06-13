@@ -514,6 +514,152 @@ body {
     border-bottom-right-radius: 8px;
 }
 
+/* Modal styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 20px 24px 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.delete-warning {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.warning-icon {
+    margin-bottom: 12px;
+}
+
+.delete-warning p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.confirmation-input {
+    margin-top: 16px;
+}
+
+.confirmation-input label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.space-name-display {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.confirmation-input input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.confirmation-input input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.confirmation-error {
+    margin-top: 8px;
+    color: #EF4444;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.modal-actions {
+    padding: 16px 24px 24px 24px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.btn-danger {
+    background: #EF4444;
+    color: white;
+    border: 1px solid #EF4444;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #DC2626;
+    border-color: #DC2626;
+}
+
+.btn-danger:disabled {
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+    border-color: var(--border-color);
+    cursor: not-allowed;
+}
+
 /* Loading overlay */
 .loading-overlay {
     position: absolute;
@@ -658,7 +804,7 @@ body {
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .workspace-card::before {
@@ -672,12 +818,14 @@ body {
     opacity: 0;
     transition: opacity 0.2s ease;
     pointer-events: none;
+    border-radius: 12px;
 }
 
 .workspace-card:hover {
     border-color: rgba(255, 255, 255, 0.2);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px var(--shadow);
+    z-index: 10;
 }
 
 :root.light-theme .workspace-card:hover {
@@ -765,16 +913,107 @@ body {
     color: var(--text-muted);
     transition: all 0.2s ease;
     flex-shrink: 0;
+    position: relative;
 }
 
 .workspace-card:hover .workspace-action {
     color: var(--text-primary);
-    transform: translateX(2px);
 }
 
 .workspace-action svg {
     width: 16px;
     height: 16px;
+}
+
+.workspace-options-btn {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.workspace-options-btn:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.workspace-options-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow);
+    z-index: 1000;
+    min-width: 140px;
+    display: none;
+    margin-top: 4px;
+}
+
+.workspace-options-dropdown.show {
+    display: block;
+}
+
+/* Ensure cards with open dropdowns are above other cards */
+.workspace-card:has(.workspace-options-dropdown.show) {
+    z-index: 20;
+}
+
+/* Fallback for browsers that don't support :has() selector */
+.workspace-card.dropdown-open {
+    z-index: 20;
+}
+
+.workspace-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.workspace-option:hover {
+    background: var(--hover-bg);
+}
+
+.workspace-option:first-child {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.workspace-option:last-child {
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.workspace-option.edit-option {
+    color: var(--text-primary);
+}
+
+.workspace-option.edit-option:hover {
+    background: var(--hover-bg);
+}
+
+.workspace-option.delete-option {
+    color: #ef4444;
+}
+
+.workspace-option.delete-option:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.workspace-option svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 /* New workspace card specific styles */
@@ -830,11 +1069,15 @@ body {
     position: relative;
 }
 
-.workspace-card.loading .workspace-action svg {
+.workspace-card.loading .workspace-options-btn {
+    position: relative;
+}
+
+.workspace-card.loading .workspace-options-btn svg {
     display: none;
 }
 
-.workspace-card.loading .workspace-action::after {
+.workspace-card.loading .workspace-options-btn::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -846,6 +1089,10 @@ body {
     border-top: 2px solid var(--text-primary);
     border-radius: 50%;
     animation: workspaceSpinner 0.8s linear infinite;
+}
+
+.workspace-card.loading .workspace-options-dropdown {
+    display: none;
 }
 
 .workspaces-disabled .workspace-card:not(.loading) {
@@ -978,6 +1225,15 @@ body {
 }
 
 #create-space-screen .dashboard-content {
+    padding: 0;
+}
+
+/* Edit Space Screen - Same styling as create space */
+#edit-space-screen {
+    padding: 0;
+}
+
+#edit-space-screen .dashboard-content {
     padding: 0;
 }
 

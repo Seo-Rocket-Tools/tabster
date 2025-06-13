@@ -268,6 +268,145 @@
             </div>
         </div>
 
+        <!-- Edit Space Screen -->
+        <div id="edit-space-screen" class="screen">
+            <div class="dashboard-header">
+                <div class="header-brand">
+                    <img src="icons/tabster_logo.svg" alt="Tabster" class="header-icon">
+                    <h2>Edit Space</h2>
+                </div>
+                <button id="cancel-edit-space" class="btn btn-text">Cancel</button>
+            </div>
+            <div class="dashboard-content">
+                <div class="create-space-section">
+                    <form id="edit-space-form" class="create-space-form">
+                        <!-- Row 1: Emoji + Space Name -->
+                        <div class="form-row">
+                            <div class="form-group emoji-group">
+                                <label for="edit-space-emoji">Emoji</label>
+                                <div class="emoji-input-container">
+                                    <input type="text" id="edit-space-emoji" name="spaceEmoji" readonly placeholder="📦" class="emoji-input square">
+                                    <div id="edit-emoji-dropdown" class="emoji-dropdown">
+                                        <div class="emoji-option" data-emoji="📦">📦</div>
+                                        <div class="emoji-option" data-emoji="📁">📁</div>
+                                        <div class="emoji-option" data-emoji="💼">💼</div>
+                                        <div class="emoji-option" data-emoji="🎯">🎯</div>
+                                        <div class="emoji-option" data-emoji="🚀">🚀</div>
+                                        <div class="emoji-option" data-emoji="📚">📚</div>
+                                        <div class="emoji-option" data-emoji="🎨">🎨</div>
+                                        <div class="emoji-option" data-emoji="⚡">⚡</div>
+                                        <div class="emoji-option" data-emoji="🔥">🔥</div>
+                                        <div class="emoji-option" data-emoji="💡">💡</div>
+                                        <div class="emoji-option" data-emoji="🌟">🌟</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group name-group">
+                                <label for="edit-space-name">Space Name *</label>
+                                <input type="text" id="edit-space-name" name="spaceName" required placeholder="e.g., Work Projects, Research, Shopping">
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Description -->
+                        <div class="form-group">
+                            <label for="edit-space-description">Description</label>
+                            <textarea id="edit-space-description" name="spaceDescription" placeholder="What is this space for? (optional)" rows="3"></textarea>
+                        </div>
+
+                        <!-- Row 3: Color -->
+                        <div class="form-group">
+                            <label for="edit-space-color">Color Theme</label>
+                            <div class="color-input-container">
+                                <div class="color-input" id="edit-space-color">
+                                    <div class="color-preview" id="edit-color-preview"></div>
+                                    <span class="color-label" id="edit-color-label">Choose a color</span>
+                                </div>
+                                <div id="edit-color-dropdown" class="color-dropdown">
+                                    <div class="color-option" data-color="#3B82F6" data-name="Blue">
+                                        <div class="color-swatch" style="background: #3B82F6;"></div>
+                                        <span>Blue</span>
+                                    </div>
+                                    <div class="color-option" data-color="#10B981" data-name="Green">
+                                        <div class="color-swatch" style="background: #10B981;"></div>
+                                        <span>Green</span>
+                                    </div>
+                                    <div class="color-option" data-color="#F59E0B" data-name="Amber">
+                                        <div class="color-swatch" style="background: #F59E0B;"></div>
+                                        <span>Amber</span>
+                                    </div>
+                                    <div class="color-option" data-color="#EF4444" data-name="Red">
+                                        <div class="color-swatch" style="background: #EF4444;"></div>
+                                        <span>Red</span>
+                                    </div>
+                                    <div class="color-option" data-color="#8B5CF6" data-name="Purple">
+                                        <div class="color-swatch" style="background: #8B5CF6;"></div>
+                                        <span>Purple</span>
+                                    </div>
+                                    <div class="color-option" data-color="#EC4899" data-name="Pink">
+                                        <div class="color-swatch" style="background: #EC4899;"></div>
+                                        <span>Pink</span>
+                                    </div>
+                                    <div class="color-option" data-color="#06B6D4" data-name="Cyan">
+                                        <div class="color-swatch" style="background: #06B6D4;"></div>
+                                        <span>Cyan</span>
+                                    </div>
+                                    <div class="color-option" data-color="#84CC16" data-name="Lime">
+                                        <div class="color-swatch" style="background: #84CC16;"></div>
+                                        <span>Lime</span>
+                                    </div>
+                                    <div class="color-option" data-color="#F97316" data-name="Orange">
+                                        <div class="color-swatch" style="background: #F97316;"></div>
+                                        <span>Orange</span>
+                                    </div>
+                                    <div class="color-option" data-color="#6B7280" data-name="Gray">
+                                        <div class="color-swatch" style="background: #6B7280;"></div>
+                                        <span>Gray</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="cancel-edit-space-btn" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="delete-confirmation-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Delete Space</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="delete-warning">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="warning-icon">
+                            <circle cx="12" cy="12" r="10" stroke="#EF4444" stroke-width="2"/>
+                            <path d="M12 8v4" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M12 16h.01" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <p>This action cannot be undone. This will permanently delete the space and all its saved tabs.</p>
+                    </div>
+                    <div class="confirmation-input">
+                        <label for="space-name-confirmation">Type the space name to confirm:</label>
+                        <div class="space-name-display" id="space-name-display"></div>
+                        <input type="text" id="space-name-confirmation" placeholder="Enter space name" autocomplete="off">
+                        <div id="confirmation-error" class="confirmation-error" style="display: none;">
+                            Space name doesn't match. Please try again.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="cancel-delete" class="btn btn-secondary">Cancel</button>
+                    <button type="button" id="confirm-delete" class="btn btn-danger" disabled>Delete Space</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Loading overlay -->
         <div id="loading-overlay" class="loading-overlay" style="display: none;">
             <div class="loading-spinner"></div>
