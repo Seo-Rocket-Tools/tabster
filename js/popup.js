@@ -73,14 +73,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function initializeApp() {
         try {
-            showLoading(true);
+            // Don't show loading overlay for initial authentication check
             
             if (typeof authHelpers !== 'undefined') {
                 const user = await authHelpers.getCurrentUser();
                 
                 if (user) {
-                    await loadUserData(user);
+                    // Immediately show dashboard with skeleton for logged-in users
                     showScreen('dashboard');
+                    await loadUserData(user);
                 } else {
                     const savedScreen = localStorage.getItem('tabster-current-screen');
                     showScreen(savedScreen || 'welcome');
@@ -92,9 +93,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('App initialization error:', error);
             showScreen('welcome');
-        } finally {
-            showLoading(false);
         }
+        // No finally block - we don't want to hide loading overlay here anymore
     }
 
     function setupNavigation() {
@@ -502,8 +502,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-
-
     async function loadTabsFromSpace(space) {
         try {
             console.log('Loading tabs from space:', space.name);
@@ -612,7 +610,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load workspaces and set initial active state
     async function loadWorkspaces() {
         try {
-            showLoading(true);
+            // Immediately render skeleton card - no loading overlay
+            renderSkeletonSpaces();
+
             const { data: spaces, error } = await authHelpers.getUserSpaces();
             
             if (error) {
@@ -621,6 +621,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // Replace skeleton with actual spaces
             renderWorkspaces(spaces);
 
             // Set active space indicator based on browser storage
@@ -639,9 +640,44 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Error loading spaces:', error);
             showError('Failed to load spaces. Please try again.');
-        } finally {
-            showLoading(false);
         }
+        // No finally block - we don't show/hide loading overlay anymore
+    }
+
+    function renderSkeletonSpaces() {
+        const workspacesGrid = document.getElementById('workspaces-grid');
+        if (!workspacesGrid) return;
+
+        // Clear existing content
+        workspacesGrid.innerHTML = '';
+
+        // Create single skeleton space card
+        const skeletonCard = createSkeletonSpaceCard();
+        workspacesGrid.appendChild(skeletonCard);
+    }
+
+    function createSkeletonSpaceCard() {
+        const card = document.createElement('div');
+        card.className = 'workspace-card skeleton-card';
+        
+        card.innerHTML = `
+            <div class="workspace-icon skeleton-icon">
+                <div class="skeleton-shimmer"></div>
+            </div>
+            <div class="workspace-content">
+                <div class="skeleton-title">
+                    <div class="skeleton-shimmer"></div>
+                </div>
+                <div class="skeleton-description">
+                    <div class="skeleton-shimmer"></div>
+                </div>
+            </div>
+            <div class="workspace-action skeleton-action">
+                <div class="skeleton-shimmer"></div>
+            </div>
+        `;
+
+        return card;
     }
 
     function renderWorkspaces(spaces) {

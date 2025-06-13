@@ -397,8 +397,8 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: flex-start;
 }
 
 .welcome-section {
@@ -894,5 +894,80 @@ body {
     }
     100% {
         transform: rotate(360deg);
+    }
+}
+
+/* Skeleton loading styles */
+.skeleton-card {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.skeleton-icon,
+.skeleton-title,
+.skeleton-description,
+.skeleton-action {
+    position: relative;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.skeleton-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.skeleton-title {
+    height: 20px;
+    width: 120px;
+    margin: 0 0 2px 0;
+}
+
+.skeleton-description {
+    height: 16px;
+    width: 180px;
+    margin: 0;
+}
+
+.skeleton-action {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.skeleton-shimmer {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+:root.light-theme .skeleton-shimmer {
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0, 0, 0, 0.05) 50%,
+        transparent 100%
+    );
+}
+
+@keyframes shimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
     }
 } 
