@@ -305,6 +305,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (avatarInitials) {
                     avatarInitials.textContent = initials;
                 }
+
+                // Initialize dashboard and load workspaces
+                await initializeDashboard();
             }
         } catch (error) {
             console.error('Error loading user data:', error);
@@ -377,5 +380,185 @@ document.addEventListener('DOMContentLoaded', function() {
                 msg.parentNode.removeChild(msg);
             }
         });
+    }
+
+    function setupWorkspaceCards() {
+        const workspaceCards = document.querySelectorAll('.workspace-card');
+        
+        workspaceCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const workspaceId = this.dataset.workspace;
+                const action = this.dataset.action;
+                
+                if (action === 'create') {
+                    handleCreateWorkspace();
+                } else if (workspaceId) {
+                    handleWorkspaceClick(workspaceId);
+                }
+            });
+        });
+    }
+
+    function handleWorkspaceClick(workspaceId) {
+        // For now, just show a message since we're not connecting to DB yet
+        console.log(`Opening workspace: ${workspaceId}`);
+        showMessage(`Opening ${workspaceId} workspace...`, 'success');
+        
+        // TODO: Navigate to workspace tabs view
+        // This is where you'll later implement the workspace navigation
+    }
+
+    function handleCreateWorkspace() {
+        // For now, just show a message since we're not connecting to DB yet
+        console.log('Creating new workspace');
+        showMessage('Create workspace feature coming soon!', 'success');
+        
+        // TODO: Show create workspace modal/form
+        // This is where you'll later implement the workspace creation flow
+    }
+
+    // Initialize workspace functionality
+    setupWorkspaceCards();
+
+    async function loadWorkspaces() {
+        try {
+            showLoading(true);
+            const { data: spaces, error } = await authHelpers.getUserSpaces();
+            
+            if (error) {
+                console.error('Error loading spaces:', error);
+                showError('Failed to load workspaces. Please try again.');
+                return;
+            }
+
+            renderWorkspaces(spaces);
+        } catch (error) {
+            console.error('Error loading spaces:', error);
+            showError('Failed to load workspaces. Please try again.');
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function renderWorkspaces(spaces) {
+        const workspacesGrid = document.getElementById('workspaces-grid');
+        if (!workspacesGrid) return;
+
+        // Clear existing content
+        workspacesGrid.innerHTML = '';
+
+        // Render each workspace
+        spaces.forEach(space => {
+            const workspaceCard = createWorkspaceCard(space);
+            workspacesGrid.appendChild(workspaceCard);
+        });
+
+        // Add create new workspace card
+        const createCard = createNewWorkspaceCard();
+        workspacesGrid.appendChild(createCard);
+
+        // Setup event listeners for all cards
+        setupWorkspaceCardListeners();
+    }
+
+    function createWorkspaceCard(space) {
+        const card = document.createElement('div');
+        card.className = 'workspace-card';
+        card.dataset.workspace = space.id;
+        
+        // Convert hex color to rgba for background
+        const rgbaBackground = hexToRgba(space.color, 0.15);
+        
+        card.innerHTML = `
+            <div class="workspace-icon" style="background: ${rgbaBackground}; border-color: ${space.color};">
+                ${space.emoji || '📁'}
+            </div>
+            <div class="workspace-content">
+                <h4>${space.name}</h4>
+                <p>${space.description || 'No description'}</p>
+            </div>
+            <div class="workspace-action">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        `;
+
+        return card;
+    }
+
+    function hexToRgba(hex, alpha) {
+        if (!hex) return 'rgba(255, 255, 255, 0.03)';
+        
+        // Remove the hash if present
+        hex = hex.replace('#', '');
+        
+        // Parse the hex values
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function createNewWorkspaceCard() {
+        const card = document.createElement('div');
+        card.className = 'workspace-card new-workspace';
+        card.dataset.action = 'create';
+        
+        card.innerHTML = `
+            <div class="workspace-icon new">
+                ➕
+            </div>
+            <div class="workspace-content">
+                <h4>Create Workspace</h4>
+                <p>Start organizing your tabs</p>
+            </div>
+        `;
+
+        return card;
+    }
+
+    function setupWorkspaceCardListeners() {
+        const workspaceCards = document.querySelectorAll('.workspace-card');
+        
+        workspaceCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const workspaceId = this.dataset.workspace;
+                const action = this.dataset.action;
+                
+                if (action === 'create') {
+                    handleCreateWorkspace();
+                } else if (workspaceId) {
+                    handleWorkspaceClick(workspaceId);
+                }
+            });
+        });
+    }
+
+    function handleWorkspaceClick(workspaceId) {
+        console.log(`Opening workspace: ${workspaceId}`);
+        showMessage(`Opening workspace...`, 'success');
+        
+        // TODO: Navigate to workspace tabs view
+        // This is where you'll implement the workspace navigation
+    }
+
+    function handleCreateWorkspace() {
+        console.log('Creating new workspace');
+        showMessage('Create workspace feature coming soon!', 'success');
+        
+        // TODO: Show create workspace modal/form
+        // This is where you'll implement the workspace creation flow
+    }
+
+    // Load workspaces when dashboard is shown
+    async function initializeDashboard() {
+        await loadWorkspaces();
+    }
+
+    // Call initialize when needed
+    if (document.getElementById('dashboard-screen')?.classList.contains('active')) {
+        initializeDashboard();
     }
 }); 
