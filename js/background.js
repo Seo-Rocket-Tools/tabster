@@ -170,6 +170,62 @@ async function getUserSpaces(userId) {
     }
 }
 
+async function updateSpace(spaceId, updates, userToken = null) {
+    try {
+        console.log('🔄 Starting database update for space:', spaceId);
+        console.log('📝 Updates to apply:', updates);
+        console.log('🔑 User token available:', !!userToken);
+        
+        const SUPABASE_URL = 'https://aodovkzddxblxjhiclci.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvZG92a3pkZHhibHhqaGljbGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0Nzc0MzEsImV4cCI6MjA2NDA1MzQzMX0.xjQlWkMoCMyNakjPuDOAreQ2P0EBOvT41ZNmYSudB0s';
+        
+        // Use user token if available, otherwise fall back to anon key
+        const authToken = userToken || SUPABASE_ANON_KEY;
+        console.log('🔐 Using auth token:', userToken ? 'User JWT' : 'Anonymous key');
+        
+        const url = `${SUPABASE_URL}/rest/v1/spaces?id=eq.${spaceId}`;
+        console.log('🌐 Request URL:', url);
+        
+        const requestBody = JSON.stringify(updates);
+        console.log('📦 Request body:', requestBody);
+        
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: requestBody
+        });
+
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        const responseText = await response.text();
+        console.log('📡 Response text:', responseText);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
+        }
+
+        let updatedSpace;
+        try {
+            updatedSpace = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('Error parsing response JSON:', parseError);
+            throw new Error('Invalid JSON response from server');
+        }
+        
+        console.log('✅ Database update successful:', updatedSpace);
+        return { data: updatedSpace, error: null };
+    } catch (error) {
+        console.error('❌ Background: Error updating space:', error);
+        return { data: null, error };
+    }
+}
+
 // Check if current tabs match the saved space
 async function currentTabsMatchSpace(space) {
     try {
@@ -305,6 +361,9 @@ chrome.tabs.onCreated.addListener((tab) => {
         title: tab.title || 'New Tab',
         timestamp: new Date().toISOString()
     });
+    
+    // Save tabs to active space
+    saveTabsToActiveSpace();
 });
 
 // When a tab is removed/closed
@@ -315,6 +374,9 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
         isWindowClosing: removeInfo.isWindowClosing,
         timestamp: new Date().toISOString()
     });
+    
+    // Save tabs to active space
+    saveTabsToActiveSpace();
 });
 
 // When a tab is updated (including URL changes)
@@ -348,6 +410,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             title: tab.title,
             timestamp: new Date().toISOString()
         });
+    }
+    
+    // Save tabs to active space if URL changed or pin status changed
+    if (changeInfo.url || changeInfo.pinned !== undefined) {
+        saveTabsToActiveSpace();
     }
 });
 
@@ -425,6 +492,10 @@ chrome.tabs.onMoved.addListener(async (tabId, moveInfo) => {
             newOrder: newOrder,
             timestamp: new Date().toISOString()
         });
+        
+        // Save tabs to active space
+        saveTabsToActiveSpace();
+        
     } catch (error) {
         console.error('Error tracking tab reorder:', error);
     }
@@ -466,4 +537,98 @@ chrome.windows.onRemoved.addListener((windowId) => {
     windowTabOrders.delete(windowId);
 });
 
-console.log('Tab event listeners configured successfully!'); 
+console.log('Tab event listeners configured successfully!');
+
+// Function to get active space from storage
+async function getActiveSpaceFromStorage() {
+    try {
+        console.log('🔍 Getting active space from storage...');
+        
+        // Try to get from global storage first (no authentication needed)
+        const globalStorageKey = 'tabster_current_active_space';
+        console.log('🔑 Using global storage key:', globalStorageKey);
+        
+        const result = await chrome.storage.local.get([globalStorageKey]);
+        console.log('📦 Storage result:', result);
+        
+        if (result[globalStorageKey]) {
+            const activeSpaceData = result[globalStorageKey];
+            console.log('🎯 Active space data:', activeSpaceData);
+            return {
+                spaceId: activeSpaceData.spaceId,
+                userToken: activeSpaceData.userToken || null,
+                userId: activeSpaceData.userId
+            };
+        }
+        
+        console.log('❌ No active space found in global storage');
+        return null;
+    } catch (error) {
+        console.error('Error getting active space from storage:', error);
+        return null;
+    }
+}
+
+// Function to save current tabs to database for active space
+async function saveTabsToActiveSpace() {
+    console.log('🔄 saveTabsToActiveSpace function triggered!');
+    
+    try {
+        // Get the current active space
+        const activeSpaceData = await getActiveSpaceFromStorage();
+        if (!activeSpaceData || !activeSpaceData.spaceId) {
+            console.log('No active space found, skipping tab save');
+            return;
+        }
+        
+        const { spaceId: activeSpaceId, userToken } = activeSpaceData;
+        console.log('🎯 Active space ID:', activeSpaceId);
+        console.log('🔑 User token available:', !!userToken);
+
+        // Get all current tabs (excluding extension pages)
+        const allTabs = await chrome.tabs.query({});
+        const currentTabs = allTabs.filter(tab => 
+            !tab.url.startsWith('chrome-extension://') &&
+            !tab.url.startsWith('chrome://') &&
+            !tab.url.startsWith('edge-extension://') &&
+            !tab.url.startsWith('moz-extension://')
+        );
+
+        // Convert tabs to the format expected by the database
+        const tabsData = currentTabs.map(tab => ({
+            id: tab.id,
+            url: tab.url,
+            title: tab.title,
+            index: tab.index,
+            pinned: tab.pinned,
+            windowId: tab.windowId,
+            active: tab.active,
+            favIconUrl: tab.favIconUrl || null
+        }));
+
+        console.log(`Saving ${tabsData.length} tabs to space ${activeSpaceId}`);
+
+        // Update the space in the database with the current tabs
+        console.log('💾 About to update database...');
+        const { data, error } = await updateSpace(activeSpaceId, {
+            tabs_data: tabsData,
+            updated_at: new Date().toISOString()
+        }, userToken);
+
+        if (error) {
+            console.error('❌ Error saving tabs to database:', error);
+            console.error('❌ Error details:', JSON.stringify(error, null, 2));
+        } else {
+            console.log('✅ Successfully saved tabs to database for active space');
+            console.log('✅ Database response data:', data);
+            if (data && data.length > 0) {
+                console.log('✅ Updated space:', data[0]);
+            } else {
+                console.warn('⚠️ Database update returned no data - this might indicate the update didn\'t affect any rows');
+            }
+        }
+
+    } catch (error) {
+        console.error('Error in saveTabsToActiveSpace:', error);
+    }
+} 

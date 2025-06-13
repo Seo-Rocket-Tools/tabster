@@ -464,8 +464,22 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const user = await authHelpers.getCurrentUser();
             if (user) {
-                const storageKey = `tabster_active_space_${user.id}`;
-                await chrome.storage.local.set({ [storageKey]: spaceId });
+                // Get the user's session for JWT token
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                
+                // Store both user-specific and global active space
+                const userStorageKey = `tabster_active_space_${user.id}`;
+                const globalStorageKey = 'tabster_current_active_space';
+                
+                await chrome.storage.local.set({ 
+                    [userStorageKey]: spaceId,
+                    [globalStorageKey]: {
+                        spaceId: spaceId,
+                        userId: user.id,
+                        userToken: session?.access_token || null,
+                        timestamp: new Date().toISOString()
+                    }
+                });
                 console.log('Saved active space to storage:', spaceId);
             }
         } catch (error) {
@@ -493,8 +507,10 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const user = await authHelpers.getCurrentUser();
             if (user) {
-                const storageKey = `tabster_active_space_${user.id}`;
-                await chrome.storage.local.remove([storageKey]);
+                const userStorageKey = `tabster_active_space_${user.id}`;
+                const globalStorageKey = 'tabster_current_active_space';
+                
+                await chrome.storage.local.remove([userStorageKey, globalStorageKey]);
                 console.log('Cleared active space from storage');
             }
         } catch (error) {
