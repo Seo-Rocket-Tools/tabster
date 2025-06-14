@@ -78,7 +78,7 @@ async function restoreActiveSpaceOnBrowserStartup() {
         console.log('Background: Found saved active space:', savedSpaceId);
 
         // Get space data from database
-        const spaces = await getUserSpaces(user.id);
+        const spaces = await getUserSpaces(user.id, null);
         if (!spaces) {
             console.error('Background: Error loading spaces');
             return;
@@ -145,28 +145,41 @@ async function getCurrentUser() {
     }
 }
 
-async function getUserSpaces(userId) {
+async function getUserSpaces(userId, userToken = null) {
     try {
+        console.log(`🔄 Background: Fetching spaces for user ${userId}`);
         const SUPABASE_URL = 'https://aodovkzddxblxjhiclci.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvZG92a3pkZHhibHhqaGljbGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0Nzc0MzEsImV4cCI6MjA2NDA1MzQzMX0.xjQlWkMoCMyNakjPuDOAreQ2P0EBOvT41ZNmYSudB0s';
         
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/spaces?user_id=eq.${userId}&is_archived=eq.false&order=order_index`, {
+        // Use user token if available, fallback to anon key
+        const authToken = userToken || SUPABASE_ANON_KEY;
+        console.log(`🔄 Background: Using ${userToken ? 'user JWT token' : 'anonymous key'} for authentication`);
+        
+        const url = `${SUPABASE_URL}/rest/v1/spaces?user_id=eq.${userId}&is_archived=eq.false&order=order_index.asc`;
+        console.log(`🔄 Background: Making request to: ${url}`);
+        
+        const response = await fetch(url, {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
             }
         });
 
+        console.log(`🔄 Background: Response status: ${response.status}`);
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const responseText = await response.text();
+            console.error(`❌ Background: HTTP error! status: ${response.status}, body: ${responseText}`);
+            throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
         }
 
         const spaces = await response.json();
+        console.log(`✅ Background: Successfully fetched ${spaces.length} spaces:`, spaces);
         return spaces;
     } catch (error) {
-        console.error('Background: Error fetching spaces:', error);
-        return null;
+        console.error('❌ Background: Error fetching spaces:', error);
+        return [];
     }
 }
 
@@ -247,7 +260,30 @@ async function loadTabsFromSpace(space) {
         // Note: isSwitchingSpaces flag is managed by runtime messages from popup
         
         if (!space.tabs_data || !Array.isArray(space.tabs_data) || space.tabs_data.length === 0) {
-            console.log('Background: No tabs data found for space');
+            console.log('Background: No tabs data found for space, creating new empty tab');
+            
+            // Get all current tabs
+            const currentTabs = await chrome.tabs.query({});
+            
+            // Close all non-extension tabs
+            const tabsToClose = currentTabs.filter(tab => 
+                !tab.url.startsWith('chrome-extension://') &&
+                !tab.url.startsWith('chrome://') &&
+                !tab.url.startsWith('edge-extension://') &&
+                !tab.url.startsWith('moz-extension://')
+            );
+
+            if (tabsToClose.length > 0) {
+                await chrome.tabs.remove(tabsToClose.map(tab => tab.id));
+            }
+            
+            // Create a single new empty tab
+            console.log('Background: 🔄 Creating new empty tab');
+            const newTab = await chrome.tabs.create({
+                url: 'chrome://newtab/',
+                active: true
+            });
+            console.log(`Background: ✅ Created new empty tab (ID: ${newTab.id})`);
             return;
         }
 
@@ -318,24 +354,38 @@ async function loadTabsFromSpace(space) {
                     await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
                 }
 
-                // Special handling for Gmail URLs - add timestamp to prevent deduplication
+                // Enhanced handling for common sites that might be deduplicated
                 let urlToCreate = tabData.url;
-                if (tabData.url.includes('mail.google.com')) {
-                    // Add a unique timestamp parameter to Gmail URLs to prevent browser deduplication
-                    const separator = tabData.url.includes('?') ? '&' : '?';
-                    urlToCreate = `${tabData.url}${separator}tabster_restore=${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-                    console.log(`Background: 📧 Gmail URL modified to prevent deduplication: ${urlToCreate}`);
+                const needsUniqueParam = urlToCreate.includes('mail.google.com') || 
+                                       urlToCreate.includes('accounts.google.com') ||
+                                       urlToCreate.includes('drive.google.com') ||
+                                       urlToCreate.includes('docs.google.com') ||
+                                       urlToCreate.includes('sheets.google.com') ||
+                                       urlToCreate.includes('slides.google.com');
+                
+                if (needsUniqueParam) {
+                    // Add a unique timestamp parameter to prevent browser deduplication
+                    const separator = urlToCreate.includes('?') ? '&' : '?';
+                    const uniqueParam = `tabster_restore_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    urlToCreate = `${urlToCreate}${separator}${uniqueParam}=1`;
+                    console.log(`Background: 🔗 URL modified to prevent deduplication: ${tabData.url} -> ${urlToCreate}`);
+                    
+                    // Special logging for Gmail
+                    if (urlToCreate.includes('mail.google.com')) {
+                        console.log(`Background: 📧 Gmail account detected: ${tabData.url.match(/\/u\/(\d+)\//) ? `Account ${tabData.url.match(/\/u\/(\d+)\//)[1]}` : 'Default account'}`);
+                    }
                 }
 
-                const createdTab = await chrome.tabs.create({
+                // Create tab with only supported properties (no windowId to avoid "No window" errors)
+                const createProperties = {
                     url: urlToCreate,
                     active: successfulTabIndex === 0, // Make first successful tab active
                     pinned: tabData.pinned || false,
-                    index: successfulTabIndex,
-                    // Use additional properties if available
-                    cookieStoreId: tabData.cookieStoreId || undefined,
-                    openerTabId: tabData.openerTabId || undefined
-                });
+                    index: successfulTabIndex
+                };
+
+                console.log(`Background: 🔄 Creating tab with properties:`, createProperties);
+                const createdTab = await chrome.tabs.create(createProperties);
                 console.log(`Background: ✅ Created tab ${successfulTabIndex + 1}: ${tabData.pinned ? '📌' : '📄'} "${tabData.title}" - ${tabData.url} (ID: ${createdTab.id}, UniqueId: ${tabData.uniqueId || 'N/A'})`);
                 successfulTabIndex++;
             } catch (error) {
@@ -371,6 +421,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 console.error('Error clearing storage:', error);
                 sendResponse({ success: false, error: error.message });
             });
+            return true; // Keep message channel open for async response
+            
+        case 'switch_to_space':
+            // Handle space switching entirely in background script
+            handleSpaceSwitch(message.spaceId, message.userId, message.userToken)
+                .then((result) => {
+                    sendResponse(result);
+                })
+                .catch((error) => {
+                    console.error('Error in space switch:', error);
+                    sendResponse({ success: false, error: error.message });
+                });
+            return true; // Keep message channel open for async response
+            
+        case 'get_spaces':
+            // Handle getting spaces in background
+            handleGetSpaces(message.userId, message.userToken)
+                .then((result) => {
+                    sendResponse(result);
+                })
+                .catch((error) => {
+                    console.error('Error getting spaces:', error);
+                    sendResponse({ success: false, error: error.message });
+                });
             return true; // Keep message channel open for async response
             
         case 'space_switching_start':
@@ -700,13 +774,6 @@ async function saveTabsToActiveSpace() {
             windowId: tab.windowId,
             active: tab.active,
             favIconUrl: tab.favIconUrl || null,
-            // Additional unique identifiers to prevent tab deduplication
-            cookieStoreId: tab.cookieStoreId || null,
-            openerTabId: tab.openerTabId || null,
-            sessionId: tab.sessionId || null,
-            discarded: tab.discarded || false,
-            autoDiscardable: tab.autoDiscardable !== undefined ? tab.autoDiscardable : true,
-            groupId: tab.groupId || null,
             // Store timestamp to make each save unique
             savedAt: new Date().toISOString(),
             // Store a unique identifier for this specific tab instance
@@ -735,6 +802,120 @@ async function saveTabsToActiveSpace() {
 
     } catch (error) {
         console.error('Error in saveTabsToActiveSpace:', error);
+    }
+}
+
+// Robust space switching handler - runs entirely in background
+async function handleSpaceSwitch(spaceId, userId, userToken = null) {
+    console.log(`🔄 Background: Starting space switch to ${spaceId}`);
+    
+    try {
+        // Set switching flag to prevent tab save interruptions
+        isSwitchingSpaces = true;
+        const switchStartTime = new Date().toISOString();
+        console.log(`🔄 Space switching started in background - tab saving disabled (${switchStartTime})`);
+        
+        // Safety timeout to prevent flag from getting stuck
+        const safetyTimeout = setTimeout(() => {
+            if (isSwitchingSpaces) {
+                console.log('⚠️  Background space switching flag timeout - auto-clearing after 30 seconds');
+                isSwitchingSpaces = false;
+            }
+        }, 30000); // 30 second timeout
+        
+        // Save the active space to Chrome storage
+        await saveActiveSpaceToStorage(spaceId, userId, userToken);
+        
+        // Get the space data including tabs
+        const spaces = await getUserSpaces(userId, userToken);
+        if (!spaces) {
+            throw new Error('Failed to load spaces');
+        }
+        
+        const currentSpace = spaces.find(space => space.id === spaceId);
+        if (!currentSpace) {
+            throw new Error('Space not found');
+        }
+        
+        console.log(`🔄 Background: Loading tabs for space "${currentSpace.name}"`);
+        
+        // Load tabs from the space (this function is already robust in background)
+        await loadTabsFromSpace(currentSpace);
+        
+        // Clear the safety timeout since we completed successfully
+        clearTimeout(safetyTimeout);
+        
+        // Re-enable tab saving
+        isSwitchingSpaces = false;
+        console.log(`✅ Background space switching completed - tab saving re-enabled (${new Date().toISOString()})`);
+        
+        return {
+            success: true,
+            message: `Switched to ${currentSpace.name}`,
+            spaceName: currentSpace.name,
+            spaceId: spaceId
+        };
+        
+    } catch (error) {
+        // Always clear the flag on error
+        isSwitchingSpaces = false;
+        console.error('❌ Background: Error in space switch:', error);
+        throw error;
+    }
+}
+
+// Handle getting spaces in background
+async function handleGetSpaces(userId, userToken = null) {
+    try {
+        console.log('🔄 Background: Getting spaces for user', userId);
+        const spaces = await getUserSpaces(userId, userToken);
+        
+        console.log(`🔄 Background: getUserSpaces returned ${spaces ? spaces.length : 0} spaces`);
+        
+        if (!spaces) {
+            console.log('❌ Background: getUserSpaces returned null/undefined');
+            throw new Error('Failed to load spaces - getUserSpaces returned null');
+        }
+        
+        // Get active space from storage
+        const activeSpaceData = await getActiveSpaceFromStorage();
+        const activeSpaceId = activeSpaceData ? activeSpaceData.spaceId : null;
+        
+        console.log(`✅ Background: Returning ${spaces.length} spaces with activeSpaceId: ${activeSpaceId}`);
+        
+        return {
+            success: true,
+            spaces: spaces,
+            activeSpaceId: activeSpaceId
+        };
+        
+    } catch (error) {
+        console.error('❌ Background: Error getting spaces:', error);
+        throw error;
+    }
+}
+
+// Enhanced save active space function 
+async function saveActiveSpaceToStorage(spaceId, userId, userToken = null) {
+    try {
+        // Store both user-specific and global active space
+        const userStorageKey = `tabster_active_space_${userId}`;
+        const globalStorageKey = 'tabster_current_active_space';
+        
+        await chrome.storage.local.set({ 
+            [userStorageKey]: spaceId,
+            [globalStorageKey]: {
+                spaceId: spaceId,
+                userId: userId,
+                userToken: userToken,
+                timestamp: new Date().toISOString()
+            }
+        });
+        console.log('🔄 Background: Saved active space to storage:', spaceId);
+        
+    } catch (error) {
+        console.error('❌ Background: Error saving active space to storage:', error);
+        // Don't throw error as this shouldn't block workspace switching
     }
 }
 

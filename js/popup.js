@@ -48,8 +48,11 @@ document.addEventListener('DOMContentLoaded', function() {
     setupUserMenu();
     initializeApp();
 
-    // Connect to background script for disconnect detection
+    // Connect to background script for disconnect detection and improved reliability
     const port = chrome.runtime.connect({ name: 'popup' });
+    port.onDisconnect.addListener(() => {
+        console.log('🔌 Popup: Connection to background script disconnected');
+    });
 
     function initializeTheme() {
         const savedTheme = localStorage.getItem('tabster-theme') || 'dark';
@@ -432,39 +435,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
             showMessage('Switching space...', 'success');
 
-            // Notify background script that space switching is starting
-            chrome.runtime.sendMessage({ type: 'space_switching_start' });
-
-            // Save the active space to Chrome storage
-            await saveActiveSpaceToStorage(spaceId);
-
-            // Get the space data including tabs
-            const { data: spaces, error: spacesError } = await authHelpers.getUserSpaces();
-            if (spacesError) {
-                throw new Error(`Failed to load spaces: ${spacesError.message}`);
+            // Get current user info
+            const user = await authHelpers.getCurrentUser();
+            if (!user) {
+                throw new Error('User not authenticated');
             }
 
-            const currentSpace = spaces.find(space => space.id === spaceId);
-            if (!currentSpace) {
-                throw new Error('Space not found');
+            // Get the user's session for JWT token
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const userToken = session?.access_token || null;
+
+            console.log('🔄 Popup: Delegating space switch to background script');
+
+            // Delegate space switching entirely to background script
+            const response = await new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ 
+                    type: 'switch_to_space', 
+                    spaceId: spaceId,
+                    userId: user.id,
+                    userToken: userToken
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                    } else {
+                        resolve(response);
+                    }
+                });
+            });
+
+            if (!response.success) {
+                throw new Error(response.error || 'Failed to switch space');
             }
 
-            // Load tabs from the space
-            await loadTabsFromSpace(currentSpace);
+            console.log('✅ Popup: Space switch completed by background script');
 
             // Update UI to reflect active state
             updateActiveSpaceIndicator(spaceId);
 
-            showMessage(`Switched to ${currentSpace.name}`, 'success');
+            showMessage(`Switched to ${response.spaceName}`, 'success');
 
         } catch (error) {
-            console.error('Error switching workspace:', error);
+            console.error('❌ Popup: Error switching workspace:', error);
             showMessage(`Failed to switch space: ${error.message}`, 'error');
         } finally {
-            // Notify background script that space switching is complete
-            chrome.runtime.sendMessage({ type: 'space_switching_end' });
-            
-            // Remove visual feedback
+            // Always remove visual feedback
             const workspaceCard = document.querySelector(`[data-workspace="${spaceId}"]`);
             const workspacesGrid = document.getElementById('workspaces-grid');
             
@@ -533,132 +547,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function loadTabsFromSpace(space) {
-        try {
-            console.log('Loading tabs from space:', space.name);
-            
-            if (!space.tabs_data || !Array.isArray(space.tabs_data) || space.tabs_data.length === 0) {
-                console.log('No tabs data found for space, closing all tabs');
-                await closeAllTabsExceptThis();
-                return;
-            }
-
-            // Filter out extension/invalid URLs before processing
-            const validTabs = space.tabs_data.filter(tab => {
-                if (!tab.url) return false;
-                if (tab.url.startsWith('chrome-extension://') ||
-                    tab.url.startsWith('chrome://') ||
-                    tab.url.startsWith('edge-extension://') ||
-                    tab.url.startsWith('moz-extension://')) return false;
-                if (tab.url === 'about:blank' || tab.url === '') return false;
-                return true;
-            });
-
-            console.log(`Loading ${validTabs.length} valid tabs from space (filtered from ${space.tabs_data.length} total)`);
-
-            // Close all current tabs except the extension popup
-            await closeAllTabsExceptThis();
-
-            if (validTabs.length === 0) {
-                console.log('No valid tabs to restore');
-                return;
-            }
-
-            // Sort tabs by order (pinned tabs first, then by index)
-            const sortedTabs = validTabs.sort((a, b) => {
-                if (a.pinned && !b.pinned) return -1;
-                if (!a.pinned && b.pinned) return 1;
-                return (a.index || 0) - (b.index || 0);
-            });
-
-            // Create tabs in order, tracking successful creations
-            let successfulTabIndex = 0;
-            for (const tabData of sortedTabs) {
-                const createdTab = await createTabFromData(tabData, successfulTabIndex);
-                if (createdTab) {
-                    successfulTabIndex++;
-                }
-            }
-
-            console.log(`✅ Successfully loaded ${successfulTabIndex} tabs from space`);
-
-        } catch (error) {
-            console.error('Error loading tabs from space:', error);
-            throw error;
-        }
-    }
-
-    async function createTabFromData(tabData, index) {
-        try {
-            // Validate URL before creating tab
-            if (!tabData.url) {
-                console.warn('Skipping tab with no URL:', tabData);
-                return null;
-            }
-
-            // Skip extension URLs that shouldn't be restored
-            if (tabData.url.startsWith('chrome-extension://') ||
-                tabData.url.startsWith('chrome://') ||
-                tabData.url.startsWith('edge-extension://') ||
-                tabData.url.startsWith('moz-extension://')) {
-                console.log('Skipping extension/chrome tab:', tabData.url);
-                return null;
-            }
-
-            // Skip empty or invalid URLs
-            if (tabData.url === 'about:blank' || tabData.url === '') {
-                console.log('Skipping blank/empty tab');
-                return null;
-            }
-
-            console.log(`Creating tab: ${tabData.title || tabData.url}`);
-
-            const tab = await chrome.tabs.create({
-                url: tabData.url,
-                active: index === 0, // Make first tab active
-                pinned: tabData.pinned || false,
-                index: index
-            });
-
-            console.log(`✅ Successfully created tab: ${tabData.title || tabData.url}`);
-            return tab;
-
-        } catch (error) {
-            console.error('❌ Error creating tab:', {
-                url: tabData.url,
-                title: tabData.title,
-                error: error.message
-            });
-            // Continue with other tabs even if one fails
-            return null;
-        }
-    }
-
-    async function closeAllTabsExceptThis() {
-        try {
-            // Get all tabs in current window
-            const tabs = await chrome.tabs.query({ currentWindow: true });
-            
-            // Find tabs to close (everything except extension pages)
-            const tabsToClose = tabs.filter(tab => 
-                !tab.url.startsWith('chrome-extension://') &&
-                !tab.url.startsWith('chrome://') &&
-                !tab.url.startsWith('edge-extension://') &&
-                !tab.url.startsWith('moz-extension://')
-            );
-
-            // Close tabs
-            const tabIds = tabsToClose.map(tab => tab.id);
-            if (tabIds.length > 0) {
-                await chrome.tabs.remove(tabIds);
-                console.log(`Closed ${tabIds.length} tabs`);
-            }
-
-        } catch (error) {
-            console.error('Error closing tabs:', error);
-            throw error;
-        }
-    }
+    // Note: Tab restoration functions moved to background script for better reliability
+    // The background script now handles all tab operations during space switching
 
     function updateActiveSpaceIndicator(activeSpaceId) {
         // Remove active indicator from all cards
@@ -1319,19 +1209,46 @@ document.addEventListener('DOMContentLoaded', function() {
             // Immediately render skeleton card - no loading overlay
             renderSkeletonSpaces();
 
-            const { data: spaces, error } = await authHelpers.getUserSpaces();
-            
-            if (error) {
-                console.error('Error loading spaces:', error);
-                showError('Failed to load spaces. Please try again.');
-                return;
+            // Get current user info
+            const user = await authHelpers.getCurrentUser();
+            if (!user) {
+                throw new Error('User not authenticated');
             }
+
+            // Get the user's session for JWT token
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const userToken = session?.access_token || null;
+
+            console.log('🔄 Popup: Getting spaces via background script');
+
+            // Get spaces from background script
+            const response = await new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ 
+                    type: 'get_spaces', 
+                    userId: user.id,
+                    userToken: userToken
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                    } else {
+                        resolve(response);
+                    }
+                });
+            });
+
+            if (!response.success) {
+                throw new Error(response.error || 'Failed to load spaces');
+            }
+
+            console.log('✅ Popup: Spaces loaded via background script');
+
+            const spaces = response.spaces;
+            const activeSpaceId = response.activeSpaceId;
 
             // Replace skeleton with actual spaces
             renderWorkspaces(spaces);
 
-            // Set active space indicator based on browser storage
-            const activeSpaceId = await getActiveSpaceFromStorage();
+            // Set active space indicator
             if (activeSpaceId) {
                 // Verify the space still exists
                 const activeSpace = spaces.find(space => space.id === activeSpaceId);
@@ -1344,7 +1261,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
         } catch (error) {
-            console.error('Error loading spaces:', error);
+            console.error('❌ Popup: Error loading spaces:', error);
             showError('Failed to load spaces. Please try again.');
         }
         // No finally block - we don't show/hide loading overlay anymore
@@ -1656,9 +1573,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Only restore if we have minimal tabs (like just new tab page)
             if (nonExtensionTabs.length <= 1) {
-                console.log('Minimal tabs detected, restoring saved space:', savedSpace.name);
+                console.log('Minimal tabs detected, attempting to restore saved space:', savedSpace.name);
                 showMessage(`Restoring space: ${savedSpace.name}`, 'success');
-                await loadTabsFromSpace(savedSpace);
+                // Note: Background script will handle restoration on startup
+                // We just update the UI indicator here
                 updateActiveSpaceIndicator(activeSpaceId);
             } else {
                 console.log('Multiple tabs open, not auto-restoring but updating UI indicator');
