@@ -1173,13 +1173,39 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Space created successfully:', newSpace);
             showMessage(`Space "${spaceName}" created successfully!`, 'success');
 
-            // Switch to the new space
-            await saveActiveSpaceToStorage(newSpace.id);
-            
+            // Switch to the new space using background script
             if (!includeCurrentTabs) {
-                // Close all current tabs and open a new tab
-                await closeAllTabsExceptThis();
-                await chrome.tabs.create({ url: 'chrome://newtab/', active: true });
+                // Use background script to switch to new space with clean tabs
+                console.log('🔄 Popup: Switching to new space with clean tabs via background script');
+                
+                // Get user info for background script call
+                const user = await authHelpers.getCurrentUser();
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const userToken = session?.access_token || null;
+                
+                const switchResponse = await new Promise((resolve, reject) => {
+                    chrome.runtime.sendMessage({ 
+                        type: 'switch_to_space', 
+                        spaceId: newSpace.id,
+                        userId: user.id,
+                        userToken: userToken
+                    }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            reject(new Error(chrome.runtime.lastError.message));
+                        } else {
+                            resolve(response);
+                        }
+                    });
+                });
+
+                if (!switchResponse.success) {
+                    throw new Error(switchResponse.error || 'Failed to switch to new space');
+                }
+                
+                console.log('✅ Popup: Successfully switched to new space with clean tabs');
+            } else {
+                // Just save to storage if keeping current tabs
+                await saveActiveSpaceToStorage(newSpace.id);
             }
 
             // Go back to dashboard and refresh
