@@ -1159,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     favIconUrl: tab.favIconUrl || null
                 }));
                 
-                spaceData.tabs_data = tabsData;
+                spaceData.tabs_data = { tabs: tabsData };
             }
 
             // Create the space
@@ -1515,10 +1515,40 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('click', closeWorkspaceDropdowns);
     }
 
-    // Check if current tabs match the saved space
+    // Helper function to migrate old tabs_data format to new format
+    function migrateLegacyTabsData(space) {
+        // Handle NULL or undefined tabs_data
+        if (!space.tabs_data) {
+            space.tabs_data = { tabs: [] };
+            return space;
+        }
+        
+        // If tabs_data is already in new format, return as is
+        if (space.tabs_data.tabs && Array.isArray(space.tabs_data.tabs)) {
+            return space;
+        }
+        
+        // If tabs_data is an array (old format), convert it for this session
+        // Note: This indicates the space needs migration in the database
+        if (Array.isArray(space.tabs_data)) {
+            console.log('Popup: Converting legacy array format for session:', space.name);
+            space.tabs_data = { tabs: space.tabs_data };
+            return space;
+        }
+        
+        // Handle any other invalid format by defaulting to empty
+        console.log('Popup: Invalid tabs_data format for space:', space.name, 'defaulting to empty');
+        space.tabs_data = { tabs: [] };
+        
+        return space;
+    }
+
     async function currentTabsMatchSpace(space) {
         try {
-            if (!space.tabs_data || !Array.isArray(space.tabs_data)) {
+            // Migrate legacy tabs_data format if needed
+            space = migrateLegacyTabsData(space);
+            
+            if (!space.tabs_data || !space.tabs_data.tabs || !Array.isArray(space.tabs_data.tabs)) {
                 return false;
             }
 
@@ -1531,18 +1561,18 @@ document.addEventListener('DOMContentLoaded', function() {
             );
 
             // If tab counts don't match, it's not the same space
-            if (nonExtensionTabs.length !== space.tabs_data.length) {
+            if (nonExtensionTabs.length !== space.tabs_data.tabs.length) {
                 return false;
             }
 
             // If both are empty, consider it a match
-            if (nonExtensionTabs.length === 0 && space.tabs_data.length === 0) {
+            if (nonExtensionTabs.length === 0 && space.tabs_data.tabs.length === 0) {
                 return true;
             }
 
             // Sort both arrays by URL for comparison
             const currentUrls = nonExtensionTabs.map(tab => tab.url).sort();
-            const spaceUrls = space.tabs_data.map(tab => tab.url).sort();
+            const spaceUrls = space.tabs_data.tabs.map(tab => tab.url).sort();
 
             // Compare URLs - if they match, it's likely the same space
             return JSON.stringify(currentUrls) === JSON.stringify(spaceUrls);
@@ -1625,5 +1655,53 @@ document.addEventListener('DOMContentLoaded', function() {
     // Call initialize when needed
     if (document.getElementById('dashboard-screen')?.classList.contains('active')) {
         initializeDashboard();
+    }
+
+    // Function to trigger migration of all spaces to new format
+    async function triggerSpacesMigration() {
+        try {
+            const user = await authHelpers.getCurrentUser();
+            if (!user) {
+                console.log('No user found for migration');
+                return;
+            }
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const userToken = session?.access_token || null;
+
+            console.log('Popup: Triggering spaces migration...');
+
+            const response = await new Promise((resolve,    reject) => {
+                chrome.runtime.sendMessage({ 
+                    type: 'migrate_spaces', 
+                    userId: user.id,
+                    userToken: userToken
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                    } else {
+                        resolve(response);
+                    }
+                });
+            });
+
+            if (response.success) {
+                console.log(`Popup: Migration completed! Migrated ${response.migratedCount} out of ${response.totalSpaces} spaces`);
+                if (response.errors && response.errors.length > 0) {
+                    console.warn('Popup: Migration errors:', response.errors);
+                }
+                
+                if (response.migratedCount > 0) {
+                    showMessage(`Successfully migrated ${response.migratedCount} spaces to new format!`, 'success');
+                }
+            } else {
+                console.error('Popup: Migration failed:', response.error);
+                showMessage(`Migration failed: ${response.error}`, 'error');
+            }
+
+        } catch (error) {
+            console.error('Popup: Error triggering migration:', error);
+            showMessage(`Migration error: ${error.message}`, 'error');
+        }
     }
 }); 

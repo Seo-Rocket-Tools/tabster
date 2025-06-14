@@ -218,7 +218,10 @@ async function updateSpace(spaceId, updates, userToken = null) {
 // Check if current tabs match the saved space
 async function currentTabsMatchSpace(space) {
     try {
-        if (!space.tabs_data || !Array.isArray(space.tabs_data)) {
+        // Migrate legacy tabs_data format if needed
+        space = migrateLegacyTabsData(space);
+        
+        if (!space.tabs_data || !space.tabs_data.tabs || !Array.isArray(space.tabs_data.tabs)) {
             return false;
         }
 
@@ -231,18 +234,18 @@ async function currentTabsMatchSpace(space) {
         );
 
         // If tab counts don't match, it's not the same space
-        if (nonExtensionTabs.length !== space.tabs_data.length) {
+        if (nonExtensionTabs.length !== space.tabs_data.tabs.length) {
             return false;
         }
 
         // If both are empty, consider it a match
-        if (nonExtensionTabs.length === 0 && space.tabs_data.length === 0) {
+        if (nonExtensionTabs.length === 0 && space.tabs_data.tabs.length === 0) {
             return true;
         }
 
         // Sort both arrays by URL for comparison
         const currentUrls = nonExtensionTabs.map(tab => tab.url).sort();
-        const spaceUrls = space.tabs_data.map(tab => tab.url).sort();
+        const spaceUrls = space.tabs_data.tabs.map(tab => tab.url).sort();
 
         // Compare URLs - if they match, it's likely the same space
         return JSON.stringify(currentUrls) === JSON.stringify(spaceUrls);
@@ -257,9 +260,12 @@ async function loadTabsFromSpace(space) {
     try {
         console.log('Background: Loading tabs from space:', space.name);
         
+        // Migrate legacy tabs_data format if needed
+        space = migrateLegacyTabsData(space);
+        
         // Note: isSwitchingSpaces flag is managed by runtime messages from popup
         
-        if (!space.tabs_data || !Array.isArray(space.tabs_data) || space.tabs_data.length === 0) {
+        if (!space.tabs_data || !space.tabs_data.tabs || !Array.isArray(space.tabs_data.tabs) || space.tabs_data.tabs.length === 0) {
             console.log('Background: No tabs data found for space, creating new empty tab');
             
             // Get all current tabs
@@ -288,7 +294,7 @@ async function loadTabsFromSpace(space) {
         }
 
         // Filter out extension/invalid URLs before processing
-        const validTabs = space.tabs_data.filter(tab => {
+        const validTabs = space.tabs_data.tabs.filter(tab => {
             if (!tab.url) return false;
             if (tab.url.startsWith('chrome-extension://') ||
                 tab.url.startsWith('chrome://') ||
@@ -298,7 +304,7 @@ async function loadTabsFromSpace(space) {
             return true;
         });
 
-        console.log(`Background: Loading ${validTabs.length} valid tabs from space (filtered from ${space.tabs_data.length} total)`);
+        console.log(`Background: Loading ${validTabs.length} valid tabs from space (filtered from ${space.tabs_data.tabs.length} total)`);
 
         // Log detailed tab information for debugging
         console.log('📋 Detailed tabs being restored:');
@@ -443,6 +449,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 })
                 .catch((error) => {
                     console.error('Error getting spaces:', error);
+                    sendResponse({ success: false, error: error.message });
+                });
+            return true; // Keep message channel open for async response
+            
+        case 'migrate_spaces':
+            // Handle migrating spaces to new format
+            migrateAllSpacesToNewFormat(message.userId, message.userToken)
+                .then((result) => {
+                    sendResponse(result);
+                })
+                .catch((error) => {
+                    console.error('Error migrating spaces:', error);
                     sendResponse({ success: false, error: error.message });
                 });
             return true; // Keep message channel open for async response
@@ -790,7 +808,7 @@ async function saveTabsToActiveSpace() {
 
         // Update the space in the database with the current tabs
         const { data, error } = await updateSpace(activeSpaceId, {
-            tabs_data: tabsData,
+            tabs_data: { tabs: tabsData },
             updated_at: new Date().toISOString()
         }, userToken);
 
@@ -929,4 +947,111 @@ chrome.runtime.onConnect.addListener((port) => {
             }
         });
     }
-}); 
+});
+
+// Helper function to migrate old tabs_data format to new format
+function migrateLegacyTabsData(space) {
+    // Handle NULL or undefined tabs_data
+    if (!space.tabs_data) {
+        space.tabs_data = { tabs: [] };
+        return space;
+    }
+    
+    // If tabs_data is already in new format, return as is
+    if (space.tabs_data.tabs && Array.isArray(space.tabs_data.tabs)) {
+        return space;
+    }
+    
+    // If tabs_data is an array (old format), convert it for this session
+    // Note: This indicates the space needs migration in the database
+    if (Array.isArray(space.tabs_data)) {
+        console.log('Background: Converting legacy array format for session:', space.name);
+        space.tabs_data = { tabs: space.tabs_data };
+        return space;
+    }
+    
+    // Handle any other invalid format by defaulting to empty
+    console.log('Background: Invalid tabs_data format for space:', space.name, 'defaulting to empty');
+    space.tabs_data = { tabs: [] };
+    
+    return space;
+}
+
+// Migration function to update all existing spaces to new tabs_data format
+async function migrateAllSpacesToNewFormat(userId, userToken = null) {
+    try {
+        console.log('Background: Starting migration of all spaces to new tabs_data format');
+        
+        // Get all user spaces
+        const spaces = await getUserSpaces(userId, userToken);
+        if (!spaces || spaces.length === 0) {
+            console.log('Background: No spaces to migrate');
+            return { success: true, migratedCount: 0 };
+        }
+        
+        let migratedCount = 0;
+        const errors = [];
+        
+        for (const space of spaces) {
+            try {
+                // Check if space needs migration
+                if (!space.tabs_data) {
+                    console.log(`Background: Migrating space "${space.name}" from NULL to new format`);
+                    
+                    // Update space with new format
+                    const { data, error } = await updateSpace(space.id, {
+                        tabs_data: { tabs: [] },
+                        updated_at: new Date().toISOString()
+                    }, userToken);
+                    
+                    if (error) {
+                        console.error(`Background: Error migrating space "${space.name}":`, error);
+                        errors.push(`${space.name}: ${error.message}`);
+                    } else {
+                        console.log(`Background: Successfully migrated space "${space.name}"`);
+                        migratedCount++;
+                    }
+                } else if (Array.isArray(space.tabs_data)) {
+                    console.log(`Background: Migrating space "${space.name}" from array to new format`);
+                    
+                    // Update space with new format
+                    const { data, error } = await updateSpace(space.id, {
+                        tabs_data: { tabs: space.tabs_data },
+                        updated_at: new Date().toISOString()
+                    }, userToken);
+                    
+                    if (error) {
+                        console.error(`Background: Error migrating space "${space.name}":`, error);
+                        errors.push(`${space.name}: ${error.message}`);
+                    } else {
+                        console.log(`Background: Successfully migrated space "${space.name}"`);
+                        migratedCount++;
+                    }
+                } else if (space.tabs_data.tabs && Array.isArray(space.tabs_data.tabs)) {
+                    console.log(`Background: Space "${space.name}" already in correct format`);
+                } else {
+                    console.log(`Background: Space "${space.name}" has unexpected format`);
+                }
+            } catch (spaceError) {
+                console.error(`Background: Error processing space "${space.name}":`, spaceError);
+                errors.push(`${space.name}: ${spaceError.message}`);
+            }
+        }
+        
+        console.log(`Background: Migration completed. Migrated ${migratedCount} spaces`);
+        
+        return {
+            success: true,
+            migratedCount: migratedCount,
+            totalSpaces: spaces.length,
+            errors: errors
+        };
+        
+    } catch (error) {
+        console.error('Background: Error during migration:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+} 
