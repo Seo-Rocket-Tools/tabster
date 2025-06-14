@@ -189,10 +189,10 @@ const authHelpers = {
             const user = await this.getCurrentUser();
             if (!user) return { error: new Error('Not authenticated') };
 
-            // Soft delete by setting is_archived to true
+            // Hard delete - completely remove the record from the database
             const { error } = await supabaseClient
                 .from('spaces')
-                .update({ is_archived: true })
+                .delete()
                 .eq('id', spaceId)
                 .eq('user_id', user.id);
 
