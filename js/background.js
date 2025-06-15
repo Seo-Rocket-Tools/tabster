@@ -341,6 +341,8 @@ async function loadTabsFromSpace(space) {
 
         // Create tabs in order, tracking successful creations
         let successfulTabIndex = 0;
+        const createdTabs = []; // Track created tabs to focus the last one
+        
         for (const tabData of sortedTabs) {
             // Validate URL before creating tab
             if (!tabData.url || 
@@ -383,9 +385,10 @@ async function loadTabsFromSpace(space) {
                 }
 
                 // Create tab with only supported properties (no windowId to avoid "No window" errors)
+                // Set all tabs to inactive initially - we'll activate the last one after all are created
                 const createProperties = {
                     url: urlToCreate,
-                    active: successfulTabIndex === 0, // Make first successful tab active
+                    active: false, // Set all tabs to inactive initially
                     pinned: tabData.pinned || false,
                     index: successfulTabIndex
                 };
@@ -393,6 +396,9 @@ async function loadTabsFromSpace(space) {
                 console.log(`Background: 🔄 Creating tab with properties:`, createProperties);
                 const createdTab = await chrome.tabs.create(createProperties);
                 console.log(`Background: ✅ Created tab ${successfulTabIndex + 1}: ${tabData.pinned ? '📌' : '📄'} "${tabData.title}" - ${tabData.url} (ID: ${createdTab.id}, UniqueId: ${tabData.uniqueId || 'N/A'})`);
+                
+                // Track created tabs so we can activate the last one
+                createdTabs.push(createdTab);
                 successfulTabIndex++;
             } catch (error) {
                 console.error('Background: ❌ Error creating tab:', {
@@ -400,6 +406,43 @@ async function loadTabsFromSpace(space) {
                     title: tabData.title,
                     error: error.message
                 });
+            }
+        }
+        
+        // Activate and focus the last (rightmost) tab, and discard all others
+        if (createdTabs.length > 0) {
+            const lastTab = createdTabs[createdTabs.length - 1];
+            
+            // First activate the last tab
+            try {
+                await chrome.tabs.update(lastTab.id, { active: true });
+                console.log(`Background: ✅ Activated rightmost tab (ID: ${lastTab.id}) - this tab remains loaded`);
+            } catch (error) {
+                console.error('Background: ❌ Error activating last tab:', error);
+            }
+            
+            // Wait a bit for tabs to load their titles and favicons, then discard all except the last one
+            if (createdTabs.length > 1) {
+                console.log(`Background: ⏳ Waiting for titles and favicons to load before discarding...`);
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+                
+                for (let i = 0; i < createdTabs.length - 1; i++) {
+                    try {
+                        // Check if the tab still exists before discarding
+                        const tab = await chrome.tabs.get(createdTabs[i].id);
+                        await chrome.tabs.discard(createdTabs[i].id);
+                        console.log(`Background: 💤 Discarded tab "${tab.title || 'Untitled'}" (ID: ${createdTabs[i].id}) - title and favicon preserved`);
+                    } catch (error) {
+                        // Tab might have been closed or doesn't exist anymore
+                        if (error.message && error.message.includes('No tab with id')) {
+                            console.log(`Background: ℹ️ Tab ${createdTabs[i].id} no longer exists, skipping discard`);
+                        } else {
+                            console.error(`Background: ❌ Error discarding tab ${createdTabs[i].id}:`, error);
+                        }
+                    }
+                }
+                
+                console.log(`Background: ✅ Finished discarding ${createdTabs.length - 1} tabs while preserving titles and favicons`);
             }
         }
 
