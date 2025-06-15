@@ -583,8 +583,14 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
         timestamp: new Date().toISOString()
     });
     
-    // Save tabs to active space
-    saveTabsToActiveSpace();
+    // Only save tabs if it's not a window closing event
+    // When a window closes, all tabs are removed but we don't want to save empty data
+    if (!removeInfo.isWindowClosing) {
+        console.log('🔄 Individual tab closed - saving current state');
+        saveTabsToActiveSpace();
+    } else {
+        console.log('🚫 Window closing detected - skipping tab save to prevent empty data');
+    }
 });
 
 // When a tab is updated (including URL changes)
@@ -757,8 +763,30 @@ chrome.windows.onCreated.addListener((window) => {
     windowTabOrders.set(window.id, []);
 });
 
-// Clean up when windows are removed
-chrome.windows.onRemoved.addListener((windowId) => {
+// Clean up when windows are removed and save current state before window closes
+chrome.windows.onRemoved.addListener(async (windowId) => {
+    console.log('🚪 Window being removed:', windowId);
+    
+    // Save current state before the window is fully removed
+    // This ensures we capture the state before all tabs are removed
+    try {
+        // Check if there are still other windows with tabs
+        const remainingWindows = await chrome.windows.getAll({ populate: true });
+        const hasTabsInOtherWindows = remainingWindows.some(window => 
+            window.id !== windowId && window.tabs && window.tabs.length > 0
+        );
+        
+        if (hasTabsInOtherWindows) {
+            console.log('💾 Other windows still exist - saving current state before window close');
+            await saveTabsToActiveSpace();
+        } else {
+            console.log('🚪 Last window closing - not saving to prevent empty state');
+        }
+    } catch (error) {
+        console.error('Error handling window removal:', error);
+    }
+    
+    // Clean up window tab orders
     windowTabOrders.delete(windowId);
 });
 
