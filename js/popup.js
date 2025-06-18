@@ -286,6 +286,63 @@ document.addEventListener('DOMContentLoaded', function() {
         return card;
     }
 
+    // Helper function to create a skeleton loading card
+    function createSkeletonCard() {
+        const card = document.createElement('div');
+        card.className = 'space-card skeleton-card';
+        
+        card.innerHTML = `
+            <div class="space-icon">
+                <div class="skeleton-shimmer"></div>
+            </div>
+            <div class="space-content">
+                <div class="space-name">
+                    <div class="skeleton-shimmer"></div>
+                </div>
+                <div class="space-description">
+                    <div class="skeleton-shimmer"></div>
+                </div>
+            </div>
+            <div class="space-menu">
+                <button class="space-menu-btn">
+                    <div class="skeleton-shimmer"></div>
+                </button>
+            </div>
+        `;
+        
+        return card;
+    }
+
+    // Helper function to show loading dashboard
+    function showLoadingDashboard() {
+        console.log('Popup: Showing loading dashboard with skeleton card');
+        
+        // Update welcome message with generic loading text
+        const welcomeMessage = document.getElementById('welcome-message');
+        if (welcomeMessage) {
+            welcomeMessage.textContent = 'Loading your spaces...';
+        }
+        
+        // Update user avatar with loading state
+        const avatarInitials = document.getElementById('avatar-initials');
+        if (avatarInitials) {
+            avatarInitials.textContent = '●●';
+        }
+        
+        // Show spaces grid with skeleton card
+        const spacesGrid = document.getElementById('workspaces-grid');
+        if (spacesGrid) {
+            spacesGrid.innerHTML = ''; // Clear existing content
+            
+            // Add skeleton loading card
+            const skeletonCard = createSkeletonCard();
+            spacesGrid.appendChild(skeletonCard);
+        }
+        
+        // Show dashboard screen
+        showScreen('dashboard');
+    }
+
     // Global function to open a space (can be expanded later)
     window.openSpace = function(spaceId) {
         console.log('Opening space:', spaceId);
@@ -297,6 +354,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check user authentication when popup opens
     async function checkUserAuthOnOpen() {
         console.log('Popup: Checking user authentication on open...');
+        
+        // Show loading dashboard immediately for better UX
+        showLoadingDashboard();
         
         try {
             // Send auth check request to background script
@@ -316,10 +376,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // User is authenticated - update dashboard and show it
-            console.log('Popup: User authenticated, loading dashboard');
+            // User is authenticated - update dashboard with real data
+            console.log('Popup: User authenticated, updating dashboard with real data');
             updateMainDashboard(response.userData, response.userSpaces);
-            showScreen('dashboard');
             
             // Check for active space and update UI accordingly
             await checkAndUpdateActiveSpace(response.userSpaces);
