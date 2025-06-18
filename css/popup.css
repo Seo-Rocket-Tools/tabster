@@ -536,6 +536,111 @@ body {
     color: #EF4444;
 }
 
+/* Modern Message Banner System */
+.message-banner {
+    position: fixed;
+    top: 76px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 280px;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.message-banner.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.message-banner.hide {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-50px);
+}
+
+/* Message Banner Text */
+.message-banner-icon {
+    display: none;
+}
+
+.message-banner-text {
+    color: var(--text-primary);
+    line-height: 1.4;
+    text-align: center;
+}
+
+/* Banner Type Variants */
+.message-banner.success {
+    background: var(--bg-secondary);
+    border-color: #34d399;
+}
+
+.message-banner.success .message-banner-text {
+    color: #34d399;
+}
+
+.message-banner.error {
+    background: var(--bg-secondary);
+    border-color: #f87171;
+}
+
+.message-banner.error .message-banner-text {
+    color: #f87171;
+}
+
+.message-banner.warning {
+    background: var(--bg-secondary);
+    border-color: #fbbf24;
+}
+
+.message-banner.warning .message-banner-text {
+    color: #fbbf24;
+}
+
+.message-banner.info {
+    background: var(--bg-secondary);
+    border-color: #60a5fa;
+}
+
+.message-banner.info .message-banner-text {
+    color: #60a5fa;
+}
+
+/* Loading/Processing Banner */
+.message-banner.loading {
+    background: var(--bg-secondary);
+    border-color: #9ca3af;
+}
+
+.message-banner.loading .message-banner-text {
+    color: #9ca3af;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* Light theme adjustments */
+:root.light-theme .message-banner {
+    background: var(--bg-tertiary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 /* Modal styles */
 .modal-overlay {
     position: fixed;

@@ -37,6 +37,101 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // SECTION UI RELATED FUNCTIONS
 
+    // Modern Message Banner System
+    const MessageBanner = {
+        element: null,
+        iconElement: null,
+        textElement: null,
+        currentTimeout: null,
+
+        init() {
+            this.element = document.getElementById('message-banner');
+            this.iconElement = document.getElementById('message-banner-icon');
+            this.textElement = document.getElementById('message-banner-text');
+        },
+
+        show(message, type = 'info', duration = 4000) {
+            if (!this.element) this.init();
+
+            // Clear any existing timeout
+            if (this.currentTimeout) {
+                clearTimeout(this.currentTimeout);
+                this.currentTimeout = null;
+            }
+
+            // Set content
+            this.textElement.textContent = message;
+            
+            // Set icon based on type
+            const icons = {
+                success: '✓',
+                error: '✕',
+                warning: '⚠',
+                info: 'ℹ',
+                loading: '⧗'
+            };
+            this.iconElement.textContent = icons[type] || icons.info;
+
+            // Clear previous type classes
+            this.element.className = 'message-banner';
+            
+            // Add new type class
+            this.element.classList.add(type);
+
+            // Show banner
+            setTimeout(() => {
+                this.element.classList.add('show');
+            }, 10);
+
+            // Auto-hide after duration (unless it's a loading message)
+            if (type !== 'loading' && duration > 0) {
+                this.currentTimeout = setTimeout(() => {
+                    this.hide();
+                }, duration);
+            }
+
+            console.log(`Banner: ${type.toUpperCase()} - ${message}`);
+        },
+
+        hide() {
+            if (!this.element) return;
+
+            this.element.classList.remove('show');
+            this.element.classList.add('hide');
+
+            // Clear timeout
+            if (this.currentTimeout) {
+                clearTimeout(this.currentTimeout);
+                this.currentTimeout = null;
+            }
+
+            // Remove hide class after animation
+            setTimeout(() => {
+                this.element.classList.remove('hide');
+            }, 400);
+        },
+
+        success(message, duration = 4000) {
+            this.show(message, 'success', duration);
+        },
+
+        error(message, duration = 6000) {
+            this.show(message, 'error', duration);
+        },
+
+        warning(message, duration = 5000) {
+            this.show(message, 'warning', duration);
+        },
+
+        info(message, duration = 4000) {
+            this.show(message, 'info', duration);
+        },
+
+        loading(message) {
+            this.show(message, 'loading', 0); // No auto-hide for loading
+        }
+    };
+
     function initializeTheme() {
         const savedTheme = localStorage.getItem('tabster-theme') || 'dark';
         applyTheme(savedTheme);
@@ -186,11 +281,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('Popup: Attempting sign-in for:', email);
         
-        // Show loading state
+        // Show loading banner and disable button
         const submitBtn = e.target.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'Signing in...';
         submitBtn.disabled = true;
+        MessageBanner.loading('Signing in...');
         
         try {
             // Send login credentials to background script
@@ -202,46 +296,26 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (response.success) {
                 console.log('Popup: Sign-in successful, updating dashboard');
-                updateMainDashboard(response.userData, response.userSpaces);
-                showScreen('dashboard');
+                MessageBanner.success('Sign in successful! Welcome back.');
+                
+                // Small delay to show success message before switching screens
+                setTimeout(() => {
+                    updateMainDashboard(response.userData, response.userSpaces);
+                    showScreen('dashboard');
+                    MessageBanner.hide(); // Hide banner when switching screens
+                }, 1000);
             } else {
                 console.error('Popup: Sign-in failed:', response.error);
-                showLoginError(response.error);
+                MessageBanner.error(response.error || 'Sign in failed. Please try again.');
             }
         } catch (error) {
             console.error('Popup: Sign-in exception:', error);
-            showLoginError('Connection error. Please try again.');
+            MessageBanner.error('Connection error. Please try again.');
         } finally {
             // Reset button state
-            submitBtn.textContent = originalText;
             submitBtn.disabled = false;
         }
     });
-
-    // Helper function to show login error
-    function showLoginError(message) {
-        // Find or create error element
-        let errorElement = document.getElementById('login-error');
-        if (!errorElement) {
-            errorElement = document.createElement('div');
-            errorElement.id = 'login-error';
-            errorElement.className = 'error-message';
-            errorElement.style.color = 'red';
-            errorElement.style.marginTop = '10px';
-            errorElement.style.fontSize = '14px';
-            
-            const form = document.getElementById('login-form');
-            form.insertBefore(errorElement, form.querySelector('.auth-links'));
-        }
-        
-        errorElement.textContent = message;
-        errorElement.style.display = 'block';
-        
-        // Hide error after 5 seconds
-        setTimeout(() => {
-            errorElement.style.display = 'none';
-        }, 5000);
-    }
 
     // Helper function to update main dashboard with user data and spaces
     function updateMainDashboard(userData, userSpaces) {
@@ -508,12 +582,13 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Popup: Initiating user signout...');
             
-            // Show loading state (optional - for user feedback)
+            // Show loading banner and disable signout option
             const signoutBtn = document.querySelector('.signout-option');
             if (signoutBtn) {
-                signoutBtn.textContent = 'Signing out...';
                 signoutBtn.style.pointerEvents = 'none';
             }
+            
+            MessageBanner.loading('Signing out...');
             
             // Send signout request to background script
             const response = await chrome.runtime.sendMessage({
@@ -522,31 +597,34 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (!response.success) {
                 console.error('Popup: Signout failed:', response.error);
+                MessageBanner.error('Signout failed: ' + response.error);
+                
                 // Reset button state
                 if (signoutBtn) {
-                    signoutBtn.textContent = 'Sign Out';
                     signoutBtn.style.pointerEvents = 'auto';
                 }
-                // Show error message (you can enhance this later)
-                alert('Signout failed: ' + response.error);
                 return;
             }
             
             console.log('Popup: Signout successful, redirecting to welcome screen');
+            MessageBanner.success('Signed out successfully!');
             
-            // Clear any local UI state and redirect to welcome screen
-            clearDashboardState();
-            showScreen('welcome');
+            // Small delay to show success message before switching screens
+            setTimeout(() => {
+                clearDashboardState();
+                showScreen('welcome');
+                MessageBanner.hide(); // Hide banner when switching screens
+            }, 1000);
             
         } catch (error) {
             console.error('Popup: Signout exception:', error);
+            MessageBanner.error('Signout failed: ' + error.message);
+            
             // Reset button state
             const signoutBtn = document.querySelector('.signout-option');
             if (signoutBtn) {
-                signoutBtn.textContent = 'Sign Out';
                 signoutBtn.style.pointerEvents = 'auto';
             }
-            alert('Signout failed: ' + error.message);
         }
     }
 
