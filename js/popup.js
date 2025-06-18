@@ -1,7 +1,5 @@
 // Minimal Tabster Popup - UI Only
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Tabster popup loaded');
-    
     // Screen elements
     const welcomeScreen = document.getElementById('welcome-screen');
     const loginScreen = document.getElementById('login-screen');
@@ -89,8 +87,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     this.hide();
                 }, duration);
             }
-
-            console.log(`Banner: ${type.toUpperCase()} - ${message}`);
         },
 
         hide() {
@@ -289,7 +285,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('tabster-current-screen', screenName);
     }
 
-
     // SECTION USER LOGIN HANDLER
 
     // On user sign-in / login form submit listener
@@ -298,8 +293,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
-        
-        console.log('Popup: Attempting sign-in for:', email);
         
         // Show loading banner and disable button
         const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -315,7 +308,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (response.success) {
-                console.log('Popup: Sign-in successful, updating dashboard');
                 MessageBanner.success('Sign in successful! Welcome back.');
                 
                 // Small delay to show success message before switching screens
@@ -325,11 +317,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     MessageBanner.hide(); // Hide banner when switching screens
                 }, 1000);
             } else {
-                console.log('Popup: Sign-in failed:', response.error);
                 MessageBanner.error(response.error || 'Sign in failed. Please try again.');
             }
         } catch (error) {
-            console.error('Popup: Sign-in exception:', error);
             MessageBanner.error('Connection error. Please try again.');
         } finally {
             // Reset button state
@@ -339,8 +329,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper function to update main dashboard with user data and spaces
     function updateMainDashboard(userData, userSpaces) {
-        console.log('Popup: Updating dashboard with:', { userData, userSpaces });
-        
         // Update welcome message with user's display name or full name
         const welcomeMessage = document.getElementById('welcome-message');
         if (welcomeMessage && userData) {
@@ -444,8 +432,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper function to show loading dashboard
     function showLoadingDashboard() {
-        console.log('Popup: Showing loading dashboard with skeleton card');
-        
         // Update welcome message to "Please wait..."
         const welcomeMessage = document.getElementById('welcome-message');
         if (welcomeMessage) {
@@ -483,8 +469,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Check user authentication when popup opens
     async function checkUserAuthOnOpen() {
-        console.log('Popup: Checking user authentication on open...');
-        
         // Show loading dashboard immediately for better UX
         showLoadingDashboard();
         
@@ -495,26 +479,22 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (!response.success) {
-                console.error('Popup: Auth check failed:', response.error);
                 showScreen('welcome');
                 return;
             }
             
             if (!response.authenticated) {
-                console.log('Popup: User not authenticated, showing welcome screen');
                 showScreen('welcome');
                 return;
             }
             
             // User is authenticated - update dashboard with real data
-            console.log('Popup: User authenticated, updating dashboard with real data');
             updateMainDashboard(response.userData, response.userSpaces);
             
             // Check for active space and update UI accordingly
             await checkAndUpdateActiveSpace(response.userSpaces);
             
         } catch (error) {
-            console.error('Popup: Auth check exception:', error);
             showScreen('welcome');
         }
     }
@@ -522,8 +502,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check chrome local storage for active space and update UI
     async function checkAndUpdateActiveSpace(userSpaces) {
         try {
-            console.log('Popup: Checking for active space in local storage...');
-            
             // Request active space data from background (which uses getLocalActiveSpace)
             const activeSpaceResponse = await chrome.runtime.sendMessage({
                 type: 'getActiveSpace'
@@ -552,7 +530,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const matchingSpace = userSpaces.find(space => space.id === activeSpace.id);
             
             if (!matchingSpace) {
-                console.log('Popup: Active space not found in user spaces list');
                 return;
             }
             
@@ -603,8 +580,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle user signout
     async function handleUserSignout() {
         try {
-            console.log('Popup: Initiating user signout...');
-            
             // Show loading banner and disable signout option
             const signoutBtn = document.querySelector('.signout-option');
             if (signoutBtn) {
@@ -629,7 +604,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            console.log('Popup: Signout successful, redirecting to welcome screen');
             MessageBanner.success('Signed out successfully!');
             
             // Reset button state immediately after successful signout
@@ -682,7 +656,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (dropdown) {
             dropdown.classList.remove('show');
         }
-        
-        console.log('Popup: Dashboard state cleared');
     }
+
+    // SECTION USER SIGNUP HANDLER
+    
 }); 
