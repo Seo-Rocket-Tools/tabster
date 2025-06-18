@@ -31,8 +31,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setupNavigation();
     setupThemeToggle();
     
-    // Show welcome screen by default
-    showScreen('welcome');
+    // Check user authentication on popup open
+    checkUserAuthOnOpen();
 
     function initializeTheme() {
         const savedTheme = localStorage.getItem('tabster-theme') || 'dark';
@@ -278,4 +278,120 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Opening space:', spaceId);
         // TODO: Implement space opening functionality
     };
+
+    // SECTION ON POPUP OPEN FLOW
+
+    // Check user authentication when popup opens
+    async function checkUserAuthOnOpen() {
+        console.log('Popup: Checking user authentication on open...');
+        
+        try {
+            // Send auth check request to background script
+            const response = await chrome.runtime.sendMessage({
+                type: 'checkAuth'
+            });
+            
+            if (!response.success) {
+                console.error('Popup: Auth check failed:', response.error);
+                showScreen('welcome');
+                return;
+            }
+            
+            if (!response.authenticated) {
+                console.log('Popup: User not authenticated, showing welcome screen');
+                showScreen('welcome');
+                return;
+            }
+            
+            // User is authenticated - update dashboard and show it
+            console.log('Popup: User authenticated, loading dashboard');
+            updateMainDashboard(response.userData, response.userSpaces);
+            showScreen('dashboard');
+            
+            // Check for active space and update UI accordingly
+            await checkAndUpdateActiveSpace(response.userSpaces);
+            
+        } catch (error) {
+            console.error('Popup: Auth check exception:', error);
+            showScreen('welcome');
+        }
+    }
+
+    // Check chrome local storage for active space and update UI
+    async function checkAndUpdateActiveSpace(userSpaces) {
+        try {
+            console.log('Popup: Checking for active space in local storage...');
+            
+            // Request active space data from background (which uses getLocalActiveSpace)
+            const activeSpaceResponse = await chrome.runtime.sendMessage({
+                type: 'getActiveSpace'
+            });
+            
+            if (!activeSpaceResponse || !activeSpaceResponse.success || !activeSpaceResponse.data) {
+                console.log('Popup: No active space found in local storage');
+                return;
+            }
+            
+            const activeSpace = activeSpaceResponse.data;
+            console.log('Popup: Active space found:', activeSpace);
+            
+            // Find matching space in user spaces and add indicator
+            addActiveSpaceIndicator(activeSpace, userSpaces);
+            
+        } catch (error) {
+            console.error('Popup: Error checking active space:', error);
+        }
+    }
+
+    // Add visual indicator to the active space in the spaces list
+    function addActiveSpaceIndicator(activeSpace, userSpaces) {
+        try {
+            // Find the space that matches the active space
+            const matchingSpace = userSpaces.find(space => space.id === activeSpace.id);
+            
+            if (!matchingSpace) {
+                console.log('Popup: Active space not found in user spaces list');
+                return;
+            }
+            
+            console.log('Popup: Adding active indicator to space:', matchingSpace.name);
+            
+            // Find the space card in the DOM
+            const spacesGrid = document.getElementById('workspaces-grid');
+            if (!spacesGrid) return;
+            
+            const spaceCards = spacesGrid.querySelectorAll('.workspace-card');
+            spaceCards.forEach(card => {
+                const spaceName = card.querySelector('.workspace-name');
+                if (spaceName && spaceName.textContent === matchingSpace.name) {
+                    // Add active indicator class/style
+                    card.classList.add('active-space');
+                    
+                    // Add active indicator element
+                    if (!card.querySelector('.active-indicator')) {
+                        const indicator = document.createElement('div');
+                        indicator.className = 'active-indicator';
+                        indicator.innerHTML = '✓ Active';
+                        indicator.style.cssText = `
+                            position: absolute;
+                            top: 8px;
+                            right: 8px;
+                            background: #10b981;
+                            color: white;
+                            padding: 2px 6px;
+                            border-radius: 4px;
+                            font-size: 10px;
+                            font-weight: bold;
+                        `;
+                        
+                        card.style.position = 'relative';
+                        card.appendChild(indicator);
+                    }
+                }
+            });
+            
+        } catch (error) {
+            console.error('Popup: Error adding active space indicator:', error);
+        }
+    }
 }); 
