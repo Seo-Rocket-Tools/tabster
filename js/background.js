@@ -80,6 +80,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             handleGetActiveSpace(sendResponse);
             return true; // Keep message channel open for async response
             
+        case 'signout':
+            handleSignout(sendResponse);
+            return true; // Keep message channel open for async response
+            
         default:
             console.log('Background: Unknown message type:', message.type);
             sendResponse({ status: 'unknown', message: 'Unknown message type' });
@@ -151,6 +155,33 @@ async function handleSignin(email, password, sendResponse) {
     } catch (error) {
         console.error('Background: Signin exception:', error);
         sendResponse({ success: false, error: error.message || 'An unexpected error occurred' });
+    }
+}
+
+async function handleSignout(sendResponse) {
+    try {
+        console.log('Background: Handling user signout...');
+        
+        // Call the signout function
+        const signoutResult = await signoutUser();
+        
+        if (!signoutResult.success) {
+            console.error('Background: Signout failed:', signoutResult.error);
+            sendResponse({ success: false, error: signoutResult.error });
+            return;
+        }
+        
+        console.log('Background: User signed out successfully');
+        
+        // Send success response
+        sendResponse({
+            success: true,
+            message: 'Signed out successfully'
+        });
+        
+    } catch (error) {
+        console.error('Background: Signout exception:', error);
+        sendResponse({ success: false, error: error.message || 'Signout failed' });
     }
 }
 

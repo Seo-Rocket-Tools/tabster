@@ -530,6 +530,12 @@ body {
     border-bottom-right-radius: 8px;
 }
 
+/* Signout option specific styling */
+.dropdown-item.signout-option:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+}
+
 /* Modal styles */
 .modal-overlay {
     position: fixed;

@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeTheme();
     setupNavigation();
     setupThemeToggle();
+    setupUserMenu();
     
     // Check user authentication on popup open
     checkUserAuthOnOpen();
@@ -94,6 +95,36 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             showScreen('welcome');
         });
+    }
+
+    function setupUserMenu() {
+        const userAvatar = document.getElementById('user-avatar');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        const logoutBtn = document.getElementById('logout-btn-dropdown');
+
+        // Toggle dropdown when avatar is clicked
+        if (userAvatar && dropdownMenu) {
+            userAvatar.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdownMenu.classList.toggle('show');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!userAvatar.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    dropdownMenu.classList.remove('show');
+                }
+            });
+        }
+
+        // Handle signout click
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleUserSignout();
+            });
+        }
     }
 
     function showScreen(screenName) {
@@ -468,5 +499,84 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Popup: Error adding active space indicator:', error);
         }
+    }
+
+    // SECTION USER LOGOUT HANDLER
+
+    // Handle user signout
+    async function handleUserSignout() {
+        try {
+            console.log('Popup: Initiating user signout...');
+            
+            // Show loading state (optional - for user feedback)
+            const signoutBtn = document.querySelector('.signout-option');
+            if (signoutBtn) {
+                signoutBtn.textContent = 'Signing out...';
+                signoutBtn.style.pointerEvents = 'none';
+            }
+            
+            // Send signout request to background script
+            const response = await chrome.runtime.sendMessage({
+                type: 'signout'
+            });
+            
+            if (!response.success) {
+                console.error('Popup: Signout failed:', response.error);
+                // Reset button state
+                if (signoutBtn) {
+                    signoutBtn.textContent = 'Sign Out';
+                    signoutBtn.style.pointerEvents = 'auto';
+                }
+                // Show error message (you can enhance this later)
+                alert('Signout failed: ' + response.error);
+                return;
+            }
+            
+            console.log('Popup: Signout successful, redirecting to welcome screen');
+            
+            // Clear any local UI state and redirect to welcome screen
+            clearDashboardState();
+            showScreen('welcome');
+            
+        } catch (error) {
+            console.error('Popup: Signout exception:', error);
+            // Reset button state
+            const signoutBtn = document.querySelector('.signout-option');
+            if (signoutBtn) {
+                signoutBtn.textContent = 'Sign Out';
+                signoutBtn.style.pointerEvents = 'auto';
+            }
+            alert('Signout failed: ' + error.message);
+        }
+    }
+
+    // Clear dashboard state and reset UI
+    function clearDashboardState() {
+        // Clear welcome message
+        const welcomeMessage = document.getElementById('welcome-message');
+        if (welcomeMessage) {
+            welcomeMessage.textContent = '';
+        }
+        
+        // Clear avatar
+        const avatarInitials = document.getElementById('avatar-initials');
+        if (avatarInitials) {
+            avatarInitials.textContent = '';
+            avatarInitials.classList.remove('skeleton-shimmer');
+        }
+        
+        // Clear spaces grid
+        const spacesGrid = document.getElementById('workspaces-grid');
+        if (spacesGrid) {
+            spacesGrid.innerHTML = '';
+        }
+        
+        // Hide any open dropdowns
+        const dropdown = document.querySelector('.dropdown-menu');
+        if (dropdown) {
+            dropdown.classList.remove('show');
+        }
+        
+        console.log('Popup: Dashboard state cleared');
     }
 }); 
