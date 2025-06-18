@@ -104,7 +104,7 @@ async function handleSignin(email, password, sendResponse) {
         const signinResult = await signinUser(email, password);
         
         if (!signinResult.success) {
-            console.error('Background: Signin failed:', signinResult.error);
+            console.log('Background: Signin failed:', signinResult.error);
             sendResponse({ success: false, error: signinResult.error });
             return;
         }
@@ -369,7 +369,7 @@ async function signinUser(email, password) {
         });
         
         if (error) {
-            console.error('Sign in error:', error);
+            console.log('Sign in error:', error);
             return { success: false, error: error.message };
         }
         

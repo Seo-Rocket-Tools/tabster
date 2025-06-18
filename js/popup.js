@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     MessageBanner.hide(); // Hide banner when switching screens
                 }, 1000);
             } else {
-                console.error('Popup: Sign-in failed:', response.error);
+                console.log('Popup: Sign-in failed:', response.error);
                 MessageBanner.error(response.error || 'Sign in failed. Please try again.');
             }
         } catch (error) {
