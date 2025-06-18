@@ -347,10 +347,14 @@ async function signupUser(fullName, email, password) {
         
         // Supabase auth will handle duplicate email validation automatically
         
+        // Get the confirmation page URL from the extension
+        const confirmationUrl = chrome.runtime.getURL('confirmation.html');
+        
         const { data, error } = await supabase.auth.signUp({
             email: email,
             password: password,
             options: {
+                emailRedirectTo: confirmationUrl,
                 data: {
                     full_name: fullName,
                     display_name: fullName

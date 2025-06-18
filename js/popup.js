@@ -1,5 +1,6 @@
 // Minimal Tabster Popup - UI Only
 document.addEventListener('DOMContentLoaded', function() {
+    
     // Screen elements
     const welcomeScreen = document.getElementById('welcome-screen');
     const loginScreen = document.getElementById('login-screen');

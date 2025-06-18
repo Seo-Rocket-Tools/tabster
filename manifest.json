@@ -30,6 +30,14 @@
     }
   ],
   "permissions": [
-    "storage"
+    "storage",
+    "tabs",
+    "scripting"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["confirmation.html", "css/*", "js/*", "icons/*"],
+      "matches": ["<all_urls>"]
+    }
   ]
 } 
