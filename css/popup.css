@@ -582,7 +582,7 @@ body {
 /* Banner Type Variants */
 .message-banner.success {
     background: var(--bg-secondary);
-    border-color: #34d399;
+    border-color: rgba(52, 211, 153, 0.5);
 }
 
 .message-banner.success .message-banner-text {
@@ -591,7 +591,7 @@ body {
 
 .message-banner.error {
     background: var(--bg-secondary);
-    border-color: #f87171;
+    border-color: rgba(248, 113, 113, 0.5);
 }
 
 .message-banner.error .message-banner-text {
@@ -600,7 +600,7 @@ body {
 
 .message-banner.warning {
     background: var(--bg-secondary);
-    border-color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.5);
 }
 
 .message-banner.warning .message-banner-text {
@@ -609,7 +609,7 @@ body {
 
 .message-banner.info {
     background: var(--bg-secondary);
-    border-color: #60a5fa;
+    border-color: rgba(96, 165, 250, 0.5);
 }
 
 .message-banner.info .message-banner-text {
@@ -619,7 +619,7 @@ body {
 /* Loading/Processing Banner */
 .message-banner.loading {
     background: var(--bg-secondary);
-    border-color: #9ca3af;
+    border-color: rgba(156, 163, 175, 0.5);
 }
 
 .message-banner.loading .message-banner-text {
