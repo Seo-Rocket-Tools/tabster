@@ -223,12 +223,13 @@ document.addEventListener('DOMContentLoaded', function() {
             welcomeMessage.textContent = `Welcome back, ${displayName}!`;
         }
         
-        // Update user avatar initials
+        // Update user avatar initials and clear loading state
         const avatarInitials = document.getElementById('avatar-initials');
         if (avatarInitials && userData) {
             const name = userData.display_name || userData.full_name || userData.email;
             const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
             avatarInitials.textContent = initials;
+            avatarInitials.classList.remove('skeleton-shimmer'); // Remove shimmer animation
         }
         
         // Update spaces grid
@@ -317,16 +318,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function showLoadingDashboard() {
         console.log('Popup: Showing loading dashboard with skeleton card');
         
-        // Update welcome message with generic loading text
+        // Update welcome message to "Please wait..."
         const welcomeMessage = document.getElementById('welcome-message');
         if (welcomeMessage) {
-            welcomeMessage.textContent = 'Loading your spaces...';
+            welcomeMessage.textContent = 'Please wait...';
         }
         
-        // Update user avatar with loading state
+        // Update user avatar with loading state and shimmer animation
         const avatarInitials = document.getElementById('avatar-initials');
         if (avatarInitials) {
-            avatarInitials.textContent = '●●';
+            avatarInitials.textContent = ''; // Clear text content
+            avatarInitials.classList.add('skeleton-shimmer'); // Add shimmer animation
         }
         
         // Show spaces grid with skeleton card
