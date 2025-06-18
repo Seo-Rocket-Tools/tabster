@@ -576,7 +576,7 @@ body {
 .message-banner-text {
     color: var(--text-primary);
     line-height: 1.4;
-    text-align: center;
+    text-align: left;
 }
 
 /* Banner Type Variants */

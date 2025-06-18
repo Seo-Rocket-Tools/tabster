@@ -659,5 +659,45 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // SECTION USER SIGNUP HANDLER
-    
+
+    // On user sign-up / signup form submit listener
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const fullName = document.getElementById('signup-name').value;
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        
+        // Show loading banner and disable button
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        MessageBanner.loading('Creating account...');
+        
+        try {
+            // Send signup credentials to background script
+            const response = await chrome.runtime.sendMessage({
+                type: 'signup',
+                fullName: fullName,
+                email: email,
+                password: password
+            });
+            
+            if (response.success) {
+                MessageBanner.success(response.message);
+                
+                // Small delay to show success message before switching screens
+                setTimeout(() => {
+                    showScreen('login');
+                    MessageBanner.hide(); // Hide banner when switching screens
+                }, 2000);
+            } else {
+                MessageBanner.error(response.error || 'Sign up failed. Please try again.');
+            }
+        } catch (error) {
+            MessageBanner.error('Connection error. Please try again.');
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+        }
+    });
 }); 

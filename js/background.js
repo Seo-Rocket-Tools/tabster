@@ -61,6 +61,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             handleSignin(message.email, message.password, sendResponse);
             return true; // Keep message channel open for async response
             
+        case 'signup':
+            handleSignup(message.fullName, message.email, message.password, sendResponse);
+            return true; // Keep message channel open for async response
+            
         case 'checkAuth':
             handleUserAuthCheck(sendResponse);
             return true; // Keep message channel open for async response
@@ -162,8 +166,29 @@ async function handleSignout(sendResponse) {
     }
 }
 
-async function handleSignup(email, password, sendResponse) {
-    
+async function handleSignup(fullName, email, password, sendResponse) {
+    try {
+        // Sign up user to Supabase auth
+        const signupResult = await signupUser(fullName, email, password);
+        
+        if (!signupResult.success) {
+            console.log('Background: Signup failed:', signupResult.error);
+            sendResponse({ success: false, error: signupResult.error });
+            return;
+        }
+        
+        console.log('Background: Signup successful');
+        
+        // Send success response
+        sendResponse({
+            success: true,
+            message: 'Account created successfully! Please check your email for confirmation.'
+        });
+        
+    } catch (error) {
+        console.error('Background: Signup exception:', error);
+        sendResponse({ success: false, error: error.message || 'An unexpected error occurred' });
+    }
 }
 
 async function handleUserAuthCheck(sendResponse) {
@@ -315,9 +340,48 @@ async function signoutUser() {
     }
 }
 
-// sing ups user to supabase auth
-async function signupUser(email, password) {
-
+// Sign up user to Supabase auth
+async function signupUser(fullName, email, password) {
+    try {
+        console.log('Attempting to sign up user:', email);
+        
+        // Supabase auth will handle duplicate email validation automatically
+        
+        const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    full_name: fullName,
+                    display_name: fullName
+                }
+            }
+        });
+        
+        if (error) {
+            console.log('Sign up error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        // Additional validation: Check if user was created successfully
+        if (!data.user) {
+            console.log('Sign up failed: No user created');
+            return { success: false, error: 'Account creation failed. Please try again.' };
+        }
+        
+        // Check for other edge cases where signup appears successful but isn't
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+            console.log('Sign up failed: User already exists');
+            return { success: false, error: 'An account with this email already exists. Please sign in instead.' };
+        }
+        
+        console.log('Sign up successful:', data.user.email);
+        return { success: true, data: data };
+        
+    } catch (error) {
+        console.error('Sign up exception:', error);
+        return { success: false, error: error.message };
+    }
 }
 
 // Get current user data from 'users' table
