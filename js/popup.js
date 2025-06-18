@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check user authentication on popup open
     checkUserAuthOnOpen();
 
+    // SECTION UI RELATED FUNCTIONS
+
     function initializeTheme() {
         const savedTheme = localStorage.getItem('tabster-theme') || 'dark';
         applyTheme(savedTheme);
@@ -234,39 +236,50 @@ document.addEventListener('DOMContentLoaded', function() {
         if (spacesGrid && userSpaces) {
             spacesGrid.innerHTML = ''; // Clear existing spaces
             
-            if (userSpaces.length === 0) {
-                // Show empty state
-                const emptyState = document.createElement('div');
-                emptyState.className = 'empty-state';
-                emptyState.innerHTML = `
-                    <p>No spaces yet</p>
-                    <button class="btn btn-primary" onclick="showScreen('create-space-screen')">Create your first space</button>
-                `;
-                spacesGrid.appendChild(emptyState);
-            } else {
-                // Create space cards
-                userSpaces.forEach(space => {
-                    const spaceCard = createSpaceCard(space);
-                    spacesGrid.appendChild(spaceCard);
-                });
-            }
+            // Always create space cards (even if empty) and add "New Space" card
+            userSpaces.forEach(space => {
+                const spaceCard = createSpaceCard(space);
+                spacesGrid.appendChild(spaceCard);
+            });
+            
+            // Add "New Space" card at the end
+            const newSpaceCard = createNewSpaceCard();
+            spacesGrid.appendChild(newSpaceCard);
         }
     }
 
     // Helper function to create a space card element
     function createSpaceCard(space) {
         const card = document.createElement('div');
-        card.className = 'workspace-card';
-        card.style.backgroundColor = space.color || '#6366f1';
+        card.className = 'space-card';
+        card.setAttribute('data-space-id', space.id);
+        card.onclick = () => openSpace(space.id);
         
         card.innerHTML = `
-            <div class="workspace-icon">${space.emoji || '📁'}</div>
-            <div class="workspace-info">
-                <h4 class="workspace-name">${space.name}</h4>
-                <p class="workspace-description">${space.description || 'No description'}</p>
+            <div class="space-icon">${space.emoji || '📁'}</div>
+            <div class="space-content">
+                <div class="space-name">${space.name}</div>
+                <div class="space-description">${space.description || 'No description'}</div>
             </div>
-            <div class="workspace-actions">
-                <button class="btn btn-sm" onclick="openSpace('${space.id}')">Open</button>
+            <div class="space-menu">
+                <button class="space-menu-btn">⋯</button>
+            </div>
+        `;
+        
+        return card;
+    }
+
+    // Helper function to create the "New Space" card
+    function createNewSpaceCard() {
+        const card = document.createElement('div');
+        card.className = 'space-card new-space-card';
+        card.onclick = () => showScreen('create-space-screen');
+        
+        card.innerHTML = `
+            <div class="new-space-icon">+</div>
+            <div class="new-space-content">
+                <div class="new-space-title">New Space</div>
+                <div class="new-space-subtitle">Organize your tabs</div>
             </div>
         `;
         
@@ -360,9 +373,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const spacesGrid = document.getElementById('workspaces-grid');
             if (!spacesGrid) return;
             
-            const spaceCards = spacesGrid.querySelectorAll('.workspace-card');
+            const spaceCards = spacesGrid.querySelectorAll('.space-card:not(.new-space-card)');
             spaceCards.forEach(card => {
-                const spaceName = card.querySelector('.workspace-name');
+                const spaceName = card.querySelector('.space-name');
                 if (spaceName && spaceName.textContent === matchingSpace.name) {
                     // Add active indicator class/style
                     card.classList.add('active-space');
@@ -382,6 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             border-radius: 4px;
                             font-size: 10px;
                             font-weight: bold;
+                            z-index: 10;
                         `;
                         
                         card.style.position = 'relative';
