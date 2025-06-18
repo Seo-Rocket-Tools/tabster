@@ -197,24 +197,44 @@ document.addEventListener('DOMContentLoaded', function() {
         const dropdownMenu = document.getElementById('dropdown-menu');
         const logoutBtn = document.getElementById('logout-btn-dropdown');
 
+        // Reset signout button state in case it was disabled
+        if (logoutBtn) {
+            logoutBtn.style.pointerEvents = 'auto';
+            // Remove any existing click listeners to prevent duplicates
+            const newLogoutBtn = logoutBtn.cloneNode(true);
+            logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+        }
+
+        // Get the fresh reference after cloning
+        const freshLogoutBtn = document.getElementById('logout-btn-dropdown');
+
         // Toggle dropdown when avatar is clicked
         if (userAvatar && dropdownMenu) {
-            userAvatar.addEventListener('click', (e) => {
-                e.stopPropagation();
-                dropdownMenu.classList.toggle('show');
-            });
+            // Remove existing avatar listeners to prevent duplicates
+            const newUserAvatar = userAvatar.cloneNode(true);
+            userAvatar.parentNode.replaceChild(newUserAvatar, userAvatar);
+            
+            // Get fresh reference and add listener
+            const freshAvatar = document.getElementById('user-avatar');
+            if (freshAvatar) {
+                freshAvatar.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdownMenu.classList.toggle('show');
+                });
+            }
 
             // Close dropdown when clicking outside
             document.addEventListener('click', (e) => {
-                if (!userAvatar.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                const currentAvatar = document.getElementById('user-avatar');
+                if (currentAvatar && !currentAvatar.contains(e.target) && !dropdownMenu.contains(e.target)) {
                     dropdownMenu.classList.remove('show');
                 }
             });
         }
 
         // Handle signout click
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', (e) => {
+        if (freshLogoutBtn) {
+            freshLogoutBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 handleUserSignout();
@@ -336,6 +356,9 @@ document.addEventListener('DOMContentLoaded', function() {
             avatarInitials.textContent = initials;
             avatarInitials.classList.remove('skeleton-shimmer'); // Remove shimmer animation
         }
+        
+        // Reset and setup user menu to ensure proper state
+        setupUserMenu();
         
         // Update spaces grid
         const spacesGrid = document.getElementById('workspaces-grid');
@@ -608,6 +631,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log('Popup: Signout successful, redirecting to welcome screen');
             MessageBanner.success('Signed out successfully!');
+            
+            // Reset button state immediately after successful signout
+            if (signoutBtn) {
+                signoutBtn.style.pointerEvents = 'auto';
+            }
             
             // Small delay to show success message before switching screens
             setTimeout(() => {
