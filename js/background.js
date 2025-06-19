@@ -870,6 +870,18 @@ const tabEventListeners = {
             isWindowClosing: removeInfo.isWindowClosing,
             timestamp: new Date().toISOString()
         });
+
+        if (removeInfo.isWindowClosing) {
+            const otherWindows = await chrome.windows.getAll({ 
+                windowTypes: ['normal'] 
+            }).then(windows => windows.filter(w => w.id !== removeInfo.windowId));
+            
+            if (otherWindows.length === 0) {
+                console.log('❗IMPORTANT: Browser closing');
+                await saveLocalToDb();
+                return; // Exit early - no need to update local storage when browser is closing
+            }
+        }
         
         // Save current tabs state to active space
         await updateLocalActiveSpace();
