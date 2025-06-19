@@ -436,6 +436,59 @@ async function getUserSpaces(userId) {
 
 // SECTION LOCAL STORAGE FUNCTIONS
 
+
+async function saveToLocal() {
+    try {
+        // Check if 'tabster_active_space' exists in local Chrome storage
+        const activeSpace = await getLocalActiveSpace();
+        
+        if (!activeSpace) {
+            console.log('saveToLocal: No active space found, doing nothing');
+            return { success: true, message: 'No active space to save' };
+        }
+        
+        console.log('saveToLocal: Active space found, collecting current tabs data');
+        
+        // Trigger getCurrentTabsData() to collect all current tabs data
+        const currentTabsData = await getCurrentTabsData();
+        
+        // Construct the updated space object with the updated tabs_data
+        const updatedSpace = {
+            ...activeSpace,
+            tabs_data: currentTabsData,
+            last_accessed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        
+        // Save/update the space object to 'tabster_active_space' in local storage
+        await new Promise((resolve, reject) => {
+            chrome.storage.local.set({ 'tabster_active_space': updatedSpace }, () => {
+                if (chrome.runtime.lastError) {
+                    console.error('saveToLocal: Chrome storage error:', chrome.runtime.lastError);
+                    reject(new Error(chrome.runtime.lastError.message));
+                    return;
+                }
+                
+                console.log('saveToLocal: Successfully updated active space with current tabs data');
+                resolve();
+            });
+        });
+        
+        return { 
+            success: true, 
+            message: 'Active space updated with current tabs data',
+            updatedSpace: updatedSpace
+        };
+        
+    } catch (error) {
+        console.error('saveToLocal: Exception occurred:', error);
+        return { 
+            success: false, 
+            error: error.message || 'Failed to save to local storage' 
+        };
+    }
+}
+
 // Get active space data from Chrome local storage
 async function getLocalActiveSpace() {
     try {
@@ -619,27 +672,42 @@ let tabEventListenersEnabled = false;
 // Tab event listener functions (stored as references for enable/disable control)
 const tabEventListeners = {
     // Handle new tab creation
-    onTabCreated: (tab) => {
+    onTabCreated: async (tab) => {
         console.log('Tab created:', {
             tabId: tab.id,
             url: tab.url,
             title: tab.title,
             timestamp: new Date().toISOString()
         });
+        
+        // Save current tabs state to active space
+        await saveToLocal();
     },
 
     // Handle tab removal/closing
-    onTabRemoved: (tabId, removeInfo) => {
+    onTabRemoved: async (tabId, removeInfo) => {
         console.log('Tab removed:', {
             tabId: tabId,
             windowId: removeInfo.windowId,
             isWindowClosing: removeInfo.isWindowClosing,
             timestamp: new Date().toISOString()
         });
+        
+        // Save current tabs state to active space
+        await saveToLocal();
     },
 
     // Handle tab updates (URL changes, pin/unpin, etc.)
-    onTabUpdated: (tabId, changeInfo, tab) => {
+    onTabUpdated: async (tabId, changeInfo, tab) => {
+        // Only trigger save for meaningful changes
+        const shouldSave = changeInfo.url || 
+                          changeInfo.hasOwnProperty('pinned') || 
+                          changeInfo.status === 'complete';
+        
+        if (!shouldSave) {
+            return;
+        }
+        
         // Log URL changes
         if (changeInfo.url) {
             console.log('Tab URL updated:', {
@@ -662,12 +730,15 @@ const tabEventListeners = {
                 timestamp: new Date().toISOString()
             });
         }
+        
+        // Save current tabs state to active space
+        await saveToLocal();
     },
 
     // Handle tab reordering/moving
-    onTabMoved: (tabId, moveInfo) => {
+    onTabMoved: async (tabId, moveInfo) => {
         // Get tab details to log URL
-        chrome.tabs.get(tabId, (tab) => {
+        chrome.tabs.get(tabId, async (tab) => {
             if (chrome.runtime.lastError) {
                 console.error('Error getting moved tab details:', chrome.runtime.lastError);
                 return;
@@ -682,7 +753,22 @@ const tabEventListeners = {
                 windowId: moveInfo.windowId,
                 timestamp: new Date().toISOString()
             });
+            
+            // Save current tabs state to active space
+            await saveToLocal();
         });
+    },
+
+    // Handle tab replacement (e.g., when a tab is replaced by another)
+    onTabReplaced: async (addedTabId, removedTabId) => {
+        console.log('Tab replaced:', {
+            addedTabId: addedTabId,
+            removedTabId: removedTabId,
+            timestamp: new Date().toISOString()
+        });
+        
+        // Save current tabs state to active space
+        await saveToLocal();
     }
 };
 
@@ -699,6 +785,7 @@ function enableTabEventListeners() {
         chrome.tabs.onRemoved.addListener(tabEventListeners.onTabRemoved);
         chrome.tabs.onUpdated.addListener(tabEventListeners.onTabUpdated);
         chrome.tabs.onMoved.addListener(tabEventListeners.onTabMoved);
+        chrome.tabs.onReplaced.addListener(tabEventListeners.onTabReplaced);
         
         tabEventListenersEnabled = true;
         console.log('Tab event listeners enabled successfully');
@@ -721,6 +808,7 @@ function disableTabEventListeners() {
         chrome.tabs.onRemoved.removeListener(tabEventListeners.onTabRemoved);
         chrome.tabs.onUpdated.removeListener(tabEventListeners.onTabUpdated);
         chrome.tabs.onMoved.removeListener(tabEventListeners.onTabMoved);
+        chrome.tabs.onReplaced.removeListener(tabEventListeners.onTabReplaced);
         
         tabEventListenersEnabled = false;
         console.log('Tab event listeners disabled successfully');
