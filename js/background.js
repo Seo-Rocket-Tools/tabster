@@ -77,6 +77,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             handleSignout(sendResponse);
             return true; // Keep message channel open for async response
             
+        case 'spaceSwitch':
+            handleSpaceSwitch(message.spaceId, sendResponse);
+            return true; // Keep message channel open for async response
+            
         default:
             console.log('Background: Unknown message type:', message.type);
             sendResponse({ status: 'unknown', message: 'Unknown message type' });
@@ -260,6 +264,65 @@ async function handleGetActiveSpace(sendResponse) {
     }
 }
 
+async function handleSpaceSwitch(spaceId, sendResponse) {
+    try {
+        console.log(`handleSpaceSwitch: Starting space switch to space ID: ${spaceId}`);
+        
+        // Check if there is an active space
+        const currentActiveSpace = await getLocalActiveSpace();
+        
+        if (currentActiveSpace) {
+            console.log('handleSpaceSwitch: Active space exists, saving to database and disabling listeners');
+            
+            // Save current active space to database
+            const saveResult = await saveLocalToDb();
+            if (!saveResult.success) {
+                console.error('handleSpaceSwitch: Failed to save current space to database:', saveResult.error);
+                sendResponse({ success: false, error: 'Failed to save current space' });
+                return;
+            }
+            
+            // Disable tab event listeners to prevent saving during switch
+            disableTabEventListeners();
+        } else {
+            console.log('handleSpaceSwitch: No active space found, proceeding with switch');
+        }
+        
+        // Get the new space data from database
+        const spaceDataResult = await getSpaceData(spaceId);
+        if (!spaceDataResult.success) {
+            console.error('handleSpaceSwitch: Failed to get space data:', spaceDataResult.error);
+            sendResponse({ success: false, error: 'Failed to load space data' });
+            return;
+        }
+        
+        // Set the new space as active in local storage
+        const saveLocalResult = await setToLocalActiveSpace(spaceDataResult.data);
+        if (!saveLocalResult.success) {
+            console.error('handleSpaceSwitch: Failed to set new active space:', saveLocalResult.error);
+            sendResponse({ success: false, error: 'Failed to activate new space' });
+            return;
+        }
+        
+        console.log(`handleSpaceSwitch: Successfully switched to space: ${spaceDataResult.data.name}`);
+        
+        // Resume tab event listeners for the new active space
+        enableTabEventListeners();
+        
+        // Send success response with the active space ID
+        sendResponse({
+            success: true,
+            activeSpaceId: spaceId,
+            spaceName: spaceDataResult.data.name,
+            message: `Switched to "${spaceDataResult.data.name}" space`
+        });
+        
+    } catch (error) {
+        console.error('handleSpaceSwitch: Exception occurred:', error);
+        sendResponse({ success: false, error: error.message || 'Space switch failed' });
+    }
+}
+
 // =============================================================================
 
 // SECTION SUPABASE FUNCTIONS
@@ -432,22 +495,104 @@ async function getUserSpaces(userId) {
     }
 }
 
+async function getSpaceData(spaceId) {
+    try {
+        console.log(`getSpaceData: Fetching space data for ID: ${spaceId}`);
+        
+        const { data, error } = await supabase
+            .from('spaces')
+            .select('*')
+            .eq('id', spaceId)
+            .single();
+        
+        if (error) {
+            console.error('getSpaceData: Database error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        if (!data) {
+            console.error('getSpaceData: Space not found');
+            return { success: false, error: 'Space not found' };
+        }
+        
+        console.log(`getSpaceData: Successfully retrieved space: ${data.name}`);
+        return { success: true, data: data };
+        
+    } catch (error) {
+        console.error('getSpaceData: Exception occurred:', error);
+        return { success: false, error: error.message || 'Failed to fetch space data' };
+    }
+}
+
+async function saveLocalToDb() {
+    try {
+        console.log('saveLocalToDb: Starting save to database');
+        
+        // Get the current active space from local storage
+        const activeSpace = await getLocalActiveSpace();
+        
+        if (!activeSpace) {
+            console.log('saveLocalToDb: No active space found to save');
+            return { success: true, message: 'No active space to save' };
+        }
+        
+        if (!activeSpace.id) {
+            console.error('saveLocalToDb: Active space missing ID');
+            return { success: false, error: 'Active space missing required ID' };
+        }
+        
+        // Prepare the update data (excluding read-only fields)
+        const updateData = {
+            tabs_data: activeSpace.tabs_data,
+            last_accessed_at: activeSpace.last_accessed_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            settings: activeSpace.settings || {}
+        };
+        
+        console.log(`saveLocalToDb: Updating space ${activeSpace.id} in database`);
+        
+        const { data, error } = await supabase
+            .from('spaces')
+            .update(updateData)
+            .eq('id', activeSpace.id)
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('saveLocalToDb: Database error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        console.log(`saveLocalToDb: Successfully saved space "${activeSpace.name}" to database`);
+        return { 
+            success: true, 
+            message: `Space "${activeSpace.name}" saved to database`,
+            data: data
+        };
+        
+    } catch (error) {
+        console.error('saveLocalToDb: Exception occurred:', error);
+        return { success: false, error: error.message || 'Failed to save to database' };
+    }
+}
+
 // =============================================================================
 
 // SECTION LOCAL STORAGE FUNCTIONS
 
 
-async function saveToLocal() {
+// previously saveToLocal()
+async function updateLocalActiveSpace() {
     try {
         // Check if 'tabster_active_space' exists in local Chrome storage
         const activeSpace = await getLocalActiveSpace();
         
         if (!activeSpace) {
-            console.log('saveToLocal: No active space found, doing nothing');
-            return { success: true, message: 'No active space to save' };
+            console.log('updateLocalActiveSpace: No active space found, doing nothing');
+            return { success: true, message: 'No active space to update' };
         }
         
-        console.log('saveToLocal: Active space found, collecting current tabs data');
+        console.log('updateLocalActiveSpace: Active space found, collecting current tabs data');
         
         // Trigger getCurrentTabsData() to collect all current tabs data
         const currentTabsData = await getCurrentTabsData();
@@ -464,12 +609,12 @@ async function saveToLocal() {
         await new Promise((resolve, reject) => {
             chrome.storage.local.set({ 'tabster_active_space': updatedSpace }, () => {
                 if (chrome.runtime.lastError) {
-                    console.error('saveToLocal: Chrome storage error:', chrome.runtime.lastError);
+                    console.error('updateLocalActiveSpace: Chrome storage error:', chrome.runtime.lastError);
                     reject(new Error(chrome.runtime.lastError.message));
                     return;
                 }
                 
-                console.log('saveToLocal: Successfully updated active space with current tabs data');
+                console.log('updateLocalActiveSpace: Successfully updated active space with current tabs data');
                 resolve();
             });
         });
@@ -481,11 +626,33 @@ async function saveToLocal() {
         };
         
     } catch (error) {
-        console.error('saveToLocal: Exception occurred:', error);
+        console.error('updateLocalActiveSpace: Exception occurred:', error);
         return { 
             success: false, 
-            error: error.message || 'Failed to save to local storage' 
+            error: error.message || 'Failed to update local active space' 
         };
+    }
+}
+
+// Set space object to Chrome local storage as active space
+async function setToLocalActiveSpace(spaceData) {
+    try {
+        return new Promise((resolve) => {
+            chrome.storage.local.set({ 'tabster_active_space': spaceData }, () => {
+                if (chrome.runtime.lastError) {
+                    console.error('setToLocalActiveSpace: Chrome storage error:', chrome.runtime.lastError);
+                    resolve({ success: false, error: chrome.runtime.lastError.message });
+                    return;
+                }
+                
+                console.log(`setToLocalActiveSpace: Successfully set "${spaceData.name}" as active space`);
+                resolve({ success: true, message: `Set "${spaceData.name}" as active space` });
+            });
+        });
+        
+    } catch (error) {
+        console.error('setToLocalActiveSpace: Exception occurred:', error);
+        return { success: false, error: error.message || 'Failed to set active space locally' };
     }
 }
 
@@ -681,7 +848,7 @@ const tabEventListeners = {
         });
         
         // Save current tabs state to active space
-        await saveToLocal();
+        await updateLocalActiveSpace();
     },
 
     // Handle tab removal/closing
@@ -694,7 +861,7 @@ const tabEventListeners = {
         });
         
         // Save current tabs state to active space
-        await saveToLocal();
+        await updateLocalActiveSpace();
     },
 
     // Handle tab updates (URL changes, pin/unpin, etc.)
@@ -732,7 +899,7 @@ const tabEventListeners = {
         }
         
         // Save current tabs state to active space
-        await saveToLocal();
+        await updateLocalActiveSpace();
     },
 
     // Handle tab reordering/moving
@@ -755,7 +922,7 @@ const tabEventListeners = {
             });
             
             // Save current tabs state to active space
-            await saveToLocal();
+            await updateLocalActiveSpace();
         });
     },
 
@@ -768,7 +935,7 @@ const tabEventListeners = {
         });
         
         // Save current tabs state to active space
-        await saveToLocal();
+        await updateLocalActiveSpace();
     }
 };
 
@@ -832,11 +999,21 @@ function getTabEventListenersStatus() {
 
 async function getCurrentTabsData() {
     try {
-        // Get all tabs and tab groups from all windows in parallel
-        const [allTabs, allTabGroups] = await Promise.all([
-            chrome.tabs.query({}),
-            chrome.tabGroups.query({})
-        ]);
+        // Get all tabs from all windows
+        const allTabs = await chrome.tabs.query({});
+        
+        // Get tab groups if API is available (Chrome 88+)
+        let allTabGroups = [];
+        if (chrome.tabGroups && chrome.tabGroups.query) {
+            try {
+                allTabGroups = await chrome.tabGroups.query({});
+            } catch (error) {
+                console.warn('getCurrentTabsData: Tab groups API not available:', error);
+                allTabGroups = [];
+            }
+        } else {
+            console.warn('getCurrentTabsData: Tab groups API not supported in this Chrome version');
+        }
 
         // Process tab groups data
         const tabGroups = allTabGroups.map(group => ({

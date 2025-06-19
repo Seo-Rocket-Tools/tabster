@@ -32,7 +32,8 @@
   "permissions": [
     "storage",
     "tabs",
-    "scripting"
+    "scripting",
+    "tabGroups"
   ],
   "web_accessible_resources": [
     {

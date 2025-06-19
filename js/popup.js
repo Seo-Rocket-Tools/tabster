@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const card = document.createElement('div');
         card.className = 'space-card';
         card.setAttribute('data-space-id', space.id);
-        card.onclick = () => openSpace(space.id);
+        card.onclick = () => window.handleSpaceSwitch(space.id, space.name);
         
         card.innerHTML = `
             <div class="space-icon">${space.emoji || '📁'}</div>
@@ -459,12 +459,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show dashboard screen
         showScreen('dashboard');
     }
-
-    // Global function to open a space (can be expanded later)
-    window.openSpace = function(spaceId) {
-        console.log('Opening space:', spaceId);
-        // TODO: Implement space opening functionality
-    };
 
     // SECTION ON POPUP OPEN FLOW
 
@@ -701,4 +695,96 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = false;
         }
     });
+
+    // SECTION HANDLE SPACE SWITCH
+
+    // Handle space switching when user clicks on a space card
+    async function handleSpaceSwitch(spaceId, spaceName) {
+        try {
+            console.log(`Popup: Starting space switch to: ${spaceName} (ID: ${spaceId})`);
+            
+            // Show switching message banner
+            MessageBanner.loading(`Switching to "${spaceName}" space...`);
+            
+            // Send space switch request to background script
+            const response = await chrome.runtime.sendMessage({
+                type: 'spaceSwitch',
+                spaceId: spaceId
+            });
+            
+            if (!response.success) {
+                console.error('Popup: Space switch failed:', response.error);
+                MessageBanner.error('Space switch failed: ' + response.error);
+                return;
+            }
+            
+            console.log('Popup: Space switch successful:', response.message);
+            
+            // Update UI to show new active space
+            updateActiveSpaceIndicator(spaceId, response.spaceName);
+            
+            // Show success message
+            MessageBanner.success(response.message || `Switched to "${response.spaceName}" space`);
+            
+        } catch (error) {
+            console.error('Popup: Space switch exception:', error);
+            MessageBanner.error('Space switch failed: ' + error.message);
+        }
+    }
+
+    // Update the active space visual indicator in the UI
+    function updateActiveSpaceIndicator(activeSpaceId, activeSpaceName) {
+        try {
+            const spacesGrid = document.getElementById('workspaces-grid');
+            if (!spacesGrid) return;
+            
+            // Remove active indicators from all space cards
+            const allSpaceCards = spacesGrid.querySelectorAll('.space-card:not(.new-space-card)');
+            allSpaceCards.forEach(card => {
+                card.classList.remove('active-space');
+                const existingIndicator = card.querySelector('.active-indicator');
+                if (existingIndicator) {
+                    existingIndicator.remove();
+                }
+            });
+            
+            // Add active indicator to the selected space
+            allSpaceCards.forEach(card => {
+                const spaceIdAttr = card.getAttribute('data-space-id');
+                if (spaceIdAttr && spaceIdAttr === activeSpaceId.toString()) {
+                    // Add active indicator class
+                    card.classList.add('active-space');
+                    
+                    // Add active indicator element
+                    const indicator = document.createElement('div');
+                    indicator.className = 'active-indicator';
+                    indicator.innerHTML = '✓ Active';
+                    indicator.style.cssText = `
+                        position: absolute;
+                        top: 8px;
+                        right: 8px;
+                        background: #10b981;
+                        color: white;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        font-size: 10px;
+                        font-weight: bold;
+                        z-index: 10;
+                    `;
+                    
+                    card.style.position = 'relative';
+                    card.appendChild(indicator);
+                    
+                    console.log(`Popup: Updated active indicator for space: ${activeSpaceName}`);
+                }
+            });
+            
+        } catch (error) {
+            console.error('Popup: Error updating active space indicator:', error);
+        }
+    }
+
+    // Make handleSpaceSwitch globally available for space card click events
+    window.handleSpaceSwitch = handleSpaceSwitch;
+
 }); 
