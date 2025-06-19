@@ -296,17 +296,15 @@ async function handleSpaceSwitch(spaceId, sendResponse) {
             return;
         }
         
-        // Sync current browser tabs with the space data
-        if (spaceDataResult.data.tabs_data) {
-            console.log('handleSpaceSwitch: Syncing tabs with space data');
-            try {
-                await syncTabsWithCurrent(spaceDataResult.data.tabs_data);
-                console.log('handleSpaceSwitch: Tab synchronization completed');
-            } catch (syncError) {
-                console.error('handleSpaceSwitch: Tab synchronization failed:', syncError);
-                sendResponse({ success: false, error: 'Failed to sync tabs' });
-                return;
-            }
+        // Sync current browser tabs with the space data (always call, even if tabs_data is null)
+        console.log('handleSpaceSwitch: Syncing tabs with space data');
+        try {
+            await syncTabsWithCurrent(spaceDataResult.data.tabs_data);
+            console.log('handleSpaceSwitch: Tab synchronization completed');
+        } catch (syncError) {
+            console.error('handleSpaceSwitch: Tab synchronization failed:', syncError);
+            sendResponse({ success: false, error: 'Failed to sync tabs' });
+            return;
         }
         
         // Set the new space as active in local storage
@@ -1008,7 +1006,7 @@ function getTabEventListenersStatus() {
 
 // =============================================================================
 
-// SECTION OTHER UTIL FUNCTIONS
+// SECTION TAB CONTROL FUNCTIONS
 
 async function getCurrentTabsData() {
     try {
@@ -1070,9 +1068,73 @@ async function getCurrentTabsData() {
     }
 }
 
+
 async function syncTabsWithCurrent(tabs_data) {
     try {
         console.log('syncTabsWithCurrent: Starting tab synchronization process');
+        console.log('syncTabsWithCurrent: tabs_data received:', tabs_data);
+        
+        // Handle empty or null tabs_data - create fresh new tab
+        const isNullData = !tabs_data;
+        const hasNoTabs = !tabs_data?.tabs || tabs_data.tabs.length === 0;
+        const hasNoGroups = !tabs_data?.tabGroups || tabs_data.tabGroups.length === 0;
+        const isEmpty = hasNoTabs && hasNoGroups;
+        
+        console.log('syncTabsWithCurrent: Debug checks:', {
+            isNullData,
+            hasNoTabs,
+            hasNoGroups,
+            isEmpty,
+            shouldCreateFreshTab: isNullData || isEmpty
+        });
+        
+        if (isNullData || isEmpty) {
+            console.log('syncTabsWithCurrent: No tabs data provided, creating fresh new tab');
+            
+            // Get current tabs to close them
+            const currentTabsData = await getCurrentTabsData();
+            const tabsToClose = [];
+            
+            console.log('syncTabsWithCurrent: Current tabs URLs:', currentTabsData.tabs.map(t => t.url));
+            
+            // Collect all closeable tabs
+            for (const tab of currentTabsData.tabs) {
+                // Check for various new tab URL patterns
+                const isNewTab = tab.url === 'chrome://newtab/' || 
+                                tab.url === 'chrome://new-tab-page/' ||
+                                tab.url === 'chrome://new-tab-page' ||
+                                tab.url === 'chrome://newtab' ||
+                                tab.url === 'about:newtab' ||
+                                tab.url === 'edge://newtab/' ||
+                                tab.url.startsWith('chrome://newtab') ||
+                                tab.url.startsWith('edge://newtab');
+                                
+                const isProtectedChromeUrl = tab.url.startsWith('chrome://') && !isNewTab;
+                const isExtensionUrl = tab.url.startsWith('chrome-extension://') || tab.url.startsWith('moz-extension://');
+                
+                console.log(`syncTabsWithCurrent: Tab analysis - URL: ${tab.url}, isNewTab: ${isNewTab}, isProtected: ${isProtectedChromeUrl}, isExtension: ${isExtensionUrl}`);
+                
+                if (isNewTab || (!isProtectedChromeUrl && !isExtensionUrl)) {
+                    tabsToClose.push(tab.tabId);
+                    console.log(`syncTabsWithCurrent: Will close tab: ${tab.url}`);
+                }
+            }
+            
+            // Create one fresh new tab first
+            const newTab = await chrome.tabs.create({
+                url: 'chrome://newtab/',
+                active: true
+            });
+            
+            // Close all other tabs
+            if (tabsToClose.length > 0) {
+                console.log(`syncTabsWithCurrent: Closing ${tabsToClose.length} existing tabs`);
+                await chrome.tabs.remove(tabsToClose);
+            }
+            
+            console.log('syncTabsWithCurrent: Fresh new tab created successfully');
+            return;
+        }
         
         // Get current browser state
         const currentTabsData = await getCurrentTabsData();
@@ -1080,120 +1142,88 @@ async function syncTabsWithCurrent(tabs_data) {
         console.log('syncTabsWithCurrent: Target tabs:', tabs_data.tabs.length);
         
         // Step 1: Create tab groups that don't exist
-        await createMissingTabGroups(tabs_data.tabGroups, currentTabsData.tabGroups);
-        
-        // Step 2: Get current tabs after group creation (may have changed)
-        const updatedCurrentTabs = await getCurrentTabsData();
-        
-        // Step 3: Remove tabs that exist in browser but not in target
-        await removeUnwantedTabs(tabs_data.tabs, updatedCurrentTabs.tabs);
-        
-        // Step 4: Create tabs that exist in target but not in browser
-        await createMissingTabs(tabs_data.tabs, updatedCurrentTabs.tabs);
-        
-        // Step 5: Update existing tabs properties (pinned state, groups, etc.)
-        await updateExistingTabs(tabs_data.tabs);
-        
-        // Step 6: Reorder tabs to match target order
-        await reorderTabsToMatch(tabs_data.tabs);
-        
-        console.log('syncTabsWithCurrent: Tab synchronization completed successfully');
-        
-    } catch (error) {
-        console.error('syncTabsWithCurrent: Error during tab synchronization:', error);
-        throw error;
-    }
-}
-
-// Helper function to create missing tab groups
-async function createMissingTabGroups(targetGroups, currentGroups) {
-    try {
-        console.log('createMissingTabGroups: Creating missing tab groups');
-        
-        // Skip if no tab groups API support
-        if (!chrome.tabGroups || !chrome.tabGroups.update) {
-            console.warn('createMissingTabGroups: Tab groups API not supported');
-            return;
-        }
-        
-        for (const targetGroup of targetGroups) {
-            const existingGroup = currentGroups.find(g => g.title === targetGroup.title);
-            
-            if (!existingGroup) {
-                console.log(`createMissingTabGroups: Creating group "${targetGroup.title}"`);
+        if (chrome.tabGroups && chrome.tabGroups.update) {
+            for (const targetGroup of tabs_data.tabGroups) {
+                const existingGroup = currentTabsData.tabGroups.find(g => g.title === targetGroup.title);
                 
-                // Create a temporary tab to create the group
-                const tempTab = await chrome.tabs.create({ url: 'about:blank', active: false });
-                
-                // Group the tab
-                const groupId = await chrome.tabs.group({ tabIds: [tempTab.id] });
-                
-                // Update group properties
-                await chrome.tabGroups.update(groupId, {
-                    title: targetGroup.title,
-                    color: targetGroup.color || 'grey',
-                    collapsed: targetGroup.collapsed || false
-                });
-                
-                // Remove the temporary tab
-                await chrome.tabs.remove(tempTab.id);
+                if (!existingGroup) {
+                    console.log(`syncTabsWithCurrent: Creating group "${targetGroup.title}"`);
+                    
+                    // Create a temporary tab to create the group
+                    const tempTab = await chrome.tabs.create({ url: 'about:blank', active: false });
+                    
+                    // Group the tab
+                    const groupId = await chrome.tabs.group({ tabIds: [tempTab.id] });
+                    
+                    // Update group properties
+                    await chrome.tabGroups.update(groupId, {
+                        title: targetGroup.title,
+                        color: targetGroup.color || 'grey',
+                        collapsed: targetGroup.collapsed || false
+                    });
+                    
+                    // Remove the temporary tab
+                    await chrome.tabs.remove(tempTab.id);
+                }
             }
         }
         
-    } catch (error) {
-        console.error('createMissingTabGroups: Error creating tab groups:', error);
-    }
-}
-
-// Helper function to remove unwanted tabs
-async function removeUnwantedTabs(targetTabs, currentTabs) {
-    try {
-        console.log('removeUnwantedTabs: Removing unwanted tabs');
+        // Step 2: Get updated current tabs after group creation
+        const updatedCurrentTabs = await getCurrentTabsData();
         
+        // Step 3: Remove tabs that exist in browser but not in target
         const tabsToRemove = [];
         
-        for (const currentTab of currentTabs) {
-            // Skip chrome:// and extension URLs as they can't be managed
-            if (currentTab.url.startsWith('chrome://') || 
-                currentTab.url.startsWith('chrome-extension://') ||
-                currentTab.url.startsWith('moz-extension://')) {
+        console.log('syncTabsWithCurrent: Current tabs URLs for removal check:', updatedCurrentTabs.tabs.map(t => t.url));
+        
+        for (const currentTab of updatedCurrentTabs.tabs) {
+            // Check for various new tab URL patterns
+            const isNewTab = currentTab.url === 'chrome://newtab/' || 
+                            currentTab.url === 'chrome://new-tab-page/' ||
+                            currentTab.url === 'chrome://new-tab-page' ||
+                            currentTab.url === 'chrome://newtab' ||
+                            currentTab.url === 'about:newtab' ||
+                            currentTab.url === 'edge://newtab/' ||
+                            currentTab.url.startsWith('chrome://newtab') ||
+                            currentTab.url.startsWith('edge://newtab');
+                            
+            const isProtectedChromeUrl = currentTab.url.startsWith('chrome://') && !isNewTab;
+            const isExtensionUrl = currentTab.url.startsWith('chrome-extension://') || currentTab.url.startsWith('moz-extension://');
+            
+            console.log(`syncTabsWithCurrent: Removal analysis - URL: ${currentTab.url}, isNewTab: ${isNewTab}, isProtected: ${isProtectedChromeUrl}, isExtension: ${isExtensionUrl}`);
+            
+            // Skip protected URLs but allow new tabs
+            if (isProtectedChromeUrl || isExtensionUrl) {
+                console.log(`syncTabsWithCurrent: Skipping protected tab: ${currentTab.url}`);
                 continue;
             }
             
             // Check if this tab exists in target
-            const existsInTarget = targetTabs.some(targetTab => 
+            const existsInTarget = tabs_data.tabs.some(targetTab => 
                 targetTab.url === currentTab.url
             );
             
             if (!existsInTarget) {
                 tabsToRemove.push(currentTab.tabId);
+                console.log(`syncTabsWithCurrent: Will remove unwanted tab: ${currentTab.url}`);
             }
         }
         
-        // Remove tabs that don't exist in target
+        // Remove unwanted tabs
         if (tabsToRemove.length > 0) {
-            console.log(`removeUnwantedTabs: Removing ${tabsToRemove.length} unwanted tabs`);
+            console.log(`syncTabsWithCurrent: Removing ${tabsToRemove.length} unwanted tabs`);
             await chrome.tabs.remove(tabsToRemove);
         }
         
-    } catch (error) {
-        console.error('removeUnwantedTabs: Error removing tabs:', error);
-    }
-}
-
-// Helper function to create missing tabs
-async function createMissingTabs(targetTabs, currentTabs) {
-    try {
-        console.log('createMissingTabs: Creating missing tabs');
-        
-        for (const targetTab of targetTabs) {
+        // Step 4: Create tabs that exist in target but not in browser
+        for (const targetTab of tabs_data.tabs) {
             // Check if this tab already exists in current tabs
-            const existsInCurrent = currentTabs.some(currentTab => 
+            const existsInCurrent = updatedCurrentTabs.tabs.some(currentTab => 
                 currentTab.url === targetTab.url
             );
             
             if (!existsInCurrent) {
-                console.log(`createMissingTabs: Creating tab: ${targetTab.title}`);
+                console.log(`syncTabsWithCurrent: Creating tab: ${targetTab.title}`);
                 
                 // Create the tab
                 const newTab = await chrome.tabs.create({
@@ -1217,28 +1247,17 @@ async function createMissingTabs(targetTabs, currentTabs) {
                             });
                         }
                     } catch (groupError) {
-                        console.warn('createMissingTabs: Failed to add tab to group:', groupError);
+                        console.warn('syncTabsWithCurrent: Failed to add tab to group:', groupError);
                     }
                 }
             }
         }
         
-    } catch (error) {
-        console.error('createMissingTabs: Error creating tabs:', error);
-    }
-}
-
-// Helper function to update existing tabs properties
-async function updateExistingTabs(targetTabs) {
-    try {
-        console.log('updateExistingTabs: Updating existing tabs properties');
-        
-        // Get fresh current tabs data
-        const currentTabsData = await getCurrentTabsData();
-        
-        for (const targetTab of targetTabs) {
+        // Step 5: Update existing tabs properties (pinned state, groups, etc.)
+        const finalCurrentTabs = await getCurrentTabsData();
+        for (const targetTab of tabs_data.tabs) {
             // Find the corresponding current tab
-            const currentTab = currentTabsData.tabs.find(tab => 
+            const currentTab = finalCurrentTabs.tabs.find(tab => 
                 tab.url === targetTab.url
             );
             
@@ -1258,51 +1277,92 @@ async function updateExistingTabs(targetTabs) {
                 
                 // Apply updates if any
                 if (Object.keys(updates).length > 0) {
-                    console.log(`updateExistingTabs: Updating tab properties for: ${targetTab.title}`);
+                    console.log(`syncTabsWithCurrent: Updating tab properties for: ${targetTab.title}`);
                     await chrome.tabs.update(currentTab.tabId, updates);
                 }
             }
         }
         
-    } catch (error) {
-        console.error('updateExistingTabs: Error updating tabs:', error);
-    }
-}
-
-// Helper function to reorder tabs to match target order
-async function reorderTabsToMatch(targetTabs) {
-    try {
-        console.log('reorderTabsToMatch: Reordering tabs to match target order');
-        
-        // Get fresh current tabs data
-        const currentTabsData = await getCurrentTabsData();
-        
-        // Sort target tabs by index to process in order
-        const sortedTargetTabs = [...targetTabs].sort((a, b) => a.index - b.index);
+        // Step 6: Reorder tabs to match target order
+        const reorderCurrentTabs = await getCurrentTabsData();
+        const sortedTargetTabs = [...tabs_data.tabs].sort((a, b) => a.index - b.index);
         
         for (let i = 0; i < sortedTargetTabs.length; i++) {
             const targetTab = sortedTargetTabs[i];
             
             // Find the corresponding current tab
-            const currentTab = currentTabsData.tabs.find(tab => 
+            const currentTab = reorderCurrentTabs.tabs.find(tab => 
                 tab.url === targetTab.url
             );
             
             if (currentTab && currentTab.index !== targetTab.index) {
-                console.log(`reorderTabsToMatch: Moving tab "${targetTab.title}" to index ${targetTab.index}`);
+                console.log(`syncTabsWithCurrent: Moving tab "${targetTab.title}" to index ${targetTab.index}`);
                 
                 try {
                     await chrome.tabs.move(currentTab.tabId, {
                         index: targetTab.index
                     });
                 } catch (moveError) {
-                    console.warn('reorderTabsToMatch: Failed to move tab:', moveError);
+                    console.warn('syncTabsWithCurrent: Failed to move tab:', moveError);
                 }
             }
         }
         
+        // Step 6.5: Ensure titles are set correctly before discarding
+        const preDiscardTabs = await getCurrentTabsData();
+        for (const targetTab of tabs_data.tabs) {
+            const currentTab = preDiscardTabs.tabs.find(tab => tab.url === targetTab.url);
+            
+            if (currentTab && targetTab.title && currentTab.title !== targetTab.title) {
+                try {
+                    console.log(`syncTabsWithCurrent: Setting title for tab: ${targetTab.title}`);
+                    await chrome.tabs.executeScript(currentTab.tabId, {
+                        code: `document.title = "${targetTab.title.replace(/"/g, '\\"')}";`
+                    });
+                } catch (titleError) {
+                    console.warn('syncTabsWithCurrent: Failed to set tab title:', titleError);
+                }
+            }
+        }
+        
+        // Small delay to allow tabs to start loading and set their favicons
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Step 7: Discard all tabs except the active one for memory optimization
+        const postSyncTabs = await getCurrentTabsData();
+        const tabsToDiscard = [];
+        
+        for (const tab of postSyncTabs.tabs) {
+            // Skip only the active tab and tabs that can't be discarded
+            if (!tab.active && 
+                !tab.url.startsWith('chrome://') && 
+                !tab.url.startsWith('chrome-extension://') &&
+                !tab.url.startsWith('moz-extension://')) {
+                tabsToDiscard.push(tab.tabId);
+            }
+        }
+        
+        // Discard tabs for memory optimization
+        if (tabsToDiscard.length > 0 && chrome.tabs.discard) {
+            console.log(`syncTabsWithCurrent: Discarding ${tabsToDiscard.length} tabs for memory optimization`);
+            try {
+                await Promise.all(
+                    tabsToDiscard.map(tabId => 
+                        chrome.tabs.discard(tabId).catch(err => 
+                            console.warn(`syncTabsWithCurrent: Failed to discard tab ${tabId}:`, err)
+                        )
+                    )
+                );
+            } catch (discardError) {
+                console.warn('syncTabsWithCurrent: Error during tab discarding:', discardError);
+            }
+        }
+        
+        console.log('syncTabsWithCurrent: Tab synchronization completed successfully');
+        
     } catch (error) {
-        console.error('reorderTabsToMatch: Error reordering tabs:', error);
+        console.error('syncTabsWithCurrent: Error during tab synchronization:', error);
+        throw error;
     }
 }
 
