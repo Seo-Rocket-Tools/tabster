@@ -1151,8 +1151,6 @@ body::-webkit-scrollbar {
     border-color: rgba(0, 0, 0, 0.6);
 }
 
-
-
 .workspace-content {
     flex: 1;
     min-width: 0;
@@ -1930,4 +1928,56 @@ body::-webkit-scrollbar {
         padding-top: 16px;
         margin-top: 0;
     }
+}
+
+/* Space card loading states */
+.space-card.loading {
+    pointer-events: none;
+}
+
+.space-card.loading .space-menu-btn {
+    position: relative;
+    color: transparent;
+}
+
+.space-card.loading .space-menu-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border: 2px solid var(--text-muted);
+    border-top: 2px solid var(--text-primary);
+    border-radius: 50%;
+    animation: spaceSpinner 0.8s linear infinite;
+}
+
+@keyframes spaceSpinner {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.spaces-disabled .space-card:not(.loading) {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.spaces-disabled .space-card:not(.loading) .space-icon {
+    opacity: 0.3;
+}
+
+.spaces-disabled .space-card:not(.loading) .space-content {
+    opacity: 0.5;
+}
+
+.spaces-disabled .space-card:not(.loading) .space-menu-btn {
+    opacity: 0.3;
+    cursor: not-allowed;
 } 

@@ -708,10 +708,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // SECTION HANDLE SPACE SWITCH
 
+    // Set visual loading state for space switching
+    function setSpaceSwitchingState(targetSpaceId, isLoading) {
+        try {
+            const spacesGrid = document.getElementById('workspaces-grid');
+            if (!spacesGrid) return;
+
+            // Find the target space card
+            const targetCard = spacesGrid.querySelector(`[data-space-id="${targetSpaceId}"]`);
+            
+            if (isLoading) {
+                // Add loading class to target space card
+                if (targetCard) {
+                    targetCard.classList.add('loading');
+                }
+                
+                // Add disabled class to spaces grid to fade out other spaces
+                spacesGrid.classList.add('spaces-disabled');
+            } else {
+                // Remove loading class from target space card
+                if (targetCard) {
+                    targetCard.classList.remove('loading');
+                }
+                
+                // Remove disabled class from spaces grid
+                spacesGrid.classList.remove('spaces-disabled');
+            }
+        } catch (error) {
+            console.error('Popup: Error setting space switching state:', error);
+        }
+    }
+
     // Handle space switching when user clicks on a space card
     async function handleSpaceSwitch(spaceId, spaceName) {
         try {
             console.log(`Popup: Starting space switch to: ${spaceName} (ID: ${spaceId})`);
+            
+            // Add visual loading state
+            setSpaceSwitchingState(spaceId, true);
             
             // Show switching message banner
             MessageBanner.loading(`Switching to "${spaceName}" space...`);
@@ -725,6 +759,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!response.success) {
                 console.error('Popup: Space switch failed:', response.error);
                 MessageBanner.error('Space switch failed: ' + response.error);
+                // Remove loading state on error
+                setSpaceSwitchingState(spaceId, false);
                 return;
             }
             
@@ -733,12 +769,17 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update UI to show new active space
             updateActiveSpaceIndicator(spaceId, response.spaceName);
             
+            // Remove loading state
+            setSpaceSwitchingState(spaceId, false);
+            
             // Show success message
             MessageBanner.success(response.message || `Switched to "${response.spaceName}" space`);
             
         } catch (error) {
             console.error('Popup: Space switch exception:', error);
             MessageBanner.error('Space switch failed: ' + error.message);
+            // Remove loading state on error
+            setSpaceSwitchingState(spaceId, false);
         }
     }
 
