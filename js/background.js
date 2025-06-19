@@ -740,6 +740,93 @@ function getTabEventListenersStatus() {
 
 // =============================================================================
 
+// SECTION OTHER UTIL FUNCTIONS
+
+async function getCurrentTabsData() {
+    try {
+        // Get all tabs and tab groups from all windows in parallel
+        const [allTabs, allTabGroups] = await Promise.all([
+            chrome.tabs.query({}),
+            chrome.tabGroups.query({})
+        ]);
+
+        // Process tab groups data
+        const tabGroups = allTabGroups.map(group => ({
+            groupId: group.id,
+            title: group.title || '',
+            color: group.color,
+            collapsed: group.collapsed,
+            index: group.index
+        }));
+
+        // Process tabs data
+        const tabs = allTabs.map(tab => ({
+            tabId: tab.id,
+            index: tab.index,
+            url: tab.url,
+            title: tab.title,
+            favIconUrl: tab.favIconUrl || null,
+            pinned: tab.pinned,
+            active: tab.active,
+            highlighted: tab.highlighted,
+            groupId: tab.groupId || null,
+            windowId: tab.windowId,
+            audioState: {
+                audible: tab.audible || false,
+                muted: tab.mutedInfo?.muted || false,
+                mutedInfo: {
+                    muted: tab.mutedInfo?.muted || false,
+                    reason: tab.mutedInfo?.reason || null
+                }
+            }
+        }));
+
+        return {
+            tabGroups: tabGroups,
+            tabs: tabs
+        };
+
+    } catch (error) {
+        console.error('Failed to get current tabs data:', error);
+        throw error;
+    }
+}
 
 
 
+
+const sampleData = {
+    "tabGroups": [
+        {
+            "groupId": 67890,
+            "title": "Research",
+            "color": "blue", // blue, red, yellow, green, pink, purple, cyan, orange
+            "collapsed": false,
+            "index": 0
+        }
+    ],
+
+    "tabs": [
+        {
+            "tabId": 98765, // Original tab ID (reference only)
+            "index": 0,     // Position in window
+            "url": "https://example.com",
+            "title": "Example Website",
+            "favIconUrl": "https://example.com/favicon.ico",
+            "pinned": true,
+            "active": false,
+            "highlighted": false,
+            "groupId": 67890,     // ID of tab group (if any)
+            "windowId": 1028487578,
+
+            "audioState": {
+                "audible": false,
+                "muted": false,
+                "mutedInfo": {
+                    "muted": false,
+                    "reason": null // user, capture, extension
+                }
+            },
+        }
+    ]
+}
