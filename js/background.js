@@ -334,6 +334,10 @@ async function handleSpaceSwitch(spaceId, sendResponse) {
     }
 }
 
+async function handleBrowserStartup(){
+    
+}
+
 // =============================================================================
 
 // SECTION SUPABASE FUNCTIONS
@@ -802,8 +806,9 @@ async function clearSessionBackup() {
 
 // SECTION SERVICE WORKER LIFECYCLE
 
-// Handle extension installation and updates
+// Handle extension installation, updates, and reloads
 chrome.runtime.onInstalled.addListener((details) => {
+    console.log("❗ ON INSTALLED FIRED!")
     if (details.reason === 'install') {
         console.log('Tabster extension installed');
     } else if (details.reason === 'update') {
@@ -813,10 +818,14 @@ chrome.runtime.onInstalled.addListener((details) => {
     }
 });
 
-// Handle service worker startup
-chrome.runtime.onStartup.addListener(() => {
-    console.log('Tabster service worker started');
-    attemptSessionRecovery();
+// Handle window creation / Browser startup
+chrome.windows.onCreated.addListener(async (window) => {
+    // Check if this is the first/only window
+    const allWindows = await chrome.windows.getAll();
+    if (allWindows.length <= 1) {
+        console.log("❗ ON WINDOW CREATED FIRED!");
+        attemptSessionRecovery();
+    }
 });
 
 // Attempt to recover user session on service worker startup
@@ -879,6 +888,7 @@ const tabEventListeners = {
             if (otherWindows.length === 0) {
                 console.log('❗IMPORTANT: Browser closing');
                 await saveLocalToDb();
+                disableTabEventListeners();
                 return; // Exit early - no need to update local storage when browser is closing
             }
         }
@@ -1083,6 +1093,9 @@ async function getCurrentTabsData() {
 
 async function syncTabsWithCurrent(tabs_data) {
     try {
+        // prevent updating the tabs_data while syncing
+        disableTabEventListeners();
+
         console.log('syncTabsWithCurrent: Starting tab synchronization process');
         
         // Handle empty or null tabs_data - create fresh new tab
@@ -1351,7 +1364,10 @@ async function syncTabsWithCurrent(tabs_data) {
         }
         
         console.log('syncTabsWithCurrent: Tab synchronization completed successfully');
-        
+
+        // re-enable tab event listeners
+        enableTabEventListeners();
+
     } catch (error) {
         console.error('syncTabsWithCurrent: Error during tab synchronization:', error);
         throw error;
