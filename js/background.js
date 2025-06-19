@@ -609,5 +609,137 @@ async function attemptSessionRecovery() {
     }
 }
 
+// =============================================================================
+
+// SECTION TAB EVENT HANDLERS
+
+// Tab event listener state management
+let tabEventListenersEnabled = false;
+
+// Tab event listener functions (stored as references for enable/disable control)
+const tabEventListeners = {
+    // Handle new tab creation
+    onTabCreated: (tab) => {
+        console.log('Tab created:', {
+            tabId: tab.id,
+            url: tab.url,
+            title: tab.title,
+            timestamp: new Date().toISOString()
+        });
+    },
+
+    // Handle tab removal/closing
+    onTabRemoved: (tabId, removeInfo) => {
+        console.log('Tab removed:', {
+            tabId: tabId,
+            windowId: removeInfo.windowId,
+            isWindowClosing: removeInfo.isWindowClosing,
+            timestamp: new Date().toISOString()
+        });
+    },
+
+    // Handle tab updates (URL changes, pin/unpin, etc.)
+    onTabUpdated: (tabId, changeInfo, tab) => {
+        // Log URL changes
+        if (changeInfo.url) {
+            console.log('Tab URL updated:', {
+                tabId: tabId,
+                fromUrl: changeInfo.url !== tab.url ? 'Previous URL not available' : 'Same URL',
+                toUrl: changeInfo.url,
+                title: tab.title,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        // Log pin/unpin changes
+        if (changeInfo.hasOwnProperty('pinned')) {
+            console.log('Tab pin status changed:', {
+                tabId: tabId,
+                url: tab.url,
+                title: tab.title,
+                pinned: changeInfo.pinned,
+                action: changeInfo.pinned ? 'pinned' : 'unpinned',
+                timestamp: new Date().toISOString()
+            });
+        }
+    },
+
+    // Handle tab reordering/moving
+    onTabMoved: (tabId, moveInfo) => {
+        // Get tab details to log URL
+        chrome.tabs.get(tabId, (tab) => {
+            if (chrome.runtime.lastError) {
+                console.error('Error getting moved tab details:', chrome.runtime.lastError);
+                return;
+            }
+            
+            console.log('Tab moved:', {
+                tabId: tabId,
+                url: tab.url,
+                title: tab.title,
+                fromIndex: moveInfo.fromIndex,
+                toIndex: moveInfo.toIndex,
+                windowId: moveInfo.windowId,
+                timestamp: new Date().toISOString()
+            });
+        });
+    }
+};
+
+// Enable all tab event listeners
+function enableTabEventListeners() {
+    if (tabEventListenersEnabled) {
+        console.log('Tab event listeners are already enabled');
+        return;
+    }
+    
+    try {
+        // Add all event listeners
+        chrome.tabs.onCreated.addListener(tabEventListeners.onTabCreated);
+        chrome.tabs.onRemoved.addListener(tabEventListeners.onTabRemoved);
+        chrome.tabs.onUpdated.addListener(tabEventListeners.onTabUpdated);
+        chrome.tabs.onMoved.addListener(tabEventListeners.onTabMoved);
+        
+        tabEventListenersEnabled = true;
+        console.log('Tab event listeners enabled successfully');
+        
+    } catch (error) {
+        console.error('Failed to enable tab event listeners:', error);
+    }
+}
+
+// Disable all tab event listeners
+function disableTabEventListeners() {
+    if (!tabEventListenersEnabled) {
+        console.log('Tab event listeners are already disabled');
+        return;
+    }
+    
+    try {
+        // Remove all event listeners
+        chrome.tabs.onCreated.removeListener(tabEventListeners.onTabCreated);
+        chrome.tabs.onRemoved.removeListener(tabEventListeners.onTabRemoved);
+        chrome.tabs.onUpdated.removeListener(tabEventListeners.onTabUpdated);
+        chrome.tabs.onMoved.removeListener(tabEventListeners.onTabMoved);
+        
+        tabEventListenersEnabled = false;
+        console.log('Tab event listeners disabled successfully');
+        
+    } catch (error) {
+        console.error('Failed to disable tab event listeners:', error);
+    }
+}
+
+// Get current tab event listeners status
+function getTabEventListenersStatus() {
+    return {
+        enabled: tabEventListenersEnabled,
+        timestamp: new Date().toISOString()
+    };
+}
+
+// =============================================================================
+
+
 
 
