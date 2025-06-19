@@ -384,6 +384,18 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
+        // Apply custom color styling to the space icon if space has a color
+        if (space.color) {
+            const spaceIcon = card.querySelector('.space-icon');
+            if (spaceIcon) {
+                spaceIcon.style.cssText = `
+                    border: 2px solid ${space.color} !important;
+                    background-color: ${space.color}1A !important;
+                    transition: all 0.2s ease !important;
+                `;
+            }
+        }
+        
         return card;
     }
 
