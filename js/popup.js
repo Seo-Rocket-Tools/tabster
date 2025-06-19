@@ -538,29 +538,27 @@ document.addEventListener('DOMContentLoaded', function() {
             spaceCards.forEach(card => {
                 const spaceName = card.querySelector('.space-name');
                 if (spaceName && spaceName.textContent === matchingSpace.name) {
-                    // Add active indicator class/style
+                    // Add subtle active indicator styling
                     card.classList.add('active-space');
                     
-                    // Add active indicator element
-                    if (!card.querySelector('.active-indicator')) {
-                        const indicator = document.createElement('div');
-                        indicator.className = 'active-indicator';
-                        indicator.innerHTML = '✓ Active';
-                        indicator.style.cssText = `
-                            position: absolute;
-                            top: 8px;
-                            right: 8px;
-                            background: #10b981;
-                            color: white;
-                            padding: 2px 6px;
-                            border-radius: 4px;
-                            font-size: 10px;
+                    // Simply emphasize the existing border for active state
+                    card.style.cssText = `
+                        border-color: rgba(var(--border-color-rgb), 0.5) !important;
+                        transition: border-color 0.2s ease !important;
+                    `;
+                    
+                    // Add dot indicator beside the space name
+                    if (!spaceName.querySelector('.active-dot')) {
+                        const dot = document.createElement('span');
+                        dot.className = 'active-dot';
+                        dot.innerHTML = ' •';
+                        dot.style.cssText = `
+                            color: rgba(var(--border-color-rgb), 0.8);
                             font-weight: bold;
-                            z-index: 10;
+                            font-size: 1.2em;
+                            margin-left: 4px;
                         `;
-                        
-                        card.style.position = 'relative';
-                        card.appendChild(indicator);
+                        spaceName.appendChild(dot);
                     }
                 }
             });
@@ -738,13 +736,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const spacesGrid = document.getElementById('workspaces-grid');
             if (!spacesGrid) return;
             
-            // Remove active indicators from all space cards
+            // Remove active styling from all space cards
             const allSpaceCards = spacesGrid.querySelectorAll('.space-card:not(.new-space-card)');
             allSpaceCards.forEach(card => {
                 card.classList.remove('active-space');
-                const existingIndicator = card.querySelector('.active-indicator');
-                if (existingIndicator) {
-                    existingIndicator.remove();
+                // Reset card styling to default
+                card.style.cssText = '';
+                
+                // Remove dot indicator if it exists
+                const activeDot = card.querySelector('.active-dot');
+                if (activeDot) {
+                    activeDot.remove();
                 }
             });
             
@@ -752,28 +754,29 @@ document.addEventListener('DOMContentLoaded', function() {
             allSpaceCards.forEach(card => {
                 const spaceIdAttr = card.getAttribute('data-space-id');
                 if (spaceIdAttr && spaceIdAttr === activeSpaceId.toString()) {
-                    // Add active indicator class
+                    // Add active indicator styling
                     card.classList.add('active-space');
                     
-                    // Add active indicator element
-                    const indicator = document.createElement('div');
-                    indicator.className = 'active-indicator';
-                    indicator.innerHTML = '✓ Active';
-                    indicator.style.cssText = `
-                        position: absolute;
-                        top: 8px;
-                        right: 8px;
-                        background: #10b981;
-                        color: white;
-                        padding: 2px 6px;
-                        border-radius: 4px;
-                        font-size: 10px;
-                        font-weight: bold;
-                        z-index: 10;
+                    // Simply emphasize the existing border for active state
+                    card.style.cssText = `
+                        border-color: rgba(var(--border-color-rgb), 0.5) !important;
+                        transition: border-color 0.2s ease !important;
                     `;
                     
-                    card.style.position = 'relative';
-                    card.appendChild(indicator);
+                    // Add dot indicator beside the space name
+                    const spaceName = card.querySelector('.space-name');
+                    if (spaceName && !spaceName.querySelector('.active-dot')) {
+                        const dot = document.createElement('span');
+                        dot.className = 'active-dot';
+                        dot.innerHTML = ' •';
+                        dot.style.cssText = `
+                            color: rgba(var(--border-color-rgb), 0.8);
+                            font-weight: bold;
+                            font-size: 1.2em;
+                            margin-left: 4px;
+                        `;
+                        spaceName.appendChild(dot);
+                    }
                     
                     console.log(`Popup: Updated active indicator for space: ${activeSpaceName}`);
                 }
