@@ -1072,7 +1072,6 @@ async function getCurrentTabsData() {
 async function syncTabsWithCurrent(tabs_data) {
     try {
         console.log('syncTabsWithCurrent: Starting tab synchronization process');
-        console.log('syncTabsWithCurrent: tabs_data received:', tabs_data);
         
         // Handle empty or null tabs_data - create fresh new tab
         const isNullData = !tabs_data;
@@ -1080,22 +1079,12 @@ async function syncTabsWithCurrent(tabs_data) {
         const hasNoGroups = !tabs_data?.tabGroups || tabs_data.tabGroups.length === 0;
         const isEmpty = hasNoTabs && hasNoGroups;
         
-        console.log('syncTabsWithCurrent: Debug checks:', {
-            isNullData,
-            hasNoTabs,
-            hasNoGroups,
-            isEmpty,
-            shouldCreateFreshTab: isNullData || isEmpty
-        });
-        
         if (isNullData || isEmpty) {
             console.log('syncTabsWithCurrent: No tabs data provided, creating fresh new tab');
             
             // Get current tabs to close them
             const currentTabsData = await getCurrentTabsData();
             const tabsToClose = [];
-            
-            console.log('syncTabsWithCurrent: Current tabs URLs:', currentTabsData.tabs.map(t => t.url));
             
             // Collect all closeable tabs
             for (const tab of currentTabsData.tabs) {
@@ -1112,11 +1101,8 @@ async function syncTabsWithCurrent(tabs_data) {
                 const isProtectedChromeUrl = tab.url.startsWith('chrome://') && !isNewTab;
                 const isExtensionUrl = tab.url.startsWith('chrome-extension://') || tab.url.startsWith('moz-extension://');
                 
-                console.log(`syncTabsWithCurrent: Tab analysis - URL: ${tab.url}, isNewTab: ${isNewTab}, isProtected: ${isProtectedChromeUrl}, isExtension: ${isExtensionUrl}`);
-                
                 if (isNewTab || (!isProtectedChromeUrl && !isExtensionUrl)) {
                     tabsToClose.push(tab.tabId);
-                    console.log(`syncTabsWithCurrent: Will close tab: ${tab.url}`);
                 }
             }
             
@@ -1174,8 +1160,6 @@ async function syncTabsWithCurrent(tabs_data) {
         // Step 3: Remove tabs that exist in browser but not in target
         const tabsToRemove = [];
         
-        console.log('syncTabsWithCurrent: Current tabs URLs for removal check:', updatedCurrentTabs.tabs.map(t => t.url));
-        
         for (const currentTab of updatedCurrentTabs.tabs) {
             // Check for various new tab URL patterns
             const isNewTab = currentTab.url === 'chrome://newtab/' || 
@@ -1190,11 +1174,8 @@ async function syncTabsWithCurrent(tabs_data) {
             const isProtectedChromeUrl = currentTab.url.startsWith('chrome://') && !isNewTab;
             const isExtensionUrl = currentTab.url.startsWith('chrome-extension://') || currentTab.url.startsWith('moz-extension://');
             
-            console.log(`syncTabsWithCurrent: Removal analysis - URL: ${currentTab.url}, isNewTab: ${isNewTab}, isProtected: ${isProtectedChromeUrl}, isExtension: ${isExtensionUrl}`);
-            
             // Skip protected URLs but allow new tabs
             if (isProtectedChromeUrl || isExtensionUrl) {
-                console.log(`syncTabsWithCurrent: Skipping protected tab: ${currentTab.url}`);
                 continue;
             }
             
@@ -1205,7 +1186,6 @@ async function syncTabsWithCurrent(tabs_data) {
             
             if (!existsInTarget) {
                 tabsToRemove.push(currentTab.tabId);
-                console.log(`syncTabsWithCurrent: Will remove unwanted tab: ${currentTab.url}`);
             }
         }
         
@@ -1364,42 +1344,4 @@ async function syncTabsWithCurrent(tabs_data) {
         console.error('syncTabsWithCurrent: Error during tab synchronization:', error);
         throw error;
     }
-}
-
-
-
-const sampleData = {
-    "tabGroups": [
-        {
-            "groupId": 67890,
-            "title": "Research",
-            "color": "blue", // blue, red, yellow, green, pink, purple, cyan, orange
-            "collapsed": false,
-            "index": 0
-        }
-    ],
-
-    "tabs": [
-        {
-            "tabId": 98765, // Original tab ID (reference only)
-            "index": 0,     // Position in window
-            "url": "https://example.com",
-            "title": "Example Website",
-            "favIconUrl": "https://example.com/favicon.ico",
-            "pinned": true,
-            "active": false,
-            "highlighted": false,
-            "groupId": 67890,     // ID of tab group (if any)
-            "windowId": 1028487578,
-
-            "audioState": {
-                "audible": false,
-                "muted": false,
-                "mutedInfo": {
-                    "muted": false,
-                    "reason": null // user, capture, extension
-                }
-            },
-        }
-    ]
 }
