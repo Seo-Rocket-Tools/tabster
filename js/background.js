@@ -1092,11 +1092,21 @@ async function getCurrentTabsData() {
 
 
 async function syncTabsWithCurrent(tabs_data) {
+    let dummyTabId = null;
+    
     try {
         // prevent updating the tabs_data while syncing
         disableTabEventListeners();
 
         console.log('syncTabsWithCurrent: Starting tab synchronization process');
+        
+        // Create a dummy tab first to prevent browser from closing during sync
+        console.log('syncTabsWithCurrent: Creating dummy tab to prevent browser closure');
+        const dummyTab = await chrome.tabs.create({
+            url: 'data:text/html,<html><head><title>Tabster: Loading Space...</title></head><body></body></html>',
+            active: false
+        });
+        dummyTabId = dummyTab.id;
         
         // Handle empty or null tabs_data - create fresh new tab
         const isNullData = !tabs_data;
@@ -1107,12 +1117,17 @@ async function syncTabsWithCurrent(tabs_data) {
         if (isNullData || isEmpty) {
             console.log('syncTabsWithCurrent: No tabs data provided, creating fresh new tab');
             
-            // Get current tabs to close them
+            // Get current tabs to close them (excluding our dummy tab)
             const currentTabsData = await getCurrentTabsData();
             const tabsToClose = [];
             
-            // Collect all closeable tabs
+            // Collect all closeable tabs (excluding our dummy tab)
             for (const tab of currentTabsData.tabs) {
+                // Skip our dummy tab
+                if (tab.tabId === dummyTabId) {
+                    continue;
+                }
+                
                 // Check for various new tab URL patterns
                 const isNewTab = tab.url === 'chrome://newtab/' || 
                                 tab.url === 'chrome://new-tab-page/' ||
@@ -1137,10 +1152,16 @@ async function syncTabsWithCurrent(tabs_data) {
                 active: true
             });
             
-            // Close all other tabs
+            // Close all other tabs (excluding dummy tab)
             if (tabsToClose.length > 0) {
                 console.log(`syncTabsWithCurrent: Closing ${tabsToClose.length} existing tabs`);
                 await chrome.tabs.remove(tabsToClose);
+            }
+            
+            // Remove dummy tab now that we have a real tab
+            if (dummyTabId) {
+                await chrome.tabs.remove(dummyTabId);
+                dummyTabId = null;
             }
             
             console.log('syncTabsWithCurrent: Fresh new tab created successfully');
@@ -1186,6 +1207,11 @@ async function syncTabsWithCurrent(tabs_data) {
         const tabsToRemove = [];
         
         for (const currentTab of updatedCurrentTabs.tabs) {
+            // Skip our dummy tab
+            if (currentTab.tabId === dummyTabId) {
+                continue;
+            }
+            
             // Check for various new tab URL patterns
             const isNewTab = currentTab.url === 'chrome://newtab/' || 
                             currentTab.url === 'chrome://new-tab-page/' ||
@@ -1365,11 +1391,35 @@ async function syncTabsWithCurrent(tabs_data) {
         
         console.log('syncTabsWithCurrent: Tab synchronization completed successfully');
 
+        // Remove dummy tab now that synchronization is complete
+        if (dummyTabId) {
+            try {
+                await chrome.tabs.remove(dummyTabId);
+                console.log('syncTabsWithCurrent: Dummy tab removed successfully');
+            } catch (dummyError) {
+                console.warn('syncTabsWithCurrent: Failed to remove dummy tab:', dummyError);
+            }
+        }
+
         // re-enable tab event listeners
         enableTabEventListeners();
 
     } catch (error) {
         console.error('syncTabsWithCurrent: Error during tab synchronization:', error);
+        
+        // Clean up dummy tab in case of error
+        if (dummyTabId) {
+            try {
+                await chrome.tabs.remove(dummyTabId);
+                console.log('syncTabsWithCurrent: Dummy tab cleaned up after error');
+            } catch (dummyError) {
+                console.warn('syncTabsWithCurrent: Failed to clean up dummy tab after error:', dummyError);
+            }
+        }
+        
+        // re-enable tab event listeners even in error case
+        enableTabEventListeners();
+        
         throw error;
     }
 }
