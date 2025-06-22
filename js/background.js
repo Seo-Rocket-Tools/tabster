@@ -141,6 +141,9 @@ async function handleSignin(email, password, sendResponse) {
             userSpaces: userSpaces.data
         });
         
+        // Enable tab syncing after successful signin
+        enableTabSyncing();
+        
     } catch (error) {
         console.error('Background: Signin exception:', error);
         sendResponse({ success: false, error: error.message || 'An unexpected error occurred' });
@@ -163,6 +166,9 @@ async function handleSignout(sendResponse) {
             success: true,
             message: 'Signed out successfully'
         });
+        
+        // Disable tab syncing after signout
+        disableTabSyncing();
         
     } catch (error) {
         console.error('Background: Signout exception:', error);
@@ -240,6 +246,9 @@ async function handleUserAuthCheck(sendResponse) {
             userData: userData.data,
             userSpaces: userSpaces.data
         });
+        
+        // Enable tab syncing since user is authenticated
+        enableTabSyncing();
         
     } catch (error) {
         console.error('Background: Auth check exception:', error);
@@ -597,7 +606,7 @@ async function saveLocalToDb() {
 
 
 // previously saveToLocal()
-async function updateLocalActiveSpace() {
+async function _updateLocalActiveSpace() {
     try {
         // Check if 'tabster_active_space' exists in local Chrome storage
         const activeSpace = await getLocalActiveSpace();
@@ -802,6 +811,8 @@ async function clearSessionBackup() {
     }
 }
 
+
+
 // =============================================================================
 
 // SECTION SERVICE WORKER LIFECYCLE
@@ -843,6 +854,10 @@ async function attemptSessionRecovery() {
                     ], resolve);
                 })
             ]);
+        } else {
+            // Session recovered successfully, enable tab syncing
+            console.log('Session recovered, enabling tab syncing');
+            enableTabSyncing();
         }
     } catch (error) {
         console.error('Session recovery error:', error);
@@ -1421,5 +1436,100 @@ async function syncTabsWithCurrent(tabs_data) {
         enableTabEventListeners();
         
         throw error;
+    }
+}
+
+// =============================================================================
+
+// SECTION TAB DATA SYNCHRONIZATION
+
+// Main synchronization function that runs every 5 seconds
+async function syncTabsDataToDb() {
+    try {
+        console.log('syncTabsDataToDb: Starting sync process');
+        
+        // Step 1: Check user authentication
+        const authResult = await checkUserAuth();
+        
+        if (!authResult.success) {
+            return { success: false, message: 'Authentication check failed', error: authResult.error };
+        }
+        
+        if (!authResult.authenticated) {
+            return { success: true, message: 'User not authenticated - no sync needed' };
+        }
+        
+        // Step 2: Get local active space
+        const activeSpace = await getLocalActiveSpace();
+        
+        if (!activeSpace) {
+            return { success: true, message: 'No active space selected - no sync needed' };
+        }
+        
+        // Step 3: Get current tabs data
+        const currentTabsData = await getCurrentTabsData();
+        
+        // Step 4: Compare current tabs with stored tabs data
+        const storedTabsData = activeSpace.tabs_data;
+        
+        // Deep comparison to check if tabs data has changed
+        const tabsDataMatch = JSON.stringify(currentTabsData) === JSON.stringify(storedTabsData);
+        
+        if (tabsDataMatch) {
+            return { 
+                success: true, 
+                message: 'TABS_DATA_CHECKED', 
+                timestamp: new Date().toISOString() 
+            };
+        }
+        
+        // Step 5: Update local active space with current tabs data
+        const updateResult = await _updateLocalActiveSpace();
+        
+        if (!updateResult.success) {
+            return { success: false, message: 'Failed to update local active space', error: updateResult.error };
+        }
+        
+        return { 
+            success: true, 
+            message: 'TABS_DATA_SYNCED TO DB', 
+            timestamp: new Date().toISOString() 
+        };
+        
+    } catch (error) {
+        console.error('syncTabsDataToDb: Exception occurred:', error);
+        return { 
+            success: false, 
+            message: 'Sync failed due to exception', 
+            error: error.message 
+        };
+    }
+}
+
+// Interval management for automatic synchronization
+let syncInterval = null;
+
+// Enable tab syncing with configurable interval (default 5 seconds)
+function enableTabSyncing(interval = 5000) {
+    if (syncInterval) {
+        console.log('Tab syncing already enabled');
+        return;
+    }
+    
+    console.log(`Enabling tab syncing with ${interval}ms interval`);
+    syncInterval = setInterval(async () => {
+        const result = await syncTabsDataToDb();
+        console.log('syncTabsDataToDb result:', result);
+    }, interval);
+}
+
+// Disable tab syncing
+function disableTabSyncing() {
+    if (syncInterval) {
+        clearInterval(syncInterval);
+        syncInterval = null;
+        console.log('Tab syncing disabled');
+    } else {
+        console.log('Tab syncing already disabled');
     }
 }
