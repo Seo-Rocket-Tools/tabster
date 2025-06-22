@@ -153,7 +153,9 @@ async function handleSignin(email, password, sendResponse) {
 async function handleSignout(sendResponse) {
     try {
 
+        // Sync tabs data to database manually before signing out
         const syncResult = await syncTabsDataToDb();
+
         if (!syncResult.success) {
             console.error('Background: Failed to sync tabs data:', syncResult.error);
             sendResponse({ success: false, error: 'Failed to sync tabs data' });
@@ -167,6 +169,9 @@ async function handleSignout(sendResponse) {
             sendResponse({ success: false, error: signoutResult.error });
             return;
         }
+
+        // Stop listening for tab changes
+        disableTabSyncing();
         
         // Send success response
         sendResponse({
@@ -285,10 +290,10 @@ async function handleSpaceSwitch(spaceId, sendResponse) {
         const currentActiveSpace = await getLocalActiveSpace();
         
         if (currentActiveSpace) {
-            console.log('handleSpaceSwitch: Active space exists, saving to database');
+            disableTabSyncing();
             
             // Save current active space to database
-            const saveResult = await saveLocalToDb();
+            const saveResult = await syncTabsDataToDb();
             if (!saveResult.success) {
                 console.error('handleSpaceSwitch: Failed to save current space to database:', saveResult.error);
                 sendResponse({ success: false, error: 'Failed to save current space' });
@@ -306,6 +311,14 @@ async function handleSpaceSwitch(spaceId, sendResponse) {
             return;
         }
         
+        // Set the new space as active in local storage
+        const saveLocalResult = await setToLocalActiveSpace(spaceDataResult.data);
+        if (!saveLocalResult.success) {
+            console.error('handleSpaceSwitch: Failed to set new active space:', saveLocalResult.error);
+            sendResponse({ success: false, error: 'Failed to activate new space' });
+            return;
+        }
+        
         // Sync current browser tabs with the space data (always call, even if tabs_data is null)
         console.log('handleSpaceSwitch: Syncing tabs with space data');
         try {
@@ -314,14 +327,6 @@ async function handleSpaceSwitch(spaceId, sendResponse) {
         } catch (syncError) {
             console.error('handleSpaceSwitch: Tab synchronization failed:', syncError);
             sendResponse({ success: false, error: 'Failed to sync tabs' });
-            return;
-        }
-        
-        // Set the new space as active in local storage
-        const saveLocalResult = await setToLocalActiveSpace(spaceDataResult.data);
-        if (!saveLocalResult.success) {
-            console.error('handleSpaceSwitch: Failed to set new active space:', saveLocalResult.error);
-            sendResponse({ success: false, error: 'Failed to activate new space' });
             return;
         }
         
@@ -338,6 +343,8 @@ async function handleSpaceSwitch(spaceId, sendResponse) {
     } catch (error) {
         console.error('handleSpaceSwitch: Exception occurred:', error);
         sendResponse({ success: false, error: error.message || 'Space switch failed' });
+    } finally {
+        enableTabSyncing();
     }
 }
 
@@ -1239,6 +1246,8 @@ async function syncTabsWithCurrent(tabs_data) {
         for (const tab of postSyncTabs.tabs) {
             // Skip only the active tab and tabs that can't be discarded
             if (!tab.active && 
+                tab.url && // Don't discard tabs with empty URLs
+                tab.url !== '' && 
                 !tab.url.startsWith('chrome://') && 
                 !tab.url.startsWith('chrome-extension://') &&
                 !tab.url.startsWith('moz-extension://')) {
