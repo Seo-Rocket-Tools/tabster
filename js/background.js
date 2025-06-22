@@ -152,9 +152,16 @@ async function handleSignin(email, password, sendResponse) {
 
 async function handleSignout(sendResponse) {
     try {
+
+        const syncResult = await syncTabsDataToDb();
+        if (!syncResult.success) {
+            console.error('Background: Failed to sync tabs data:', syncResult.error);
+            sendResponse({ success: false, error: 'Failed to sync tabs data' });
+            return;
+        }
+
         // Call the signout function
         const signoutResult = await signoutUser();
-        
         if (!signoutResult.success) {
             console.error('Background: Signout failed:', signoutResult.error);
             sendResponse({ success: false, error: signoutResult.error });
@@ -166,9 +173,6 @@ async function handleSignout(sendResponse) {
             success: true,
             message: 'Signed out successfully'
         });
-        
-        // Disable tab syncing after signout
-        disableTabSyncing();
         
     } catch (error) {
         console.error('Background: Signout exception:', error);
@@ -281,7 +285,7 @@ async function handleSpaceSwitch(spaceId, sendResponse) {
         const currentActiveSpace = await getLocalActiveSpace();
         
         if (currentActiveSpace) {
-            console.log('handleSpaceSwitch: Active space exists, saving to database and disabling listeners');
+            console.log('handleSpaceSwitch: Active space exists, saving to database');
             
             // Save current active space to database
             const saveResult = await saveLocalToDb();
@@ -290,9 +294,6 @@ async function handleSpaceSwitch(spaceId, sendResponse) {
                 sendResponse({ success: false, error: 'Failed to save current space' });
                 return;
             }
-            
-            // Disable tab event listeners to prevent saving during switch
-            disableTabEventListeners();
         } else {
             console.log('handleSpaceSwitch: No active space found, proceeding with switch');
         }
@@ -325,9 +326,6 @@ async function handleSpaceSwitch(spaceId, sendResponse) {
         }
         
         console.log(`handleSpaceSwitch: Successfully switched to space: ${spaceDataResult.data.name}`);
-        
-        // Resume tab event listeners for the new active space
-        enableTabEventListeners();
         
         // Send success response with the active space ID
         sendResponse({
@@ -548,6 +546,51 @@ async function getSpaceData(spaceId) {
     }
 }
 
+// Save space data to Supabase database
+async function saveSpaceToDb(spaceData) {
+    try {
+        console.log(`saveSpaceToDb: Saving space "${spaceData.name}" to database`);
+        
+        if (!spaceData.id) {
+            console.error('saveSpaceToDb: Space missing required ID');
+            return { success: false, error: 'Space missing required ID' };
+        }
+        
+        // Prepare the update data (excluding read-only fields)
+        const updateData = {
+            tabs_data: spaceData.tabs_data,
+            last_accessed_at: spaceData.last_accessed_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            settings: spaceData.settings || {}
+        };
+        
+        console.log(`saveSpaceToDb: Updating space ${spaceData.id} in database`);
+        
+        const { data, error } = await supabase
+            .from('spaces')
+            .update(updateData)
+            .eq('id', spaceData.id)
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('saveSpaceToDb: Database error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        console.log(`saveSpaceToDb: Successfully saved space "${spaceData.name}" to database`);
+        return { 
+            success: true, 
+            message: `Space "${spaceData.name}" saved to database`,
+            data: data
+        };
+        
+    } catch (error) {
+        console.error('saveSpaceToDb: Exception occurred:', error);
+        return { success: false, error: error.message || 'Failed to save to database' };
+    }
+}
+
 async function saveLocalToDb() {
     try {
         console.log('saveLocalToDb: Starting save to database');
@@ -605,25 +648,18 @@ async function saveLocalToDb() {
 // SECTION LOCAL STORAGE FUNCTIONS
 
 
-// previously saveToLocal()
-async function _updateLocalActiveSpace() {
+
+// Update local active space with current tabs data
+async function updateLocalActiveSpace(space) {
     try {
-        // Check if 'tabster_active_space' exists in local Chrome storage
-        const activeSpace = await getLocalActiveSpace();
+        console.log('updateLocalActiveSpace: Updating space with current tabs data');
         
-        if (!activeSpace) {
-            console.log('updateLocalActiveSpace: No active space found, doing nothing');
-            return { success: true, message: 'No active space to update' };
-        }
-        
-        console.log('updateLocalActiveSpace: Active space found, collecting current tabs data');
-        
-        // Trigger getCurrentTabsData() to collect all current tabs data
+        // Get current tabs data
         const currentTabsData = await getCurrentTabsData();
         
         // Construct the updated space object with the updated tabs_data
         const updatedSpace = {
-            ...activeSpace,
+            ...space,
             tabs_data: currentTabsData,
             last_accessed_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -864,182 +900,7 @@ async function attemptSessionRecovery() {
     }
 }
 
-// =============================================================================
 
-// SECTION TAB EVENT HANDLERS
-
-// Tab event listener state management
-let tabEventListenersEnabled = false;
-
-// Tab event listener functions (stored as references for enable/disable control)
-const tabEventListeners = {
-    // Handle new tab creation
-    onTabCreated: async (tab) => {
-        console.log('Tab created:', {
-            tabId: tab.id,
-            url: tab.url,
-            title: tab.title,
-            timestamp: new Date().toISOString()
-        });
-        
-        // Save current tabs state to active space
-        await updateLocalActiveSpace();
-    },
-
-    // Handle tab removal/closing
-    onTabRemoved: async (tabId, removeInfo) => {
-        console.log('Tab removed:', {
-            tabId: tabId,
-            windowId: removeInfo.windowId,
-            isWindowClosing: removeInfo.isWindowClosing,
-            timestamp: new Date().toISOString()
-        });
-
-        if (removeInfo.isWindowClosing) {
-            const otherWindows = await chrome.windows.getAll({ 
-                windowTypes: ['normal'] 
-            }).then(windows => windows.filter(w => w.id !== removeInfo.windowId));
-            
-            if (otherWindows.length === 0) {
-                console.log('❗IMPORTANT: Browser closing');
-                await saveLocalToDb();
-                disableTabEventListeners();
-                return; // Exit early - no need to update local storage when browser is closing
-            }
-        }
-        
-        // Save current tabs state to active space
-        await updateLocalActiveSpace();
-    },
-
-    // Handle tab updates (URL changes, pin/unpin, etc.)
-    onTabUpdated: async (tabId, changeInfo, tab) => {
-        // Only trigger save for meaningful changes
-        const shouldSave = changeInfo.url || 
-                          changeInfo.hasOwnProperty('pinned') || 
-                          changeInfo.status === 'complete';
-        
-        if (!shouldSave) {
-            return;
-        }
-        
-        // Log URL changes
-        if (changeInfo.url) {
-            console.log('Tab URL updated:', {
-                tabId: tabId,
-                fromUrl: changeInfo.url !== tab.url ? 'Previous URL not available' : 'Same URL',
-                toUrl: changeInfo.url,
-                title: tab.title,
-                timestamp: new Date().toISOString()
-            });
-        }
-        
-        // Log pin/unpin changes
-        if (changeInfo.hasOwnProperty('pinned')) {
-            console.log('Tab pin status changed:', {
-                tabId: tabId,
-                url: tab.url,
-                title: tab.title,
-                pinned: changeInfo.pinned,
-                action: changeInfo.pinned ? 'pinned' : 'unpinned',
-                timestamp: new Date().toISOString()
-            });
-        }
-        
-        // Save current tabs state to active space
-        await updateLocalActiveSpace();
-    },
-
-    // Handle tab reordering/moving
-    onTabMoved: async (tabId, moveInfo) => {
-        // Get tab details to log URL
-        chrome.tabs.get(tabId, async (tab) => {
-            if (chrome.runtime.lastError) {
-                console.error('Error getting moved tab details:', chrome.runtime.lastError);
-                return;
-            }
-            
-            console.log('Tab moved:', {
-                tabId: tabId,
-                url: tab.url,
-                title: tab.title,
-                fromIndex: moveInfo.fromIndex,
-                toIndex: moveInfo.toIndex,
-                windowId: moveInfo.windowId,
-                timestamp: new Date().toISOString()
-            });
-            
-            // Save current tabs state to active space
-            await updateLocalActiveSpace();
-        });
-    },
-
-    // Handle tab replacement (e.g., when a tab is replaced by another)
-    onTabReplaced: async (addedTabId, removedTabId) => {
-        console.log('Tab replaced:', {
-            addedTabId: addedTabId,
-            removedTabId: removedTabId,
-            timestamp: new Date().toISOString()
-        });
-        
-        // Save current tabs state to active space
-        await updateLocalActiveSpace();
-    }
-};
-
-// Enable all tab event listeners
-function enableTabEventListeners() {
-    if (tabEventListenersEnabled) {
-        console.log('Tab event listeners are already enabled');
-        return;
-    }
-    
-    try {
-        // Add all event listeners
-        chrome.tabs.onCreated.addListener(tabEventListeners.onTabCreated);
-        chrome.tabs.onRemoved.addListener(tabEventListeners.onTabRemoved);
-        chrome.tabs.onUpdated.addListener(tabEventListeners.onTabUpdated);
-        chrome.tabs.onMoved.addListener(tabEventListeners.onTabMoved);
-        chrome.tabs.onReplaced.addListener(tabEventListeners.onTabReplaced);
-        
-        tabEventListenersEnabled = true;
-        console.log('Tab event listeners enabled successfully');
-        
-    } catch (error) {
-        console.error('Failed to enable tab event listeners:', error);
-    }
-}
-
-// Disable all tab event listeners
-function disableTabEventListeners() {
-    if (!tabEventListenersEnabled) {
-        console.log('Tab event listeners are already disabled');
-        return;
-    }
-    
-    try {
-        // Remove all event listeners
-        chrome.tabs.onCreated.removeListener(tabEventListeners.onTabCreated);
-        chrome.tabs.onRemoved.removeListener(tabEventListeners.onTabRemoved);
-        chrome.tabs.onUpdated.removeListener(tabEventListeners.onTabUpdated);
-        chrome.tabs.onMoved.removeListener(tabEventListeners.onTabMoved);
-        chrome.tabs.onReplaced.removeListener(tabEventListeners.onTabReplaced);
-        
-        tabEventListenersEnabled = false;
-        console.log('Tab event listeners disabled successfully');
-        
-    } catch (error) {
-        console.error('Failed to disable tab event listeners:', error);
-    }
-}
-
-// Get current tab event listeners status
-function getTabEventListenersStatus() {
-    return {
-        enabled: tabEventListenersEnabled,
-        timestamp: new Date().toISOString()
-    };
-}
 
 // =============================================================================
 
@@ -1110,9 +971,6 @@ async function syncTabsWithCurrent(tabs_data) {
     let dummyTabId = null;
     
     try {
-        // prevent updating the tabs_data while syncing
-        disableTabEventListeners();
-
         console.log('syncTabsWithCurrent: Starting tab synchronization process');
         
         // Create a dummy tab first to prevent browser from closing during sync
@@ -1416,9 +1274,6 @@ async function syncTabsWithCurrent(tabs_data) {
             }
         }
 
-        // re-enable tab event listeners
-        enableTabEventListeners();
-
     } catch (error) {
         console.error('syncTabsWithCurrent: Error during tab synchronization:', error);
         
@@ -1432,12 +1287,11 @@ async function syncTabsWithCurrent(tabs_data) {
             }
         }
         
-        // re-enable tab event listeners even in error case
-        enableTabEventListeners();
-        
         throw error;
     }
 }
+
+
 
 // =============================================================================
 
@@ -1446,8 +1300,6 @@ async function syncTabsWithCurrent(tabs_data) {
 // Main synchronization function that runs every 5 seconds
 async function syncTabsDataToDb() {
     try {
-        console.log('syncTabsDataToDb: Starting sync process');
-        
         // Step 1: Check user authentication
         const authResult = await checkUserAuth();
         
@@ -1472,10 +1324,40 @@ async function syncTabsDataToDb() {
         // Step 4: Compare current tabs with stored tabs data
         const storedTabsData = activeSpace.tabs_data;
         
-        // Deep comparison to check if tabs data has changed
-        const tabsDataMatch = JSON.stringify(currentTabsData) === JSON.stringify(storedTabsData);
+        // Normalized comparison function that ignores property order and focuses on meaningful content
+        const normalizeTabData = (tabsData) => {
+            if (!tabsData || !tabsData.tabs) return null;
+            
+            return {
+                tabGroups: (tabsData.tabGroups || []).map(group => ({
+                    groupId: group.groupId,
+                    title: group.title || '',
+                    color: group.color,
+                    collapsed: group.collapsed,
+                    index: group.index
+                })).sort((a, b) => a.index - b.index),
+                
+                tabs: tabsData.tabs.map(tab => ({
+                    // Only meaningful properties that should trigger syncing
+                    url: tab.url,
+                    title: tab.title,
+                    index: tab.index,
+                    pinned: tab.pinned,
+                    groupId: tab.groupId || null,
+                    favIconUrl: tab.favIconUrl || null,
+                    muted: tab.audioState?.muted || false
+                })).sort((a, b) => a.index - b.index)
+            };
+        };
+        
+        const normalizedCurrent = normalizeTabData(currentTabsData);
+        const normalizedStored = normalizeTabData(storedTabsData);
+        
+        // Compare normalized data
+        const tabsDataMatch = JSON.stringify(normalizedCurrent) === JSON.stringify(normalizedStored);
         
         if (tabsDataMatch) {
+            console.log('TABS_DATA_CHECKED');
             return { 
                 success: true, 
                 message: 'TABS_DATA_CHECKED', 
@@ -1483,12 +1365,41 @@ async function syncTabsDataToDb() {
             };
         }
         
-        // Step 5: Update local active space with current tabs data
-        const updateResult = await _updateLocalActiveSpace();
+        // Step 5: Create updated space object with current tabs data
+        const updatedSpace = {
+            ...activeSpace,
+            tabs_data: currentTabsData,
+            last_accessed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
         
-        if (!updateResult.success) {
-            return { success: false, message: 'Failed to update local active space', error: updateResult.error };
+        // Step 6: Save updated space to Supabase database first
+        const saveToDbResult = await saveSpaceToDb(updatedSpace);
+        
+        if (!saveToDbResult.success) {
+            console.error('syncTabsDataToDb: Failed to save to database:', saveToDbResult.error);
+            return { 
+                success: false, 
+                message: 'Failed to save to database', 
+                error: saveToDbResult.error 
+            };
         }
+        
+        // Step 7: Only update local storage if database save succeeded
+        const updateLocalResult = await updateLocalActiveSpace(activeSpace);
+        
+        if (!updateLocalResult.success) {
+            console.error('syncTabsDataToDb: Failed to update local storage:', updateLocalResult.error);
+            return { 
+                success: false, 
+                message: 'Database saved but failed to update local storage', 
+                error: updateLocalResult.error 
+            };
+        }
+        
+        console.log('TABS_DATA_SYNCED');
+        console.log('Current data:', normalizedCurrent);
+        console.log('Stored data:', normalizedStored);
         
         return { 
             success: true, 
