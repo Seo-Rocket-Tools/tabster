@@ -348,8 +348,55 @@ async function handleSpaceSwitch(spaceId, sendResponse) {
     }
 }
 
-async function handleBrowserStartup(){
-    
+async function handleBrowserStartup() {
+    try {
+        console.log('handleBrowserStartup: Starting browser startup flow');
+        
+        // Step 1: Check user authentication
+        const authResult = await checkUserAuth();
+        
+        if (!authResult.success) {
+            console.error('handleBrowserStartup: Auth check failed:', authResult.error);
+            return;
+        }
+        
+        if (!authResult.authenticated) {
+            console.log('handleBrowserStartup: No user signed in - doing nothing');
+            return;
+        }
+        
+        console.log('handleBrowserStartup: User is authenticated');
+        
+        // Step 2: Check if tabster_active_space exists on chrome local storage
+        const activeSpace = await getLocalActiveSpace();
+        
+        if (!activeSpace) {
+            console.log('handleBrowserStartup: No active space found - probably first time user uses extension on this browser');
+            return;
+        }
+        
+        console.log(`handleBrowserStartup: Active space found: ${activeSpace.name}`);
+        
+        // Step 3: Disable tab syncing during startup sync
+        disableTabSyncing();
+        
+        // Step 4: Sync browser tabs with the active space data
+        try {
+            console.log('handleBrowserStartup: Syncing tabs with active space data');
+            await syncTabsWithCurrent(activeSpace.tabs_data);
+            console.log('handleBrowserStartup: Tab synchronization completed successfully');
+        } catch (syncError) {
+            console.error('handleBrowserStartup: Tab synchronization failed:', syncError);
+        }
+        
+        console.log('handleBrowserStartup: Browser startup flow completed successfully');
+        
+    } catch (error) {
+        console.error('handleBrowserStartup: Exception occurred:', error);
+    } finally {
+        // Step 5: Enable tab syncing
+        enableTabSyncing();
+    }
 }
 
 // =============================================================================
@@ -861,14 +908,16 @@ async function clearSessionBackup() {
 // SECTION SERVICE WORKER LIFECYCLE
 
 // Handle extension installation, updates, and reloads
-chrome.runtime.onInstalled.addListener((details) => {
+chrome.runtime.onInstalled.addListener(async (details) => {
     console.log("❗ ON INSTALLED FIRED!")
     if (details.reason === 'install') {
         console.log('Tabster extension installed');
+        await handleBrowserStartup();
     } else if (details.reason === 'update') {
         console.log('Tabster extension updated');
         // Attempt session recovery on update
         attemptSessionRecovery();
+        await handleBrowserStartup();
     }
 });
 
@@ -879,8 +928,42 @@ chrome.windows.onCreated.addListener(async (window) => {
     if (allWindows.length <= 1) {
         console.log("❗ ON WINDOW CREATED FIRED!");
         attemptSessionRecovery();
+        await handleBrowserStartup();
     }
 });
+
+// Track if browser is effectively closed (no normal windows)
+let browserClosed = false;
+
+// Listen for window removal to detect browser closure
+chrome.windows.onRemoved.addListener(async (windowId) => {
+    console.log(`Window ${windowId} removed`);
+    
+    // Check if any normal browser windows remain
+    try {
+        const allWindows = await chrome.windows.getAll({ 
+            windowTypes: ['normal'] 
+        });
+        
+        if (allWindows.length === 0) {
+            console.log("❗ ALL BROWSER WINDOWS CLOSED - STOPPING SYNC!");
+            browserClosed = true;
+            
+            // Final sync before stopping
+            await syncTabsDataToDb();
+            
+            // Stop syncing to prevent empty data saves
+            disableTabSyncing();
+        }
+    } catch (error) {
+        console.error('Error checking remaining windows:', error);
+        // If we can't check windows, assume browser is closing
+        browserClosed = true;
+        disableTabSyncing();
+    }
+});
+
+
 
 // Attempt to recover user session on service worker startup
 async function attemptSessionRecovery() {
@@ -1309,6 +1392,11 @@ async function syncTabsWithCurrent(tabs_data) {
 // Main synchronization function that runs every 5 seconds
 async function syncTabsDataToDb() {
     try {
+        // Step 0: Check if browser is closed (prevent empty data saves)
+        if (browserClosed) {
+            return { success: true, message: 'Browser closed - sync disabled' };
+        }
+        
         // Step 1: Check user authentication
         const authResult = await checkUserAuth();
         
