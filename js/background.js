@@ -49,7 +49,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     },
 });
 
-// SECTION Basic message handling for communication with popup
+// SECTION Basic message handling for communication with sidepanel
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     switch (message.type) {
@@ -955,6 +955,18 @@ chrome.windows.onRemoved.addListener(async (windowId) => {
         // If we can't check windows, assume browser is closing
         browserClosed = true;
         disableTabSyncing();
+    }
+});
+
+// Handle sidepanel open/close
+let sidepanelOpen = false;
+chrome.action.onClicked.addListener(async (tab) => {
+    if (sidepanelOpen) {
+        await chrome.runtime.sendMessage({ type: 'closeSidepanel' });
+        sidepanelOpen = false;
+    } else {
+        await chrome.sidePanel.open({ windowId: tab.windowId });
+        sidepanelOpen = true;
     }
 });
 

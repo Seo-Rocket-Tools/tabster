@@ -1,4 +1,4 @@
-// Minimal Tabster Popup - UI Only
+// Minimal Tabster Sidepanel - UI Only
 document.addEventListener('DOMContentLoaded', function() {
     
     // Screen elements
@@ -31,8 +31,21 @@ document.addEventListener('DOMContentLoaded', function() {
     setupThemeToggle();
     setupUserMenu();
     
-    // Check user authentication on popup open
+        // Check user authentication on sidepanel open
     checkUserAuthOnOpen();
+    
+    // Listen for close sidepanel message from background script
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+ 
+        switch (message.type) {
+            case 'closeSidepanel':
+                window.close();
+                sendResponse({ success: true });
+                break;
+            default:
+                break;
+        }
+    });
 
     // SECTION UI RELATED FUNCTIONS
 
@@ -472,9 +485,9 @@ document.addEventListener('DOMContentLoaded', function() {
         showScreen('dashboard');
     }
 
-    // SECTION ON POPUP OPEN FLOW
+    // SECTION ON SIDEPANEL OPEN FLOW
 
-    // Check user authentication when popup opens
+    // Check user authentication when sidepanel opens
     async function checkUserAuthOnOpen() {
         // Show loading dashboard immediately for better UX
         showLoadingDashboard();
@@ -515,18 +528,18 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (!activeSpaceResponse || !activeSpaceResponse.success || !activeSpaceResponse.data) {
-                console.log('Popup: No active space found in local storage');
+                console.log('Sidepanel: No active space found in local storage');
                 return;
             }
             
             const activeSpace = activeSpaceResponse.data;
-            console.log('Popup: Active space found:', activeSpace);
+            console.log('Sidepanel: Active space found:', activeSpace);
             
             // Find matching space in user spaces and add indicator
             addActiveSpaceIndicator(activeSpace, userSpaces);
             
         } catch (error) {
-            console.error('Popup: Error checking active space:', error);
+            console.error('Sidepanel: Error checking active space:', error);
         }
     }
 
@@ -540,7 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            console.log('Popup: Adding active indicator to space:', matchingSpace.name);
+            console.log('Sidepanel: Adding active indicator to space:', matchingSpace.name);
             
             // Find the space card in the DOM
             const spacesGrid = document.getElementById('workspaces-grid');
@@ -576,7 +589,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
         } catch (error) {
-            console.error('Popup: Error adding active space indicator:', error);
+            console.error('Sidepanel: Error adding active space indicator:', error);
         }
     }
 
@@ -599,7 +612,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (!response.success) {
-                console.error('Popup: Signout failed:', response.error);
+                console.error('Sidepanel: Signout failed:', response.error);
                 MessageBanner.error('Signout failed: ' + response.error);
                 
                 // Reset button state
@@ -624,7 +637,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 1000);
             
         } catch (error) {
-            console.error('Popup: Signout exception:', error);
+            console.error('Sidepanel: Signout exception:', error);
             MessageBanner.error('Signout failed: ' + error.message);
             
             // Reset button state
@@ -735,14 +748,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 spacesGrid.classList.remove('spaces-disabled');
             }
         } catch (error) {
-            console.error('Popup: Error setting space switching state:', error);
+            console.error('Sidepanel: Error setting space switching state:', error);
         }
     }
 
     // Handle space switching when user clicks on a space card
     async function handleSpaceSwitch(spaceId, spaceName) {
         try {
-            console.log(`Popup: Starting space switch to: ${spaceName} (ID: ${spaceId})`);
+            console.log(`Sidepanel: Starting space switch to: ${spaceName} (ID: ${spaceId})`);
             
             // Add visual loading state
             setSpaceSwitchingState(spaceId, true);
@@ -757,14 +770,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (!response.success) {
-                console.error('Popup: Space switch failed:', response.error);
+                console.error('Sidepanel: Space switch failed:', response.error);
                 MessageBanner.error('Space switch failed: ' + response.error);
                 // Remove loading state on error
                 setSpaceSwitchingState(spaceId, false);
                 return;
             }
             
-            console.log('Popup: Space switch successful:', response.message);
+            console.log('Sidepanel: Space switch successful:', response.message);
             
             // Update UI to show new active space
             updateActiveSpaceIndicator(spaceId, response.spaceName);
@@ -776,7 +789,7 @@ document.addEventListener('DOMContentLoaded', function() {
             MessageBanner.success(response.message || `Switched to "${response.spaceName}" space`);
             
         } catch (error) {
-            console.error('Popup: Space switch exception:', error);
+            console.error('Sidepanel: Space switch exception:', error);
             MessageBanner.error('Space switch failed: ' + error.message);
             // Remove loading state on error
             setSpaceSwitchingState(spaceId, false);
@@ -831,12 +844,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         spaceName.appendChild(dot);
                     }
                     
-                    console.log(`Popup: Updated active indicator for space: ${activeSpaceName}`);
+                    console.log(`Sidepanel: Updated active indicator for space: ${activeSpaceName}`);
                 }
             });
             
         } catch (error) {
-            console.error('Popup: Error updating active space indicator:', error);
+            console.error('Sidepanel: Error updating active space indicator:', error);
         }
     }
 

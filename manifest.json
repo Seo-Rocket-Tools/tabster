@@ -10,13 +10,15 @@
     "128": "icons/tabster_logo.png"
   },
   "action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/tabster_logo.png",
       "32": "icons/tabster_logo.png",
       "48": "icons/tabster_logo.png",
       "128": "icons/tabster_logo.png"
     }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
   },
   "background": {
     "service_worker": "js/background.js",
@@ -33,7 +35,8 @@
     "storage",
     "tabs",
     "scripting",
-    "tabGroups"
+    "tabGroups",
+    "sidePanel"
   ],
   "web_accessible_resources": [
     {
