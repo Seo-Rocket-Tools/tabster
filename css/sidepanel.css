@@ -1007,25 +1007,49 @@ body::-webkit-scrollbar {
     text-overflow: ellipsis;
 }
 
-.space-menu {
+.space-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     opacity: 1;
     transition: opacity 0.2s ease;
 }
 
+.space-switch-btn,
 .space-menu-btn {
     background: none;
     border: none;
     color: var(--text-secondary);
-    font-size: 16px;
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 6px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    min-height: 28px;
 }
 
+.space-switch-btn:hover,
 .space-menu-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--hover-bg);
     color: var(--text-primary);
+}
+
+.space-switch-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2;
+}
+
+.space-menu-btn {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.space-switch-btn:active {
+    transform: scale(0.95);
 }
 
 /* New Space Card */
@@ -1940,6 +1964,15 @@ body::-webkit-scrollbar {
     pointer-events: none;
 }
 
+.space-card.loading .space-actions {
+    pointer-events: none;
+}
+
+.space-card.loading .space-switch-btn,
+.space-card.loading .space-menu-btn {
+    opacity: 0.3;
+}
+
 .space-card.loading .space-menu-btn {
     position: relative;
     color: transparent;
@@ -1982,8 +2015,13 @@ body::-webkit-scrollbar {
     opacity: 0.5;
 }
 
-.spaces-disabled .space-card:not(.loading) .space-menu-btn {
+.spaces-disabled .space-card:not(.loading) .space-actions {
     opacity: 0.3;
+    pointer-events: none;
+}
+
+.spaces-disabled .space-card:not(.loading) .space-switch-btn,
+.spaces-disabled .space-card:not(.loading) .space-menu-btn {
     cursor: not-allowed;
 }
 

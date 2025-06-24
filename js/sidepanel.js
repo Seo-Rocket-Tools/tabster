@@ -384,7 +384,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const card = document.createElement('div');
         card.className = 'space-card';
         card.setAttribute('data-space-id', space.id);
-        card.onclick = () => window.handleSpaceSwitch(space.id, space.name);
         
         card.innerHTML = `
             <div class="space-icon">${space.emoji || '📁'}</div>
@@ -392,10 +391,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="space-name">${space.name}</div>
                 <div class="space-description">${space.description || 'No description'}</div>
             </div>
-            <div class="space-menu">
+            <div class="space-actions">
+                <button class="space-switch-btn" title="Switch to ${space.name}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="17 1 21 5 17 9"></polyline>
+                        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                        <polyline points="7 23 3 19 7 15"></polyline>
+                        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                    </svg>
+                </button>
                 <button class="space-menu-btn">⋯</button>
             </div>
         `;
+        
+        // Add event listener for the switch button
+        const switchBtn = card.querySelector('.space-switch-btn');
+        if (switchBtn) {
+            switchBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.handleSpaceSwitch(space.id, space.name);
+            });
+        }
         
         // Apply custom color styling to the space icon if space has a color
         if (space.color) {
