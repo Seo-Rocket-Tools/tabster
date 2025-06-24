@@ -14,6 +14,11 @@
   --icon-filter: none;
   --logo-filter: invert(1); /* White logo on dark background */
   --card-border-radius: 10px;
+  --drag-primary: #3B82F6;
+  --drag-primary-rgb: 59, 130, 246;
+  --drag-shadow: rgba(0, 0, 0, 0.2);
+  --drag-highlight: rgba(59, 130, 246, 0.2);
+  --drag-insertion: #3B82F6;
 }
 
 :root.light-theme {
@@ -32,6 +37,11 @@
   --icon-filter: none;
   --logo-filter: invert(0); /* Black logo on light background */
   --card-border-radius: 10px;
+  --drag-primary: #2563EB;
+  --drag-primary-rgb: 37, 99, 235;
+  --drag-shadow: rgba(0, 0, 0, 0.1);
+  --drag-highlight: rgba(37, 99, 235, 0.15);
+  --drag-insertion: #2563EB;
 }
 
 body {
@@ -943,6 +953,22 @@ body::-webkit-scrollbar {
     grid-template-columns: 1fr;
     gap: 8px;
     padding: 0 8px;
+    position: relative;
+}
+
+/* Simple insertion line */
+.insertion-line {
+    position: absolute;
+    height: 1px;
+    background: var(--text-secondary);
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.insertion-line.show {
+    opacity: 0.8;
 }
 
 /* Modern Space Card Design */
@@ -1097,6 +1123,154 @@ body::-webkit-scrollbar {
     color: var(--text-secondary);
     margin: 0;
     line-height: 1.3;
+}
+
+/* Drag and Drop Styles */
+.space-card[draggable="true"] {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.space-card {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.space-card:hover {
+    transform: translateY(-1px);
+}
+
+/* Drag Handle */
+.drag-handle {
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+    color: var(--text-secondary);
+}
+
+.drag-handle:hover {
+    color: var(--text-primary);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+    transform: translateY(-50%) scale(0.9);
+}
+
+.space-card:hover .drag-handle {
+    opacity: 1;
+    left: -1px;
+}
+
+.space-card.dragging .drag-handle {
+    opacity: 0;
+}
+
+.drag-handle svg {
+    width: 17px;
+    height: 17px;
+    transition: inherit;
+}
+
+/* Dragging state - simplified */
+.space-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+    z-index: 1000;
+    transition: none;
+}
+
+/* Simplified grid state during drag */
+.workspaces-grid.dragging {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.workspaces-grid.dragging .space-card:not(.dragging):not(.new-space-card) {
+    transition: all 0.2s ease;
+    opacity: 0.8;
+}
+
+/* Enhanced new space card states */
+.new-space-card {
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.workspaces-grid.dragging .new-space-card {
+    opacity: 0.4;
+}
+
+.new-space-card[draggable] {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+}
+
+/* Enhanced hover states for better feedback */
+.space-card:not(.dragging):hover {
+    background: var(--hover-bg);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+/* Smooth reordering animations */
+.space-card.moving {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Success animation after drop - simplified */
+.space-card.dropped {
+    animation: dropSuccess 0.4s ease-out;
+}
+
+@keyframes dropSuccess {
+    0% { 
+        transform: scale(1);
+    }
+    50% { 
+        transform: scale(1.02);
+    }
+    100% { 
+        transform: scale(1);
+    }
+}
+
+/* Mobile-friendly touch feedback */
+@media (pointer: coarse) {
+    .drag-handle {
+        width: 22px;
+        height: 22px;
+    }
+    
+    .drag-handle svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .space-card:hover .drag-handle {
+        opacity: 1;
+        left: 1px;
+    }
+    
+    .space-card.dragging {
+        transform: rotate(1deg) scale(1.03);
+    }
 }
 
 /* Legacy workspace-card support */

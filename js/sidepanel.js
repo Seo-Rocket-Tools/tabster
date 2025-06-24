@@ -409,20 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setupUserMenu();
         
         // Update spaces grid with dummy data
-        const spacesGrid = document.getElementById('workspaces-grid');
-        if (spacesGrid) {
-            spacesGrid.innerHTML = ''; // Clear existing spaces
-            
-            // Create space cards using dummy data
-            dummySpaces.forEach(space => {
-                const spaceCard = createSpaceCard(space);
-                spacesGrid.appendChild(spaceCard);
-            });
-            
-            // Add "New Space" card at the end
-            const newSpaceCard = createNewSpaceCard();
-            spacesGrid.appendChild(newSpaceCard);
-        }
+        renderSpacesGrid();
     }
 
     // Helper function to create a space card element (simplified - no switching functionality)
@@ -430,8 +417,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const card = document.createElement('div');
         card.className = 'space-card';
         card.setAttribute('data-space-id', space.id);
+        card.setAttribute('data-index', dummySpaces.findIndex(s => s.id === space.id));
         
         card.innerHTML = `
+            <div class="drag-handle" draggable="true" title="Drag to reorder">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+                    <path d="M360-160q-33 0-56.5-23.5T280-240q0-33 23.5-56.5T360-320q33 0 56.5 23.5T440-240q0 33-23.5 56.5T360-160Zm240 0q-33 0-56.5-23.5T520-240q0-33 23.5-56.5T600-320q33 0 56.5 23.5T680-240q0 33-23.5 56.5T600-160ZM360-400q-33 0-56.5-23.5T280-480q0-33 23.5-56.5T360-560q33 0 56.5 23.5T440-480q0 33-23.5 56.5T360-400Zm240 0q-33 0-56.5-23.5T520-480q0-33 23.5-56.5T600-560q33 0 56.5 23.5T680-480q0 33-23.5 56.5T600-400ZM360-640q-33 0-56.5-23.5T280-720q0-33 23.5-56.5T360-800q33 0 56.5 23.5T440-720q0 33-23.5 56.5T360-640Zm240 0q-33 0-56.5-23.5T520-720q0-33 23.5-56.5T600-800q33 0 56.5 23.5T680-720q0 33-23.5 56.5T600-640Z"/>
+                </svg>
+            </div>
             <div class="space-icon">${space.emoji || '📁'}</div>
             <div class="space-content">
                 <div class="space-name">${space.name}</div>
@@ -462,6 +455,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Add drag event listeners to the drag handle only
+        const dragHandle = card.querySelector('.drag-handle');
+        dragHandle.addEventListener('dragstart', handleDragStart);
+        dragHandle.addEventListener('dragend', handleDragEnd);
+        
+        // Add drag over and drop listeners to the card for drop zones
+        card.addEventListener('dragover', handleDragOver);
+        card.addEventListener('drop', handleDrop);
+        
         return card;
     }
 
@@ -480,6 +482,217 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         return card;
+    }
+
+    // Drag and Drop functionality
+    let draggedElement = null;
+    let draggedIndex = null;
+    let insertionLine = null;
+
+    function handleDragStart(e) {
+        // Get the parent card from the drag handle
+        const card = e.target.closest('.space-card');
+        draggedElement = card;
+        draggedIndex = parseInt(card.getAttribute('data-index'));
+        
+        // Add dragging class for visual feedback to the card
+        card.classList.add('dragging');
+        
+        // Add dragging class to container to prevent text selection
+        const spacesGrid = document.getElementById('workspaces-grid');
+        if (spacesGrid) {
+            spacesGrid.classList.add('dragging');
+        }
+        
+        // Create insertion line element
+        createInsertionLine();
+        
+        // Set drag effect
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', card.outerHTML);
+        
+        // Create a custom drag image using the entire card
+        try {
+            const dragImage = card.cloneNode(true);
+            dragImage.style.opacity = '0.8';
+            dragImage.style.transform = 'scale(0.95)';
+            dragImage.style.position = 'absolute';
+            dragImage.style.top = '-1000px';
+            document.body.appendChild(dragImage);
+            e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
+            setTimeout(() => document.body.removeChild(dragImage), 0);
+        } catch (error) {
+            // Fallback to default drag image if custom fails
+        }
+    }
+
+    function createInsertionLine() {
+        insertionLine = document.createElement('div');
+        insertionLine.className = 'insertion-line';
+        insertionLine.style.position = 'absolute';
+        insertionLine.style.width = 'calc(100% - 16px)';
+        insertionLine.style.left = '8px';
+        document.getElementById('workspaces-grid').appendChild(insertionLine);
+    }
+
+    function showInsertionLine(beforeElement) {
+        if (!insertionLine || !beforeElement) return;
+        
+        const container = document.getElementById('workspaces-grid');
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = beforeElement.getBoundingClientRect();
+        
+        // Position the line just above the target element
+        const relativeTop = elementRect.top - containerRect.top;
+        insertionLine.style.top = (relativeTop - 4) + 'px';
+        insertionLine.classList.add('show');
+    }
+
+    function showInsertionLineAfter(afterElement) {
+        if (!insertionLine || !afterElement) return;
+        
+        const container = document.getElementById('workspaces-grid');
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = afterElement.getBoundingClientRect();
+        
+        // Position the line just below the target element
+        const relativeTop = elementRect.bottom - containerRect.top;
+        insertionLine.style.top = (relativeTop + 4) + 'px';
+        insertionLine.classList.add('show');
+    }
+
+    function hideInsertionLine() {
+        if (insertionLine) {
+            insertionLine.classList.remove('show');
+        }
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        
+        // Don't allow dropping on the new space card
+        const newSpaceCard = e.target.closest('.new-space-card');
+        if (newSpaceCard) {
+            hideInsertionLine();
+            return false;
+        }
+        
+        e.dataTransfer.dropEffect = 'move';
+        
+        const dropTarget = e.target.closest('.space-card:not(.new-space-card):not(.dragging)');
+        if (dropTarget && dropTarget !== draggedElement) {
+            // Determine if we're in the top or bottom half of the target
+            const rect = dropTarget.getBoundingClientRect();
+            const midpoint = rect.top + (rect.height / 2);
+            const isTopHalf = e.clientY < midpoint;
+            
+            if (isTopHalf) {
+                showInsertionLine(dropTarget);
+            } else {
+                showInsertionLineAfter(dropTarget);
+            }
+        } else {
+            hideInsertionLine();
+        }
+        
+        return false;
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+        
+        const dropTarget = e.target.closest('.space-card:not(.new-space-card)');
+        
+        // Don't allow dropping on the new space card or invalid targets
+        if (!dropTarget || dropTarget.classList.contains('new-space-card') || dropTarget === draggedElement) {
+            return false;
+        }
+        
+        const dropIndex = parseInt(dropTarget.getAttribute('data-index'));
+        
+        if (draggedIndex !== null && dropIndex !== null && draggedIndex !== dropIndex) {
+            // Determine insertion point based on drop position
+            const rect = dropTarget.getBoundingClientRect();
+            const midpoint = rect.top + (rect.height / 2);
+            const isTopHalf = e.clientY < midpoint;
+            
+            let insertIndex = dropIndex;
+            if (!isTopHalf && draggedIndex < dropIndex) {
+                insertIndex = dropIndex;
+            } else if (!isTopHalf && draggedIndex > dropIndex) {
+                insertIndex = dropIndex + 1;
+            } else if (isTopHalf && draggedIndex > dropIndex) {
+                insertIndex = dropIndex;
+            } else if (isTopHalf && draggedIndex < dropIndex) {
+                insertIndex = dropIndex - 1;
+            }
+            
+            // Reorder the spaces array
+            const draggedSpace = dummySpaces[draggedIndex];
+            dummySpaces.splice(draggedIndex, 1);
+            dummySpaces.splice(insertIndex, 0, draggedSpace);
+            
+            // Re-render the spaces grid
+            renderSpacesGrid();
+            
+            // Add success animation to the dropped item
+            setTimeout(() => {
+                const newCard = document.querySelector(`[data-space-id="${draggedSpace.id}"]`);
+                if (newCard) {
+                    newCard.classList.add('dropped');
+                    setTimeout(() => {
+                        newCard.classList.remove('dropped');
+                    }, 400);
+                }
+            }, 50);
+        }
+        
+        return false;
+    }
+
+    function handleDragEnd(e) {
+        // Clean up drag classes
+        const allCards = document.querySelectorAll('.space-card');
+        allCards.forEach(card => {
+            card.classList.remove('dragging');
+        });
+        
+        // Remove dragging class from container
+        const spacesGrid = document.getElementById('workspaces-grid');
+        if (spacesGrid) {
+            spacesGrid.classList.remove('dragging');
+        }
+        
+        // Remove insertion line
+        if (insertionLine) {
+            insertionLine.remove();
+            insertionLine = null;
+        }
+        
+        draggedElement = null;
+        draggedIndex = null;
+    }
+
+    // Helper function to render the spaces grid
+    function renderSpacesGrid() {
+        const spacesGrid = document.getElementById('workspaces-grid');
+        if (!spacesGrid) return;
+        
+        spacesGrid.innerHTML = '';
+        
+        // Create space cards using current dummy data order
+        dummySpaces.forEach(space => {
+            const spaceCard = createSpaceCard(space);
+            spacesGrid.appendChild(spaceCard);
+        });
+        
+        // Add "New Space" card at the end
+        const newSpaceCard = createNewSpaceCard();
+        spacesGrid.appendChild(newSpaceCard);
     }
 
     // Helper function to create a skeleton loading card
