@@ -1073,7 +1073,7 @@ async function syncTabsWithCurrent(tabs_data) {
         const dummyTab = await chrome.tabs.create({
             url: 'data:text/html,<html><head><title>Tabster: Loading Space...</title></head><body></body></html>',
             active: false,
-            index: 500
+            index: 1000
         });
         dummyTabId = dummyTab.id;
 
@@ -1195,7 +1195,7 @@ async function syncTabsWithCurrent(tabs_data) {
             }
         }
 
-        // step 8: Apply all properties and reorder tabs & tab groups according to tabs_data
+        // step 8 & 9: Apply all properties and reorder tabs & tab groups according to tabs_data & discard tabs that are not active
         const finalCurrentTabs = await getCurrentTabsData();
         for (const finalTab of finalCurrentTabs.tabs) {
 
@@ -1221,27 +1221,10 @@ async function syncTabsWithCurrent(tabs_data) {
 
             // move tab to correct position
             if (finalTab.index !== targetTab.index) await chrome.tabs.move(finalTab.tabId, { index: targetTab.index });
-            
-            console.log(`syncTabsWithCurrent: Updated tab ${finalTab.title} (${finalTab.url}) with properties:`, {
-                pinned: targetTab.pinned,
-                muted: targetTab.audioState?.muted,
-                active: targetTab.active,
-                index: targetTab.index
-            });
-        }
 
-        //Step 9: discard all tabs except the active one for memory optimization
-        const tabsToDiscard = finalCurrentTabs.tabs.filter(tab => {
-            return !tab.active && 
-            tab.url && 
-            tab.url !== '' && 
-            !tab.url.startsWith('chrome://') && 
-            !tab.url.startsWith('chrome-extension://') &&
-            !tab.url.startsWith('moz-extension://');
-        });
-        if (tabsToDiscard.length > 0) {
-            for (const tabToDiscard of tabsToDiscard) {
-                await chrome.tabs.discard(tabToDiscard.tabId);
+            // step 9: discard tab if it is not active and url is not empty
+            if (!targetTab.active && finalTab.url !== '') {
+                await chrome.tabs.discard(finalTab.tabId);
             }
         }
         
