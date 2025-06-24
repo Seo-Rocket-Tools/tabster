@@ -465,18 +465,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return card;
     }
 
-    // Helper function to create the "New Space" card (disabled for now)
+    // Helper function to create the "New Space" card
     function createNewSpaceCard() {
         const card = document.createElement('div');
         card.className = 'space-card new-space-card';
-        card.style.opacity = '0.6';
-        card.style.pointerEvents = 'none';
+        card.onclick = () => showScreen('create-space-screen');
         
         card.innerHTML = `
             <div class="new-space-icon">+</div>
             <div class="new-space-content">
                 <div class="new-space-title">New Space</div>
-                <div class="new-space-subtitle">Coming soon</div>
+                <div class="new-space-subtitle">Organize your tabs</div>
             </div>
         `;
         
