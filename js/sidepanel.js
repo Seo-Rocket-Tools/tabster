@@ -54,6 +54,20 @@ document.addEventListener('DOMContentLoaded', function() {
             description: 'Online shopping tabs',
             emoji: '🛒',
             color: '#F59E0B'
+        },
+        {
+            id: 5,
+            name: 'Entertainment',
+            description: 'Movies, music, and fun',
+            emoji: '🎬',
+            color: '#EF4444'
+        },
+        {
+            id: 6,
+            name: 'Social',
+            description: 'Social media and chat',
+            emoji: '💬',
+            color: '#06B6D4'
         }
     ];
 

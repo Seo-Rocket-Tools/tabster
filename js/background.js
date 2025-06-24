@@ -217,6 +217,11 @@ async function handleUserAuthCheck(sendResponse) {
     }
 }
 
+async function handleStartup() {
+    // set panel behavior to open on action click
+    await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+}
+
 // =============================================================================
 
 // SECTION SUPABASE FUNCTIONS
@@ -468,10 +473,12 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     console.log("❗ ON INSTALLED FIRED!")
     if (details.reason === 'install') {
         console.log('Tabster extension installed');
+        handleStartup();
     } else if (details.reason === 'update') {
         console.log('Tabster extension updated');
         // Attempt session recovery on update
         attemptSessionRecovery();
+        handleStartup();
     }
 });
 
@@ -482,18 +489,7 @@ chrome.windows.onCreated.addListener(async (window) => {
     if (allWindows.length <= 1) {
         console.log("❗ ON WINDOW CREATED FIRED!");
         attemptSessionRecovery();
-    }
-});
-
-// Handle sidepanel open/close
-let sidepanelOpen = false;
-chrome.action.onClicked.addListener(async (tab) => {
-    if (sidepanelOpen) {
-        await chrome.runtime.sendMessage({ type: 'closeSidepanel' });
-        sidepanelOpen = false;
-    } else {
-        await chrome.sidePanel.open({ windowId: tab.windowId });
-        sidepanelOpen = true;
+        handleStartup();
     }
 });
 
