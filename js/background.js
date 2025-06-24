@@ -377,10 +377,8 @@ async function handleBrowserStartup() {
         
         console.log(`handleBrowserStartup: Active space found: ${activeSpace.name}`);
         
-        // Step 3: Disable tab syncing during startup sync
-        disableTabSyncing();
         
-        // Step 4: Sync browser tabs with the active space data
+        // Step 3: Sync browser tabs with the active space data
         try {
             console.log('handleBrowserStartup: Syncing tabs with active space data');
             await syncTabsWithCurrent(activeSpace.tabs_data);
@@ -393,9 +391,6 @@ async function handleBrowserStartup() {
         
     } catch (error) {
         console.error('handleBrowserStartup: Exception occurred:', error);
-    } finally {
-        // Step 5: Enable tab syncing
-        enableTabSyncing();
     }
 }
 
@@ -912,12 +907,12 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     console.log("❗ ON INSTALLED FIRED!")
     if (details.reason === 'install') {
         console.log('Tabster extension installed');
-        // await handleBrowserStartup(); 
+        await handleBrowserStartup(); 
     } else if (details.reason === 'update') {
         console.log('Tabster extension updated');
         // Attempt session recovery on update
         attemptSessionRecovery();
-        // await handleBrowserStartup();
+        await handleBrowserStartup();
     }
 });
 
@@ -928,7 +923,7 @@ chrome.windows.onCreated.addListener(async (window) => {
     if (allWindows.length <= 1) {
         console.log("❗ ON WINDOW CREATED FIRED!");
         attemptSessionRecovery();
-        // await handleBrowserStartup();
+        await handleBrowserStartup();
     }
 });
 
@@ -1199,15 +1194,15 @@ async function syncTabsWithCurrent(tabs_data) {
         const finalCurrentTabs = await getCurrentTabsData();
         for (const finalTab of finalCurrentTabs.tabs) {
 
+            // skip dummy tab
+            if (finalTab.tabId === dummyTabId) continue;
+
             // get target tab
             const targetTab = targetTabsTracker.find(tab => tab.tabId === finalTab.tabId);
             if (!targetTab) {
                 console.warn(`syncTabsWithCurrent: An existing tab was not found in the target tabs_data: ${finalTab.title} (${finalTab.url})`);
                 continue;
             }
-            
-            // skip dummy tab
-            if (finalTab.tabId === dummyTabId) continue;
 
             // skip extension urls
             if (finalTab.url.startsWith('chrome-extension://') || finalTab.url.startsWith('moz-extension://')) continue;
@@ -1224,7 +1219,12 @@ async function syncTabsWithCurrent(tabs_data) {
 
             // step 9: discard tab if it is not active and url is not empty
             if (!targetTab.active && finalTab.url !== '') {
-                await chrome.tabs.discard(finalTab.tabId);
+                try {
+                    await chrome.tabs.discard(finalTab.tabId);
+                    console.log(`syncTabsWithCurrent: Discarded tab ${finalTab.title} (${finalTab.url})`);
+                } catch (error) {
+                    console.warn(`syncTabsWithCurrent: Failed to discard tab ${finalTab.title} (${finalTab.url}):`, error);
+                }
             }
         }
         
