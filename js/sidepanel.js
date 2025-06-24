@@ -1,4 +1,4 @@
-// Minimal Tabster Sidepanel - UI Only
+// Minimal Tabster Sidepanel - UI Only (Authentication + Dummy Data)
 document.addEventListener('DOMContentLoaded', function() {
     
     // Screen elements
@@ -25,13 +25,45 @@ document.addEventListener('DOMContentLoaded', function() {
     const backToWelcome2 = document.getElementById('back-to-welcome-2');
     const backToWelcome3 = document.getElementById('back-to-welcome-3');
 
+    // Dummy spaces data
+    const dummySpaces = [
+        {
+            id: 1,
+            name: 'Work',
+            description: 'Professional workspace',
+            emoji: '💼',
+            color: '#3B82F6'
+        },
+        {
+            id: 2,
+            name: 'Personal',
+            description: 'Personal browsing',
+            emoji: '🏠',
+            color: '#10B981'
+        },
+        {
+            id: 3,
+            name: 'Research',
+            description: 'Learning and research',
+            emoji: '📚',
+            color: '#8B5CF6'
+        },
+        {
+            id: 4,
+            name: 'Shopping',
+            description: 'Online shopping tabs',
+            emoji: '🛒',
+            color: '#F59E0B'
+        }
+    ];
+
     // Initialize the app
     initializeTheme();
     setupNavigation();
     setupThemeToggle();
     setupUserMenu();
     
-        // Check user authentication on sidepanel open
+    // Check user authentication on sidepanel open
     checkUserAuthOnOpen();
     
     // Listen for close sidepanel message from background script
@@ -326,7 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Small delay to show success message before switching screens
                 setTimeout(() => {
-                    updateMainDashboard(response.userData, response.userSpaces);
+                    updateMainDashboard(response.userData);
                     showScreen('dashboard');
                     MessageBanner.hide(); // Hide banner when switching screens
                 }, 1000);
@@ -341,8 +373,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Helper function to update main dashboard with user data and spaces
-    function updateMainDashboard(userData, userSpaces) {
+    // Helper function to update main dashboard with user data and dummy spaces
+    function updateMainDashboard(userData) {
         // Update welcome message with user's display name or full name
         const welcomeMessage = document.getElementById('welcome-message');
         if (welcomeMessage && userData) {
@@ -362,13 +394,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset and setup user menu to ensure proper state
         setupUserMenu();
         
-        // Update spaces grid
+        // Update spaces grid with dummy data
         const spacesGrid = document.getElementById('workspaces-grid');
-        if (spacesGrid && userSpaces) {
+        if (spacesGrid) {
             spacesGrid.innerHTML = ''; // Clear existing spaces
             
-            // Always create space cards (even if empty) and add "New Space" card
-            userSpaces.forEach(space => {
+            // Create space cards using dummy data
+            dummySpaces.forEach(space => {
                 const spaceCard = createSpaceCard(space);
                 spacesGrid.appendChild(spaceCard);
             });
@@ -379,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Helper function to create a space card element
+    // Helper function to create a space card element (simplified - no switching functionality)
     function createSpaceCard(space) {
         const card = document.createElement('div');
         card.className = 'space-card';
@@ -392,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="space-description">${space.description || 'No description'}</div>
             </div>
             <div class="space-actions">
-                <button class="space-switch-btn" title="Switch to ${space.name}">
+                <button class="space-switch-btn" title="Switch to ${space.name}" disabled>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="17 1 21 5 17 9"></polyline>
                         <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
@@ -400,18 +432,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
                     </svg>
                 </button>
-                <button class="space-menu-btn">⋯</button>
+                <button class="space-menu-btn" disabled>⋯</button>
             </div>
         `;
-        
-        // Add event listener for the switch button
-        const switchBtn = card.querySelector('.space-switch-btn');
-        if (switchBtn) {
-            switchBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                window.handleSpaceSwitch(space.id, space.name);
-            });
-        }
         
         // Apply custom color styling to the space icon if space has a color
         if (space.color) {
@@ -428,17 +451,18 @@ document.addEventListener('DOMContentLoaded', function() {
         return card;
     }
 
-    // Helper function to create the "New Space" card
+    // Helper function to create the "New Space" card (disabled for now)
     function createNewSpaceCard() {
         const card = document.createElement('div');
         card.className = 'space-card new-space-card';
-        card.onclick = () => showScreen('create-space-screen');
+        card.style.opacity = '0.6';
+        card.style.pointerEvents = 'none';
         
         card.innerHTML = `
             <div class="new-space-icon">+</div>
             <div class="new-space-content">
                 <div class="new-space-title">New Space</div>
-                <div class="new-space-subtitle">Organize your tabs</div>
+                <div class="new-space-subtitle">Coming soon</div>
             </div>
         `;
         
@@ -462,7 +486,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="skeleton-shimmer"></div>
                 </div>
             </div>
-            <div class="space-menu">
+            <div class="space-actions">
+                <button class="space-switch-btn">
+                    <div class="skeleton-shimmer"></div>
+                </button>
                 <button class="space-menu-btn">
                     <div class="skeleton-shimmer"></div>
                 </button>
@@ -524,88 +551,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // User is authenticated - update dashboard with real data
-            updateMainDashboard(response.userData, response.userSpaces);
-            
-            // Check for active space and update UI accordingly
-            await checkAndUpdateActiveSpace(response.userSpaces);
+            // User is authenticated - update dashboard with dummy data
+            updateMainDashboard(response.userData);
             
         } catch (error) {
             showScreen('welcome');
-        }
-    }
-
-    // Check chrome local storage for active space and update UI
-    async function checkAndUpdateActiveSpace(userSpaces) {
-        try {
-            // Request active space data from background (which uses getLocalActiveSpace)
-            const activeSpaceResponse = await chrome.runtime.sendMessage({
-                type: 'getActiveSpace'
-            });
-            
-            if (!activeSpaceResponse || !activeSpaceResponse.success || !activeSpaceResponse.data) {
-                console.log('Sidepanel: No active space found in local storage');
-                return;
-            }
-            
-            const activeSpace = activeSpaceResponse.data;
-            console.log('Sidepanel: Active space found:', activeSpace);
-            
-            // Find matching space in user spaces and add indicator
-            addActiveSpaceIndicator(activeSpace, userSpaces);
-            
-        } catch (error) {
-            console.error('Sidepanel: Error checking active space:', error);
-        }
-    }
-
-    // Add visual indicator to the active space in the spaces list
-    function addActiveSpaceIndicator(activeSpace, userSpaces) {
-        try {
-            // Find the space that matches the active space
-            const matchingSpace = userSpaces.find(space => space.id === activeSpace.id);
-            
-            if (!matchingSpace) {
-                return;
-            }
-            
-            console.log('Sidepanel: Adding active indicator to space:', matchingSpace.name);
-            
-            // Find the space card in the DOM
-            const spacesGrid = document.getElementById('workspaces-grid');
-            if (!spacesGrid) return;
-            
-            const spaceCards = spacesGrid.querySelectorAll('.space-card:not(.new-space-card)');
-            spaceCards.forEach(card => {
-                const spaceName = card.querySelector('.space-name');
-                if (spaceName && spaceName.textContent === matchingSpace.name) {
-                    // Add subtle active indicator styling
-                    card.classList.add('active-space');
-                    
-                    // Simply emphasize the existing border for active state
-                    card.style.cssText = `
-                        border-color: rgba(var(--border-color-rgb), 0.5) !important;
-                        transition: border-color 0.2s ease !important;
-                    `;
-                    
-                    // Add dot indicator beside the space name
-                    if (!spaceName.querySelector('.active-dot')) {
-                        const dot = document.createElement('span');
-                        dot.className = 'active-dot';
-                        dot.innerHTML = ' •';
-                        dot.style.cssText = `
-                            color: rgba(var(--border-color-rgb), 0.8);
-                            font-weight: bold;
-                            font-size: 1.2em;
-                            margin-left: 4px;
-                        `;
-                        spaceName.appendChild(dot);
-                    }
-                }
-            });
-            
-        } catch (error) {
-            console.error('Sidepanel: Error adding active space indicator:', error);
         }
     }
 
@@ -734,142 +684,5 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = false;
         }
     });
-
-    // SECTION HANDLE SPACE SWITCH
-
-    // Set visual loading state for space switching
-    function setSpaceSwitchingState(targetSpaceId, isLoading) {
-        try {
-            const spacesGrid = document.getElementById('workspaces-grid');
-            if (!spacesGrid) return;
-
-            // Find the target space card
-            const targetCard = spacesGrid.querySelector(`[data-space-id="${targetSpaceId}"]`);
-            
-            if (isLoading) {
-                // Add loading class to target space card
-                if (targetCard) {
-                    targetCard.classList.add('loading');
-                }
-                
-                // Add disabled class to spaces grid to fade out other spaces
-                spacesGrid.classList.add('spaces-disabled');
-            } else {
-                // Remove loading class from target space card
-                if (targetCard) {
-                    targetCard.classList.remove('loading');
-                }
-                
-                // Remove disabled class from spaces grid
-                spacesGrid.classList.remove('spaces-disabled');
-            }
-        } catch (error) {
-            console.error('Sidepanel: Error setting space switching state:', error);
-        }
-    }
-
-    // Handle space switching when user clicks on a space card
-    async function handleSpaceSwitch(spaceId, spaceName) {
-        try {
-            console.log(`Sidepanel: Starting space switch to: ${spaceName} (ID: ${spaceId})`);
-            
-            // Add visual loading state
-            setSpaceSwitchingState(spaceId, true);
-            
-            // Show switching message banner
-            MessageBanner.loading(`Switching to "${spaceName}" space...`);
-            
-            // Send space switch request to background script
-            const response = await chrome.runtime.sendMessage({
-                type: 'spaceSwitch',
-                spaceId: spaceId
-            });
-            
-            if (!response.success) {
-                console.error('Sidepanel: Space switch failed:', response.error);
-                MessageBanner.error('Space switch failed: ' + response.error);
-                // Remove loading state on error
-                setSpaceSwitchingState(spaceId, false);
-                return;
-            }
-            
-            console.log('Sidepanel: Space switch successful:', response.message);
-            
-            // Update UI to show new active space
-            updateActiveSpaceIndicator(spaceId, response.spaceName);
-            
-            // Remove loading state
-            setSpaceSwitchingState(spaceId, false);
-            
-            // Show success message
-            MessageBanner.success(response.message || `Switched to "${response.spaceName}" space`);
-            
-        } catch (error) {
-            console.error('Sidepanel: Space switch exception:', error);
-            MessageBanner.error('Space switch failed: ' + error.message);
-            // Remove loading state on error
-            setSpaceSwitchingState(spaceId, false);
-        }
-    }
-
-    // Update the active space visual indicator in the UI
-    function updateActiveSpaceIndicator(activeSpaceId, activeSpaceName) {
-        try {
-            const spacesGrid = document.getElementById('workspaces-grid');
-            if (!spacesGrid) return;
-            
-            // Remove active styling from all space cards
-            const allSpaceCards = spacesGrid.querySelectorAll('.space-card:not(.new-space-card)');
-            allSpaceCards.forEach(card => {
-                card.classList.remove('active-space');
-                // Reset card styling to default
-                card.style.cssText = '';
-                
-                // Remove dot indicator if it exists
-                const activeDot = card.querySelector('.active-dot');
-                if (activeDot) {
-                    activeDot.remove();
-                }
-            });
-            
-            // Add active indicator to the selected space
-            allSpaceCards.forEach(card => {
-                const spaceIdAttr = card.getAttribute('data-space-id');
-                if (spaceIdAttr && spaceIdAttr === activeSpaceId.toString()) {
-                    // Add active indicator styling
-                    card.classList.add('active-space');
-                    
-                    // Simply emphasize the existing border for active state
-                    card.style.cssText = `
-                        border-color: rgba(var(--border-color-rgb), 0.5) !important;
-                        transition: border-color 0.2s ease !important;
-                    `;
-                    
-                    // Add dot indicator beside the space name
-                    const spaceName = card.querySelector('.space-name');
-                    if (spaceName && !spaceName.querySelector('.active-dot')) {
-                        const dot = document.createElement('span');
-                        dot.className = 'active-dot';
-                        dot.innerHTML = ' •';
-                        dot.style.cssText = `
-                            color: rgba(var(--border-color-rgb), 0.8);
-                            font-weight: bold;
-                            font-size: 1.2em;
-                            margin-left: 4px;
-                        `;
-                        spaceName.appendChild(dot);
-                    }
-                    
-                    console.log(`Sidepanel: Updated active indicator for space: ${activeSpaceName}`);
-                }
-            });
-            
-        } catch (error) {
-            console.error('Sidepanel: Error updating active space indicator:', error);
-        }
-    }
-
-    // Make handleSpaceSwitch globally available for space card click events
-    window.handleSpaceSwitch = handleSpaceSwitch;
 
 }); 
