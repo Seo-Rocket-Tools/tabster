@@ -42,6 +42,8 @@ body {
     overflow-x: hidden;
     overflow-y: auto;
     transition: background 0.3s ease, color 0.3s ease;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
 }
 
 .container {
@@ -463,6 +465,20 @@ body {
     color: var(--text-primary);
 }
 
+/* Avatar loading state */
+.avatar-initials.skeleton-shimmer {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    color: transparent;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .dropdown-menu {
     position: absolute;
     top: 100%;
@@ -512,6 +528,117 @@ body {
 .dropdown-item:last-child {
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
+}
+
+/* Signout option specific styling */
+.dropdown-item.signout-option:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+}
+
+/* Modern Message Banner System */
+.message-banner {
+    position: fixed;
+    top: 76px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 280px;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.message-banner.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.message-banner.hide {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-50px);
+}
+
+/* Message Banner Text */
+.message-banner-icon {
+    display: none;
+}
+
+.message-banner-text {
+    color: var(--text-primary);
+    line-height: 1.4;
+    text-align: left;
+}
+
+/* Banner Type Variants */
+.message-banner.success {
+    background: var(--bg-secondary);
+    border-color: rgba(52, 211, 153, 0.5);
+}
+
+.message-banner.success .message-banner-text {
+    color: #34d399;
+}
+
+.message-banner.error {
+    background: var(--bg-secondary);
+    border-color: rgba(248, 113, 113, 0.5);
+}
+
+.message-banner.error .message-banner-text {
+    color: #f87171;
+}
+
+.message-banner.warning {
+    background: var(--bg-secondary);
+    border-color: rgba(251, 191, 36, 0.5);
+}
+
+.message-banner.warning .message-banner-text {
+    color: #fbbf24;
+}
+
+.message-banner.info {
+    background: var(--bg-secondary);
+    border-color: rgba(96, 165, 250, 0.5);
+}
+
+.message-banner.info .message-banner-text {
+    color: #60a5fa;
+}
+
+/* Loading/Processing Banner */
+.message-banner.loading {
+    background: var(--bg-secondary);
+    border-color: rgba(156, 163, 175, 0.5);
+}
+
+.message-banner.loading .message-banner-text {
+    color: #9ca3af;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* Light theme adjustments */
+:root.light-theme .message-banner {
+    background: var(--bg-tertiary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Modal styles */
@@ -732,21 +859,27 @@ body {
 }
 
 /* Scrollbar styles */
+/* Hide scrollbar completely for webkit browsers */
+body::-webkit-scrollbar {
+    display: none;
+}
+
+/* Keep some basic scrollbar styles for other elements that might need them */
 ::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--text-muted);
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.3);
 }
 
 /* Animations */
@@ -803,10 +936,141 @@ body {
 .workspaces-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 8px;
     padding: 0 8px;
 }
 
+/* Modern Space Card Design */
+.space-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.space-card:hover {
+    background: var(--hover-bg);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.space-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.space-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.space-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.space-description {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.space-menu {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.space-menu-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.space-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+/* New Space Card */
+.new-space-card {
+    border: 2px dashed var(--border-color);
+    background: transparent;
+}
+
+.new-space-card:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.new-space-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.new-space-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.new-space-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.3;
+}
+
+.new-space-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.3;
+}
+
+/* Legacy workspace-card support */
 .workspace-card {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -886,8 +1150,6 @@ body {
     background: rgba(0, 0, 0, 0.03);
     border-color: rgba(0, 0, 0, 0.6);
 }
-
-
 
 .workspace-content {
     flex: 1;
@@ -1265,47 +1527,62 @@ body {
 
 /* Skeleton loading styles */
 .skeleton-card {
-    opacity: 0.7;
+    opacity: 0.8;
     pointer-events: none;
 }
 
-.skeleton-icon,
-.skeleton-title,
-.skeleton-description,
-.skeleton-action {
+/* Skeleton shimmer containers */
+.skeleton-card .space-icon,
+.skeleton-card .space-name,
+.skeleton-card .space-description,
+.skeleton-card .space-menu-btn {
     position: relative;
-    background: var(--bg-tertiary);
-    border-radius: 6px;
     overflow: hidden;
 }
 
-.skeleton-icon {
-    width: 36px;
-    height: 36px;
+/* Style the shimmer div inside skeleton elements */
+.skeleton-card .space-icon .skeleton-shimmer {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 8px;
-    flex-shrink: 0;
 }
 
-.skeleton-title {
-    height: 20px;
+.skeleton-card .space-name .skeleton-shimmer {
     width: 120px;
-    margin: 0 0 2px 0;
-}
-
-.skeleton-description {
-    height: 16px;
-    width: 180px;
-    margin: 0;
-}
-
-.skeleton-action {
-    width: 20px;
-    height: 20px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
-    flex-shrink: 0;
+}
+
+.skeleton-card .space-description .skeleton-shimmer {
+    width: 160px;
+    height: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.skeleton-card .space-menu-btn .skeleton-shimmer {
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+/* Remove default button styling for skeleton */
+.skeleton-card .space-menu-btn {
+    background: none;
+    border: none;
+    padding: 4px 8px;
 }
 
 .skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+    content: '';
     position: absolute;
     top: 0;
     left: -100%;
@@ -1314,7 +1591,7 @@ body {
     background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.3) 50%,
         transparent 100%
     );
     animation: shimmer 1.5s infinite;
@@ -1651,4 +1928,56 @@ body {
         padding-top: 16px;
         margin-top: 0;
     }
+}
+
+/* Space card loading states */
+.space-card.loading {
+    pointer-events: none;
+}
+
+.space-card.loading .space-menu-btn {
+    position: relative;
+    color: transparent;
+}
+
+.space-card.loading .space-menu-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border: 2px solid var(--text-muted);
+    border-top: 2px solid var(--text-primary);
+    border-radius: 50%;
+    animation: spaceSpinner 0.8s linear infinite;
+}
+
+@keyframes spaceSpinner {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.spaces-disabled .space-card:not(.loading) {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.spaces-disabled .space-card:not(.loading) .space-icon {
+    opacity: 0.3;
+}
+
+.spaces-disabled .space-card:not(.loading) .space-content {
+    opacity: 0.5;
+}
+
+.spaces-disabled .space-card:not(.loading) .space-menu-btn {
+    opacity: 0.3;
+    cursor: not-allowed;
 } 

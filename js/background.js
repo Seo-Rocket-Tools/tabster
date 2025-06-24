@@ -1,1128 +1,1410 @@
-// Simplified Tabster Background Script
-console.log('Tabster background script loaded');
+// Tabster Background Script with Supabase ES Modules
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Track if we've already restored for this session
-let hasRestoredThisSession = false;
+// SECTION SUPABASE CONFIGURATION
 
-// Extension installation and updates
-chrome.runtime.onInstalled.addListener((details) => {
-    console.log('Tabster extension installed/updated:', details.reason);
-    
-    if (details.reason === 'install') {
-        console.log('First time installation');
-        // Clear any existing data on fresh install
-        chrome.storage.local.clear();
-    } else if (details.reason === 'update') {
-        console.log('Extension updated');
-    }
-});
+const SUPABASE_URL = 'https://aodovkzddxblxjhiclci.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvZG92a3pkZHhibHhqaGljbGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0Nzc0MzEsImV4cCI6MjA2NDA1MzQzMX0.xjQlWkMoCMyNakjPuDOAreQ2P0EBOvT41ZNmYSudB0s';
 
-// Better approach: Detect browser startup via window creation
-chrome.windows.onCreated.addListener(async (window) => {
-    console.log('Window created:', window.id);
-    
-    // Only restore on the first window creation and if we haven't restored yet
-    if (!hasRestoredThisSession) {
-        console.log('First window created - checking for space restoration');
-        hasRestoredThisSession = true;
-        
-        // Delay to ensure browser is fully loaded
-        setTimeout(() => {
-            restoreActiveSpaceOnBrowserStartup();
-        }, 3000);
-    }
-});
-
-// Alternative: Detect via first tab creation after startup
-chrome.tabs.onCreated.addListener(async (tab) => {
-    // Only trigger on the first tab of a new session
-    if (!hasRestoredThisSession && tab.index === 0) {
-        console.log('First tab created - checking for space restoration');
-        hasRestoredThisSession = true;
-        
-        setTimeout(() => {
-            restoreActiveSpaceOnBrowserStartup();
-        }, 2000);
-    }
-});
-
-async function restoreActiveSpaceOnBrowserStartup() {
-    try {
-        console.log('Background: Checking for saved active space on startup...');
-        
-        // Check if user is logged in first
-        const result = await chrome.storage.local.get(['supabase.auth.token']);
-        if (!result['supabase.auth.token']) {
-            console.log('Background: No auth token found, checking for session...');
-        }
-
-        // Try to get user directly
-        const user = await getCurrentUser();
-        if (!user) {
-            console.log('Background: No user logged in, skipping restoration');
-            return;
-        }
-
-        console.log('Background: User found, checking for saved space...');
-
-        // Get saved active space from storage
-        const storageKey = `tabster_active_space_${user.id}`;
-        const storageResult = await chrome.storage.local.get([storageKey]);
-        const savedSpaceId = storageResult[storageKey];
-        
-        if (!savedSpaceId) {
-            console.log('Background: No saved active space found');
-            return;
-        }
-
-        console.log('Background: Found saved active space:', savedSpaceId);
-
-        // Get space data from database
-        const spaces = await getUserSpaces(user.id, null);
-        if (!spaces) {
-            console.error('Background: Error loading spaces');
-            return;
-        }
-
-        const savedSpace = spaces.find(space => space.id === savedSpaceId);
-        if (!savedSpace) {
-            console.log('Background: Saved space no longer exists, clearing storage');
-            await chrome.storage.local.remove([storageKey]);
-            return;
-        }
-
-        console.log('Background: Restoring active space:', savedSpace.name);
-
-        // Check if current tabs already match the saved space
-        const tabsMatch = await currentTabsMatchSpace(savedSpace);
-        if (tabsMatch) {
-            console.log('Background: Current tabs already match saved space, no restoration needed');
-            return;
-        }
-
-        // Check if we already have tabs that might be from this space
-        const currentTabs = await chrome.tabs.query({});
-        const nonExtensionTabs = currentTabs.filter(tab => 
-            !tab.url.startsWith('chrome-extension://') &&
-            !tab.url.startsWith('chrome://') &&
-            !tab.url.startsWith('edge-extension://') &&
-            !tab.url.startsWith('moz-extension://')
-        );
-
-        // Only restore if we have minimal tabs (like just new tab page)
-        if (nonExtensionTabs.length <= 1) {
-            console.log('Background: Minimal tabs detected, restoring space tabs');
-            await loadTabsFromSpace(savedSpace);
-        } else {
-            console.log('Background: Multiple tabs already open, skipping restoration');
-        }
-
-    } catch (error) {
-        console.error('Background: Error restoring active space:', error);
-    }
-}
-
-// Simplified Supabase functions for background script
-async function getCurrentUser() {
-    try {
-        // Get session from storage
-        const keys = await chrome.storage.local.get(null);
-        const sessionKey = Object.keys(keys).find(key => key.includes('supabase.auth.token'));
-        
-        if (!sessionKey) {
+// Custom storage adapter for Chrome extensions
+const chromeStorageAdapter = {
+    async getItem(key) {
+        try {
+            const result = await chrome.storage.local.get([key]);
+            return result[key] || null;
+        } catch (error) {
+            console.error('Storage getItem error:', error);
             return null;
         }
+    },
 
-        const session = keys[sessionKey];
-        if (session && session.user) {
-            return session.user;
+    async setItem(key, value) {
+        try {
+            await chrome.storage.local.set({ [key]: value });
+        } catch (error) {
+            console.error('Storage setItem error:', error);
         }
+    },
 
-        return null;
+    async removeItem(key) {
+        try {
+            await chrome.storage.local.remove([key]);
+        } catch (error) {
+            console.error('Storage removeItem error:', error);
+        }
+    }
+};
+
+// Initialize Supabase client with persistent storage configuration
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+        storage: chromeStorageAdapter,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+        flowType: 'pkce'
+    },
+    global: {
+        fetch: fetch,
+    },
+});
+
+// SECTION Basic message handling for communication with popup
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    switch (message.type) {
+        case 'ping':
+            sendResponse({ status: 'pong' });
+            break;
+            
+        case 'signin':
+            handleSignin(message.email, message.password, sendResponse);
+            return true; // Keep message channel open for async response
+            
+        case 'signup':
+            handleSignup(message.fullName, message.email, message.password, sendResponse);
+            return true; // Keep message channel open for async response
+            
+        case 'checkAuth':
+            handleUserAuthCheck(sendResponse);
+            return true; // Keep message channel open for async response
+            
+        case 'getActiveSpace':
+            handleGetActiveSpace(sendResponse);
+            return true; // Keep message channel open for async response
+            
+        case 'signout':
+            handleSignout(sendResponse);
+            return true; // Keep message channel open for async response
+            
+        case 'spaceSwitch':
+            handleSpaceSwitch(message.spaceId, sendResponse);
+            return true; // Keep message channel open for async response
+            
+        default:
+            console.log('Background: Unknown message type:', message.type);
+            sendResponse({ status: 'unknown', message: 'Unknown message type' });
+    }
+    
+    return true; // Keep message channel open
+}); 
+
+// =============================================================================
+
+// SECTION USER EVENT HANDLERS
+
+async function handleSignin(email, password, sendResponse) {
+    try {
+        // Sign in user to Supabase auth
+        const signinResult = await signinUser(email, password);
+        
+        if (!signinResult.success) {
+            console.log('Background: Signin failed:', signinResult.error);
+            sendResponse({ success: false, error: signinResult.error });
+            return;
+        }
+        
+        const userId = signinResult.data.user.id;
+        
+        // Save session backup and user ID to Chrome local storage
+        const storagePromise = Promise.all([
+            saveSessionBackup(signinResult.data.session, signinResult.data.user),
+            new Promise((resolve) => {
+                chrome.storage.local.set({ 'tabster_current_userId': userId }, resolve);
+            })
+        ]);
+        
+        // Run parallel operations: get user data and user spaces
+        const [userData, userSpaces] = await Promise.all([
+            getUserData(userId),
+            getUserSpaces(userId),
+            storagePromise
+        ]);
+        
+        // Check if both operations were successful
+        if (!userData.success) {
+            console.error('Background: Failed to get user data:', userData.error);
+            sendResponse({ success: false, error: 'Failed to load user data' });
+            return;
+        }
+        
+        if (!userSpaces.success) {
+            console.error('Background: Failed to get user spaces:', userSpaces.error);
+            sendResponse({ success: false, error: 'Failed to load user spaces' });
+            return;
+        }
+        
+        // Send success response with user data and spaces
+        sendResponse({
+            success: true,
+            userData: userData.data,
+            userSpaces: userSpaces.data
+        });
+        
+        // Enable tab syncing after successful signin
+        enableTabSyncing();
+        
     } catch (error) {
-        console.error('Background: Error getting user:', error);
-        return null;
+        console.error('Background: Signin exception:', error);
+        sendResponse({ success: false, error: error.message || 'An unexpected error occurred' });
     }
 }
 
-async function getUserSpaces(userId, userToken = null) {
+async function handleSignout(sendResponse) {
     try {
-        console.log(`🔄 Background: Fetching spaces for user ${userId}`);
-        const SUPABASE_URL = 'https://aodovkzddxblxjhiclci.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvZG92a3pkZHhibHhqaGljbGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0Nzc0MzEsImV4cCI6MjA2NDA1MzQzMX0.xjQlWkMoCMyNakjPuDOAreQ2P0EBOvT41ZNmYSudB0s';
+
+        // Sync tabs data to database manually before signing out
+        const syncResult = await syncTabsDataToDb();
+
+        if (!syncResult.success) {
+            console.error('Background: Failed to sync tabs data:', syncResult.error);
+            sendResponse({ success: false, error: 'Failed to sync tabs data' });
+            return;
+        }
+
+        // Call the signout function
+        const signoutResult = await signoutUser();
+        if (!signoutResult.success) {
+            console.error('Background: Signout failed:', signoutResult.error);
+            sendResponse({ success: false, error: signoutResult.error });
+            return;
+        }
+
+        // Stop listening for tab changes
+        disableTabSyncing();
         
-        // Use user token if available, fallback to anon key
-        const authToken = userToken || SUPABASE_ANON_KEY;
-        console.log(`🔄 Background: Using ${userToken ? 'user JWT token' : 'anonymous key'} for authentication`);
+        // Send success response
+        sendResponse({
+            success: true,
+            message: 'Signed out successfully'
+        });
         
-        const url = `${SUPABASE_URL}/rest/v1/spaces?user_id=eq.${userId}&is_archived=eq.false&order=order_index.asc`;
-        console.log(`🔄 Background: Making request to: ${url}`);
+    } catch (error) {
+        console.error('Background: Signout exception:', error);
+        sendResponse({ success: false, error: error.message || 'Signout failed' });
+    }
+}
+
+async function handleSignup(fullName, email, password, sendResponse) {
+    try {
+        // Sign up user to Supabase auth
+        const signupResult = await signupUser(fullName, email, password);
         
-        const response = await fetch(url, {
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
+        if (!signupResult.success) {
+            console.log('Background: Signup failed:', signupResult.error);
+            sendResponse({ success: false, error: signupResult.error });
+            return;
+        }
+        
+        console.log('Background: Signup successful');
+        
+        // Send success response
+        sendResponse({
+            success: true,
+            message: 'Account created successfully! Please check your email for confirmation.'
+        });
+        
+    } catch (error) {
+        console.error('Background: Signup exception:', error);
+        sendResponse({ success: false, error: error.message || 'An unexpected error occurred' });
+    }
+}
+
+async function handleUserAuthCheck(sendResponse) {
+    try {
+        // Check user authentication with Supabase
+        const authResult = await checkUserAuth();
+        
+        if (!authResult.success) {
+            console.error('Background: Auth check failed:', authResult.error);
+            sendResponse({ success: false, error: authResult.error });
+            return;
+        }
+        
+        if (!authResult.authenticated) {
+            sendResponse({ success: true, authenticated: false });
+            return;
+        }
+        
+        // User is authenticated - get their data
+        const userId = authResult.userId;
+        
+        // Run parallel operations: get user data and user spaces
+        const [userData, userSpaces] = await Promise.all([
+            getUserData(userId),
+            getUserSpaces(userId)
+        ]);
+        
+        // Check if both operations were successful
+        if (!userData.success) {
+            console.error('Background: Failed to get user data:', userData.error);
+            sendResponse({ success: false, error: 'Failed to load user data' });
+            return;
+        }
+        
+        if (!userSpaces.success) {
+            console.error('Background: Failed to get user spaces:', userSpaces.error);
+            sendResponse({ success: false, error: 'Failed to load user spaces' });
+            return;
+        }
+        
+        // Send success response
+        sendResponse({
+            success: true,
+            authenticated: true,
+            userData: userData.data,
+            userSpaces: userSpaces.data
+        });
+        
+        // Enable tab syncing since user is authenticated
+        enableTabSyncing();
+        
+    } catch (error) {
+        console.error('Background: Auth check exception:', error);
+        sendResponse({ success: false, error: error.message || 'Authentication check failed' });
+    }
+}
+
+async function handleGetActiveSpace(sendResponse) {
+    try {
+        const activeSpace = await getLocalActiveSpace();
+        
+        if (!activeSpace) {
+            sendResponse({ success: true, data: null });
+            return;
+        }
+        
+        sendResponse({ success: true, data: activeSpace });
+        
+    } catch (error) {
+        console.error('Background: Get active space exception:', error);
+        sendResponse({ success: false, error: error.message });
+    }
+}
+
+async function handleSpaceSwitch(spaceId, sendResponse) {
+    try {
+        console.log(`handleSpaceSwitch: Starting space switch to space ID: ${spaceId}`);
+        
+        // Check if there is an active space
+        const currentActiveSpace = await getLocalActiveSpace();
+        
+        if (currentActiveSpace) {
+            disableTabSyncing();
+            
+            // Save current active space to database
+            const saveResult = await syncTabsDataToDb();
+            if (!saveResult.success) {
+                console.error('handleSpaceSwitch: Failed to save current space to database:', saveResult.error);
+                sendResponse({ success: false, error: 'Failed to save current space' });
+                return;
+            }
+        } else {
+            console.log('handleSpaceSwitch: No active space found, proceeding with switch');
+        }
+        
+        // Get the new space data from database
+        const spaceDataResult = await getSpaceData(spaceId);
+        if (!spaceDataResult.success) {
+            console.error('handleSpaceSwitch: Failed to get space data:', spaceDataResult.error);
+            sendResponse({ success: false, error: 'Failed to load space data' });
+            return;
+        }
+        
+        // Set the new space as active in local storage
+        const saveLocalResult = await setToLocalActiveSpace(spaceDataResult.data);
+        if (!saveLocalResult.success) {
+            console.error('handleSpaceSwitch: Failed to set new active space:', saveLocalResult.error);
+            sendResponse({ success: false, error: 'Failed to activate new space' });
+            return;
+        }
+        
+        // Sync current browser tabs with the space data (always call, even if tabs_data is null)
+        console.log('handleSpaceSwitch: Syncing tabs with space data');
+        try {
+            await syncTabsWithCurrent(spaceDataResult.data.tabs_data);
+            console.log('handleSpaceSwitch: Tab synchronization completed');
+        } catch (syncError) {
+            console.error('handleSpaceSwitch: Tab synchronization failed:', syncError);
+            sendResponse({ success: false, error: 'Failed to sync tabs' });
+            return;
+        }
+        
+        console.log(`handleSpaceSwitch: Successfully switched to space: ${spaceDataResult.data.name}`);
+        
+        // Send success response with the active space ID
+        sendResponse({
+            success: true,
+            activeSpaceId: spaceId,
+            spaceName: spaceDataResult.data.name,
+            message: `Switched to "${spaceDataResult.data.name}" space`
+        });
+        
+    } catch (error) {
+        console.error('handleSpaceSwitch: Exception occurred:', error);
+        sendResponse({ success: false, error: error.message || 'Space switch failed' });
+    } finally {
+        enableTabSyncing();
+    }
+}
+
+async function handleBrowserStartup() {
+    try {
+        console.log('handleBrowserStartup: Starting browser startup flow');
+        
+        // Step 1: Check user authentication
+        const authResult = await checkUserAuth();
+        
+        if (!authResult.success) {
+            console.error('handleBrowserStartup: Auth check failed:', authResult.error);
+            return;
+        }
+        
+        if (!authResult.authenticated) {
+            console.log('handleBrowserStartup: No user signed in - doing nothing');
+            return;
+        }
+        
+        console.log('handleBrowserStartup: User is authenticated');
+        
+        // Step 2: Check if tabster_active_space exists on chrome local storage
+        const activeSpace = await getLocalActiveSpace();
+        
+        if (!activeSpace) {
+            console.log('handleBrowserStartup: No active space found - probably first time user uses extension on this browser');
+            return;
+        }
+        
+        console.log(`handleBrowserStartup: Active space found: ${activeSpace.name}`);
+        
+        
+        // Step 3: Sync browser tabs with the active space data
+        try {
+            console.log('handleBrowserStartup: Syncing tabs with active space data');
+            await syncTabsWithCurrent(activeSpace.tabs_data);
+            console.log('handleBrowserStartup: Tab synchronization completed successfully');
+        } catch (syncError) {
+            console.error('handleBrowserStartup: Tab synchronization failed:', syncError);
+        }
+        
+        console.log('handleBrowserStartup: Browser startup flow completed successfully');
+        
+    } catch (error) {
+        console.error('handleBrowserStartup: Exception occurred:', error);
+    }
+}
+
+// =============================================================================
+
+// SECTION SUPABASE FUNCTIONS
+
+// Check user authentication status with Supabase
+async function checkUserAuth() {
+    try {
+        // Get current session from Supabase
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+            console.error('Session check error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        if (!session || !session.user) {
+            return { success: true, authenticated: false };
+        }
+        
+        return { success: true, authenticated: true, userId: session.user.id };
+        
+    } catch (error) {
+        console.error('Auth check exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Sign in user to Supabase auth
+async function signinUser(email, password) {
+    try {
+        console.log('Attempting to sign in user:', email);
+        
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+        
+        if (error) {
+            console.log('Sign in error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        return { success: true, data: data };
+        
+    } catch (error) {
+        console.error('Sign in exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Sign out user and clean up all stored data
+async function signoutUser() {
+    try {
+        // Sign out from Supabase
+        const { error } = await supabase.auth.signOut();
+        
+        if (error) {
+            console.error('Supabase signout error:', error);
+            // Continue with cleanup even if Supabase signout fails
+        }
+        
+        // Clear all stored data
+        await Promise.all([
+            clearSessionBackup(),
+            new Promise((resolve) => {
+                chrome.storage.local.remove([
+                    'tabster_current_userId',
+                    'tabster_active_space'
+                ], resolve);
+            })
+        ]);
+        
+        return { success: true };
+        
+    } catch (error) {
+        console.error('Signout exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Sign up user to Supabase auth
+async function signupUser(fullName, email, password) {
+    try {
+        console.log('Attempting to sign up user:', email);
+        
+        // Supabase auth will handle duplicate email validation automatically
+        
+        // Get the confirmation page URL from the extension
+        const confirmationUrl = chrome.runtime.getURL('confirmation.html');
+        
+        const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                emailRedirectTo: confirmationUrl,
+                data: {
+                    full_name: fullName,
+                    display_name: fullName
+                }
             }
         });
-
-        console.log(`🔄 Background: Response status: ${response.status}`);
         
-        if (!response.ok) {
-            const responseText = await response.text();
-            console.error(`❌ Background: HTTP error! status: ${response.status}, body: ${responseText}`);
-            throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
+        if (error) {
+            console.log('Sign up error:', error);
+            return { success: false, error: error.message };
         }
-
-        const spaces = await response.json();
-        console.log(`✅ Background: Successfully fetched ${spaces.length} spaces:`, spaces);
-        return spaces;
+        
+        // Additional validation: Check if user was created successfully
+        if (!data.user) {
+            console.log('Sign up failed: No user created');
+            return { success: false, error: 'Account creation failed. Please try again.' };
+        }
+        
+        // Check for other edge cases where signup appears successful but isn't
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+            console.log('Sign up failed: User already exists');
+            return { success: false, error: 'An account with this email already exists. Please sign in instead.' };
+        }
+        
+        console.log('Sign up successful:', data.user.email);
+        return { success: true, data: data };
+        
     } catch (error) {
-        console.error('❌ Background: Error fetching spaces:', error);
-        return [];
+        console.error('Sign up exception:', error);
+        return { success: false, error: error.message };
     }
 }
 
-async function updateSpace(spaceId, updates, userToken = null) {
+// Get current user data from 'users' table
+async function getUserData(userId) {
     try {
-        const SUPABASE_URL = 'https://aodovkzddxblxjhiclci.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvZG92a3pkZHhibHhqaGljbGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0Nzc0MzEsImV4cCI6MjA2NDA1MzQzMX0.xjQlWkMoCMyNakjPuDOAreQ2P0EBOvT41ZNmYSudB0s';
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
         
-        const authToken = userToken || SUPABASE_ANON_KEY;
-        const url = `${SUPABASE_URL}/rest/v1/spaces?id=eq.${spaceId}`;
+        if (error) {
+            console.error('Get user data error:', error);
+            return { success: false, error: error.message };
+        }
         
-        const response = await fetch(url, {
-            method: 'PATCH',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            },
-            body: JSON.stringify(updates)
+        return { success: true, data: data };
+        
+    } catch (error) {
+        console.error('Get user data exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Get all user spaces from 'spaces' table
+async function getUserSpaces(userId) {
+    try {
+        const { data, error } = await supabase
+            .from('spaces')
+            .select('*')
+            .eq('user_id', userId);
+        
+        if (error) {
+            console.error('Get user spaces error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        console.log('User spaces retrieved:', data);
+        return { success: true, data: data };
+        
+    } catch (error) {
+        console.error('Get user spaces exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+async function getSpaceData(spaceId) {
+    try {
+        console.log(`getSpaceData: Fetching space data for ID: ${spaceId}`);
+        
+        const { data, error } = await supabase
+            .from('spaces')
+            .select('*')
+            .eq('id', spaceId)
+            .single();
+        
+        if (error) {
+            console.error('getSpaceData: Database error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        if (!data) {
+            console.error('getSpaceData: Space not found');
+            return { success: false, error: 'Space not found' };
+        }
+        
+        console.log(`getSpaceData: Successfully retrieved space: ${data.name}`);
+        return { success: true, data: data };
+        
+    } catch (error) {
+        console.error('getSpaceData: Exception occurred:', error);
+        return { success: false, error: error.message || 'Failed to fetch space data' };
+    }
+}
+
+// Save space data to Supabase database
+async function saveSpaceToDb(spaceData) {
+    try {
+        console.log(`saveSpaceToDb: Saving space "${spaceData.name}" to database`);
+        
+        if (!spaceData.id) {
+            console.error('saveSpaceToDb: Space missing required ID');
+            return { success: false, error: 'Space missing required ID' };
+        }
+        
+        // Prepare the update data (excluding read-only fields)
+        const updateData = {
+            tabs_data: spaceData.tabs_data,
+            last_accessed_at: spaceData.last_accessed_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            settings: spaceData.settings || {}
+        };
+        
+        console.log(`saveSpaceToDb: Updating space ${spaceData.id} in database`);
+        
+        const { data, error } = await supabase
+            .from('spaces')
+            .update(updateData)
+            .eq('id', spaceData.id)
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('saveSpaceToDb: Database error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        console.log(`saveSpaceToDb: Successfully saved space "${spaceData.name}" to database`);
+        return { 
+            success: true, 
+            message: `Space "${spaceData.name}" saved to database`,
+            data: data
+        };
+        
+    } catch (error) {
+        console.error('saveSpaceToDb: Exception occurred:', error);
+        return { success: false, error: error.message || 'Failed to save to database' };
+    }
+}
+
+async function saveLocalToDb() {
+    try {
+        console.log('saveLocalToDb: Starting save to database');
+        
+        // Get the current active space from local storage
+        const activeSpace = await getLocalActiveSpace();
+        
+        if (!activeSpace) {
+            console.log('saveLocalToDb: No active space found to save');
+            return { success: true, message: 'No active space to save' };
+        }
+        
+        if (!activeSpace.id) {
+            console.error('saveLocalToDb: Active space missing ID');
+            return { success: false, error: 'Active space missing required ID' };
+        }
+        
+        // Prepare the update data (excluding read-only fields)
+        const updateData = {
+            tabs_data: activeSpace.tabs_data,
+            last_accessed_at: activeSpace.last_accessed_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            settings: activeSpace.settings || {}
+        };
+        
+        console.log(`saveLocalToDb: Updating space ${activeSpace.id} in database`);
+        
+        const { data, error } = await supabase
+            .from('spaces')
+            .update(updateData)
+            .eq('id', activeSpace.id)
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('saveLocalToDb: Database error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        console.log(`saveLocalToDb: Successfully saved space "${activeSpace.name}" to database`);
+        return { 
+            success: true, 
+            message: `Space "${activeSpace.name}" saved to database`,
+            data: data
+        };
+        
+    } catch (error) {
+        console.error('saveLocalToDb: Exception occurred:', error);
+        return { success: false, error: error.message || 'Failed to save to database' };
+    }
+}
+
+// =============================================================================
+
+// SECTION LOCAL STORAGE FUNCTIONS
+
+
+
+// Update local active space with current tabs data
+async function updateLocalActiveSpace(space) {
+    try {
+        console.log('updateLocalActiveSpace: Updating space with current tabs data');
+        
+        // Get current tabs data
+        const currentTabsData = await getCurrentTabsData();
+        
+        // Construct the updated space object with the updated tabs_data
+        const updatedSpace = {
+            ...space,
+            tabs_data: currentTabsData,
+            last_accessed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        
+        // Save/update the space object to 'tabster_active_space' in local storage
+        await new Promise((resolve, reject) => {
+            chrome.storage.local.set({ 'tabster_active_space': updatedSpace }, () => {
+                if (chrome.runtime.lastError) {
+                    console.error('updateLocalActiveSpace: Chrome storage error:', chrome.runtime.lastError);
+                    reject(new Error(chrome.runtime.lastError.message));
+                    return;
+                }
+                
+                console.log('updateLocalActiveSpace: Successfully updated active space with current tabs data');
+                resolve();
+            });
         });
-
-        if (!response.ok) {
-            const responseText = await response.text();
-            throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
-        }
-
-        const updatedSpace = await response.json();
-        return { data: updatedSpace, error: null };
+        
+        return { 
+            success: true, 
+            message: 'Active space updated with current tabs data',
+            updatedSpace: updatedSpace
+        };
+        
     } catch (error) {
-        console.error('Error updating space:', error);
-        return { data: null, error };
+        console.error('updateLocalActiveSpace: Exception occurred:', error);
+        return { 
+            success: false, 
+            error: error.message || 'Failed to update local active space' 
+        };
     }
 }
 
-// Check if current tabs match the saved space
-async function currentTabsMatchSpace(space) {
+// Set space object to Chrome local storage as active space
+async function setToLocalActiveSpace(spaceData) {
     try {
-        // Migrate legacy tabs_data format if needed
-        space = migrateLegacyTabsData(space);
+        return new Promise((resolve) => {
+            chrome.storage.local.set({ 'tabster_active_space': spaceData }, () => {
+                if (chrome.runtime.lastError) {
+                    console.error('setToLocalActiveSpace: Chrome storage error:', chrome.runtime.lastError);
+                    resolve({ success: false, error: chrome.runtime.lastError.message });
+                    return;
+                }
+                
+                console.log(`setToLocalActiveSpace: Successfully set "${spaceData.name}" as active space`);
+                resolve({ success: true, message: `Set "${spaceData.name}" as active space` });
+            });
+        });
         
-        if (!space.tabs_data || !space.tabs_data.tabs || !Array.isArray(space.tabs_data.tabs)) {
-            return false;
-        }
-
-        const currentTabs = await chrome.tabs.query({});
-        const nonExtensionTabs = currentTabs.filter(tab => 
-            !tab.url.startsWith('chrome-extension://') &&
-            !tab.url.startsWith('chrome://') &&
-            !tab.url.startsWith('edge-extension://') &&
-            !tab.url.startsWith('moz-extension://')
-        );
-
-        // If tab counts don't match, it's not the same space
-        if (nonExtensionTabs.length !== space.tabs_data.tabs.length) {
-            return false;
-        }
-
-        // If both are empty, consider it a match
-        if (nonExtensionTabs.length === 0 && space.tabs_data.tabs.length === 0) {
-            return true;
-        }
-
-        // Sort both arrays by URL for comparison
-        const currentUrls = nonExtensionTabs.map(tab => tab.url).sort();
-        const spaceUrls = space.tabs_data.tabs.map(tab => tab.url).sort();
-
-        // Compare URLs - if they match, it's likely the same space
-        return JSON.stringify(currentUrls) === JSON.stringify(spaceUrls);
-
     } catch (error) {
-        console.error('Background: Error comparing tabs with space:', error);
+        console.error('setToLocalActiveSpace: Exception occurred:', error);
+        return { success: false, error: error.message || 'Failed to set active space locally' };
+    }
+}
+
+// Get active space data from Chrome local storage
+async function getLocalActiveSpace() {
+    try {
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['tabster_active_space'], (result) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Chrome storage error:', chrome.runtime.lastError);
+                    resolve(false);
+                    return;
+                }
+                
+                const activeSpace = result.tabster_active_space;
+                
+                if (!activeSpace) {
+                    console.log('No active space found in local storage');
+                    resolve(false);
+                    return;
+                }
+                
+                // Validate that the stored data is valid
+                if (typeof activeSpace !== 'object' || activeSpace === null) {
+                    console.warn('Invalid active space data found, cleaning up...');
+                    // Clean up invalid data
+                    chrome.storage.local.remove(['tabster_active_space'], () => {
+                        resolve(false);
+                    });
+                    return;
+                }
+                
+                console.log('Active space found in local storage:', activeSpace);
+                resolve(activeSpace);
+            });
+        });
+        
+    } catch (error) {
+        console.error('Get local active space exception:', error);
         return false;
     }
 }
 
-async function loadTabsFromSpace(space) {
+// SECTION Session Recovery Functions
+
+// Save session backup to Chrome storage
+async function saveSessionBackup(session, user) {
     try {
-        console.log('Background: Loading tabs from space:', space.name);
+        const sessionBackup = {
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            expires_at: session.expires_at,
+            user: {
+                id: user.id,
+                email: user.email,
+                created_at: user.created_at
+            },
+            saved_at: Date.now()
+        };
         
-        // Migrate legacy tabs_data format if needed
-        space = migrateLegacyTabsData(space);
+        await chrome.storage.local.set({ 'tabster_session_backup': sessionBackup });
         
-        // Note: isSwitchingSpaces flag is managed by runtime messages from popup
+    } catch (error) {
+        console.error('Failed to save session backup:', error);
+    }
+}
+
+// Restore session from Chrome storage backup
+async function restoreSessionBackup() {
+    try {
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['tabster_session_backup'], async (result) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Chrome storage error:', chrome.runtime.lastError);
+                    resolve(false);
+                    return;
+                }
+                
+                const backup = result.tabster_session_backup;
+                
+                if (!backup) {
+                    resolve(false);
+                    return;
+                }
+                
+                // Check if backup is expired (older than 7 days)
+                const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+                if (backup.saved_at < sevenDaysAgo) {
+                    // Clean up expired backup
+                    chrome.storage.local.remove(['tabster_session_backup']);
+                    resolve(false);
+                    return;
+                }
+                
+                try {
+                    // Try to restore session with Supabase
+                    const { data, error } = await supabase.auth.setSession({
+                        access_token: backup.access_token,
+                        refresh_token: backup.refresh_token
+                    });
+                    
+                    if (error) {
+                        // Clean up invalid backup
+                        chrome.storage.local.remove(['tabster_session_backup']);
+                        resolve(false);
+                        return;
+                    }
+                    
+                    resolve(true);
+                    
+                } catch (error) {
+                    console.error('Session restore error:', error);
+                    // Clean up invalid backup
+                    chrome.storage.local.remove(['tabster_session_backup']);
+                    resolve(false);
+                }
+            });
+        });
         
-        if (!space.tabs_data || !space.tabs_data.tabs || !Array.isArray(space.tabs_data.tabs) || space.tabs_data.tabs.length === 0) {
-            console.log('Background: No tabs data found for space, creating new empty tab');
+    } catch (error) {
+        console.error('Restore session backup exception:', error);
+        return false;
+    }
+}
+
+// Clear session backup from Chrome storage
+async function clearSessionBackup() {
+    try {
+        await chrome.storage.local.remove(['tabster_session_backup']);
+    } catch (error) {
+        console.error('Failed to clear session backup:', error);
+    }
+}
+
+
+
+// =============================================================================
+
+// SECTION SERVICE WORKER LIFECYCLE
+
+// Handle extension installation, updates, and reloads
+chrome.runtime.onInstalled.addListener(async (details) => {
+    console.log("❗ ON INSTALLED FIRED!")
+    if (details.reason === 'install') {
+        console.log('Tabster extension installed');
+        await handleBrowserStartup(); 
+    } else if (details.reason === 'update') {
+        console.log('Tabster extension updated');
+        // Attempt session recovery on update
+        attemptSessionRecovery();
+        await handleBrowserStartup();
+    }
+});
+
+// Handle window creation / Browser startup
+chrome.windows.onCreated.addListener(async (window) => {
+    // Check if this is the first/only window
+    const allWindows = await chrome.windows.getAll();
+    if (allWindows.length <= 1) {
+        console.log("❗ ON WINDOW CREATED FIRED!");
+        attemptSessionRecovery();
+        await handleBrowserStartup();
+    }
+});
+
+// Track if browser is effectively closed (no normal windows)
+let browserClosed = false;
+
+// Listen for window removal to detect browser closure
+chrome.windows.onRemoved.addListener(async (windowId) => {
+    console.log(`Window ${windowId} removed`);
+    
+    // Check if any normal browser windows remain
+    try {
+        const allWindows = await chrome.windows.getAll({ 
+            windowTypes: ['normal'] 
+        });
+        
+        if (allWindows.length === 0) {
+            console.log("❗ ALL BROWSER WINDOWS CLOSED - STOPPING SYNC!");
+            browserClosed = true;
             
-            // Get all current tabs
-            const currentTabs = await chrome.tabs.query({});
+            // Final sync before stopping
+            await syncTabsDataToDb();
             
-            // Close all non-extension tabs
-            const tabsToClose = currentTabs.filter(tab => 
-                !tab.url.startsWith('chrome-extension://') &&
-                !tab.url.startsWith('chrome://') &&
-                !tab.url.startsWith('edge-extension://') &&
-                !tab.url.startsWith('moz-extension://')
-            );
+            // Stop syncing to prevent empty data saves
+            disableTabSyncing();
+        }
+    } catch (error) {
+        console.error('Error checking remaining windows:', error);
+        // If we can't check windows, assume browser is closing
+        browserClosed = true;
+        disableTabSyncing();
+    }
+});
+
+
+
+// Attempt to recover user session on service worker startup
+async function attemptSessionRecovery() {
+    try {
+        const recovered = await restoreSessionBackup();
+        if (!recovered) {
+            // Clear any stale data if recovery failed
+            await Promise.all([
+                clearSessionBackup(),
+                new Promise((resolve) => {
+                    chrome.storage.local.remove([
+                        'tabster_current_userId',
+                        'tabster_active_space'
+                    ], resolve);
+                })
+            ]);
+        } else {
+            // Session recovered successfully, enable tab syncing
+            console.log('Session recovered, enabling tab syncing');
+            enableTabSyncing();
+        }
+    } catch (error) {
+        console.error('Session recovery error:', error);
+    }
+}
+
+
+
+// =============================================================================
+
+// SECTION TAB CONTROL FUNCTIONS
+
+async function getCurrentTabsData() {
+    try {
+        // Get all tabs from all windows
+        const allTabs = await chrome.tabs.query({});
+        
+        // Get tab groups if API is available (Chrome 88+)
+        let allTabGroups = [];
+        if (chrome.tabGroups && chrome.tabGroups.query) {
+            try {
+                allTabGroups = await chrome.tabGroups.query({});
+            } catch (error) {
+                console.warn('getCurrentTabsData: Tab groups API not available:', error);
+                allTabGroups = [];
+            }
+        } else {
+            console.warn('getCurrentTabsData: Tab groups API not supported in this Chrome version');
+        }
+
+        // Process tab groups data
+        const tabGroups = allTabGroups.map(group => ({
+            groupId: group.id,
+            title: group.title || '',
+            color: group.color,
+            collapsed: group.collapsed,
+            index: group.index
+        }));
+
+        // Process tabs data
+        const tabs = allTabs.map(tab => ({
+            tabId: tab.id,
+            index: tab.index,
+            url: tab.url,
+            title: tab.title,
+            favIconUrl: tab.favIconUrl || null,
+            pinned: tab.pinned,
+            active: tab.active,
+            highlighted: tab.highlighted,
+            groupId: tab.groupId || null,
+            windowId: tab.windowId,
+            audioState: {
+                audible: tab.audible || false,
+                muted: tab.mutedInfo?.muted || false,
+                mutedInfo: {
+                    muted: tab.mutedInfo?.muted || false,
+                    reason: tab.mutedInfo?.reason || null
+                }
+            }
+        }));
+
+        return {
+            tabGroups: tabGroups,
+            tabs: tabs
+        };
+
+    } catch (error) {
+        console.error('Failed to get current tabs data:', error);
+        throw error;
+    }
+}
+
+// sync target tabs withcurrent browser tabs
+async function syncTabsWithCurrent(tabs_data) {
+    let dummyTabId = null;
+    const currentTabsData = await getCurrentTabsData();
+
+    try {
+        console.log('syncTabsWithCurrent: Starting tab synchronization');
+
+        // Step 1: Disable tab syncing
+        console.log('syncTabsWithCurrent: disabling tab syncing');
+        disableTabSyncing();
+
+        // Step 2: Create dummy tab
+        console.log('syncTabsWithCurrent: creating dummy tab');
+        const dummyTab = await chrome.tabs.create({
+            url: 'data:text/html,<html><head><title>Tabster: Loading Space...</title></head><body></body></html>',
+            active: false,
+            index: 1000
+        });
+        dummyTabId = dummyTab.id;
+
+        // set a .5 second pause
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Step 3: Handle empty or null tabs_data - create fresh new tab
+        const isNullData = !tabs_data;
+        const hasNoTabs = !tabs_data?.tabs || tabs_data.tabs.length === 0;
+        const hasNoGroups = !tabs_data?.tabGroups || tabs_data.tabGroups.length === 0;
+        const isEmpty = hasNoTabs && hasNoGroups;
+        
+        if (isNullData || isEmpty) {
+            console.log('syncTabsWithCurrent: No tabs data provided, creating fresh new tab');
+            const tabsToClose = currentTabsData.tabs
+                .filter(tab => {
+                    const isNewTab = tab.url === 'chrome://newtab/' || 
+                                    tab.url === 'chrome://new-tab-page/' ||
+                                    tab.url === 'about:newtab' ||
+                                    tab.url.startsWith('chrome://newtab') ||
+                                    tab.url.startsWith('edge://newtab');
+                    const isProtectedChromeUrl = tab.url.startsWith('chrome://') && !isNewTab;
+                    const isExtensionUrl = tab.url.startsWith('chrome-extension://') || tab.url.startsWith('moz-extension://');
+                    return isNewTab || (!isProtectedChromeUrl && !isExtensionUrl);
+                })
+                .map(tab => tab.tabId);
+            
+            // Create new tab and close others
+            await chrome.tabs.create({ url: 'chrome://newtab/', active: true });
 
             if (tabsToClose.length > 0) {
-                await chrome.tabs.remove(tabsToClose.map(tab => tab.id));
+                console.log(`syncTabsWithCurrent: Closing ${tabsToClose.length} existing tabs`);
+                await chrome.tabs.remove(tabsToClose);
             }
             
-            // Create a single new empty tab
-            console.log('Background: 🔄 Creating new empty tab');
-            const newTab = await chrome.tabs.create({
-                url: 'chrome://newtab/',
-                active: true
+            console.log('syncTabsWithCurrent: Fresh new tab created successfully');
+            return;
+        }
+
+        // step 4: ungroup tab groups that are not in tabs_data
+        if (currentTabsData.tabGroups.length > 0) {
+            const unwantedGroups = currentTabsData.tabGroups.filter(currentGroup => {
+                return !tabs_data.tabGroups.some(targetGroup => 
+                    targetGroup.groupId === currentGroup.groupId
+                );
             });
-            console.log(`Background: ✅ Created new empty tab (ID: ${newTab.id})`);
-            return;
+
+            console.log(`syncTabsWithCurrent: Removing ${unwantedGroups.length} unwanted groups`);
+            if (unwantedGroups.length > 0) {
+                for (const unwantedGroup of unwantedGroups) {
+                    const unwantedTabsIds = currentTabsData.tabs.filter(tab => tab.groupId === unwantedGroup.groupId).map(tab => tab.tabId);
+                    await chrome.tabs.ungroup(unwantedTabsIds);
+                    console.log(`syncTabsWithCurrent: Ungrouped "${unwantedGroup.title}"`);
+                }
+            }
         }
 
-        // Filter out extension/invalid URLs before processing
-        const validTabs = space.tabs_data.tabs.filter(tab => {
-            if (!tab.url) return false;
-            if (tab.url.startsWith('chrome-extension://') ||
-                tab.url.startsWith('chrome://') ||
-                tab.url.startsWith('edge-extension://') ||
-                tab.url.startsWith('moz-extension://')) return false;
-            if (tab.url === 'about:blank' || tab.url === '') return false;
-            return true;
-        });
+        // step 5: remove tabs that are not in tabs_data
+        for (const currentTab of currentTabsData.tabs) {
+            
+            // skip dummy tab
+            if (currentTab.tabId === dummyTabId) continue;
 
-        console.log(`Background: Loading ${validTabs.length} valid tabs from space (filtered from ${space.tabs_data.tabs.length} total)`);
 
-        // Log detailed tab information for debugging
-        console.log('📋 Detailed tabs being restored:');
-        validTabs.forEach((tab, index) => {
-            console.log(`  ${index + 1}. ${tab.pinned ? '📌' : '📄'} "${tab.title}" - ${tab.url}`);
-        });
+            // skip extension urls
+            if (currentTab.url.startsWith('chrome-extension://') || currentTab.url.startsWith('moz-extension://')) continue;
 
-        // Get all current tabs
-        const currentTabs = await chrome.tabs.query({});
-        
-        // Close all non-extension tabs
-        const tabsToClose = currentTabs.filter(tab => 
-            !tab.url.startsWith('chrome-extension://') &&
-            !tab.url.startsWith('chrome://') &&
-            !tab.url.startsWith('edge-extension://') &&
-            !tab.url.startsWith('moz-extension://')
-        );
-
-        if (tabsToClose.length > 0) {
-            await chrome.tabs.remove(tabsToClose.map(tab => tab.id));
+            // remove if not in target
+            const existsInTarget = tabs_data.tabs.some(targetTab => targetTab.url === currentTab.url);
+            if (!existsInTarget) {
+                await chrome.tabs.remove(currentTab.tabId);
+                console.log(`syncTabsWithCurrent: Removed tab ${currentTab.title} (${currentTab.url})`);
+            }
         }
 
-        if (validTabs.length === 0) {
-            console.log('Background: No valid tabs to restore');
-            return;
+        // set a .5 second pause
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // step 6: create tabs from tabs_data
+        const targetTabsTracker = [];
+        for (const targetTab of tabs_data.tabs) {
+            console.log(`syncTabsWithCurrent: Creating tab: ${targetTab.title} at URL: ${targetTab.url}`);
+
+            const existsInCurrent = currentTabsData.tabs.some(currentTab => {
+                const matches = currentTab.url === targetTab.url;
+                console.log(`  - Comparing with current tab "${currentTab.title}" (URL: ${currentTab.url}) - Match: ${matches}`);
+                return matches;
+            });
+
+            if (!existsInCurrent) { // Does not exist in current tabs
+                const createdTab = await chrome.tabs.create({
+                    url: targetTab.url,
+                    active: false, // Don't activate during creation
+                    pinned: targetTab.pinned || false,
+                    index: targetTab.index
+                });
+                targetTabsTracker.push({...targetTab, tabId: createdTab.id});
+            } else {
+                targetTabsTracker.push(targetTab);
+            }
         }
 
-        // Sort tabs by order (pinned tabs first, then by index)
-        const sortedTabs = validTabs.sort((a, b) => {
-            if (a.pinned && !b.pinned) return -1;
-            if (!a.pinned && b.pinned) return 1;
-            return (a.index || 0) - (b.index || 0);
-        });
+        // set a .5 second pause
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Create tabs in order, tracking successful creations
-        let successfulTabIndex = 0;
-        const createdTabs = []; // Track created tabs to focus the last one
-        
-        for (const tabData of sortedTabs) {
-            // Validate URL before creating tab
-            if (!tabData.url || 
-                tabData.url.startsWith('chrome-extension://') ||
-                tabData.url.startsWith('chrome://') ||
-                tabData.url.startsWith('edge-extension://') ||
-                tabData.url.startsWith('moz-extension://') ||
-                tabData.url === 'about:blank' ||
-                tabData.url === '') {
-                console.log('Background: Skipping invalid tab:', tabData.url);
+        // step 7: group tab groups from tabs_data
+        for (const tabGroup of tabs_data.tabGroups) {
+            console.log(`syncTabsWithCurrent: Creating tab group: ${tabGroup.title} with groupId: ${tabGroup.groupId}`);
+
+            const tabsInGroup = targetTabsTracker.filter(tab => tab.groupId === tabGroup.groupId).map(tab => tab.tabId);
+            if (tabsInGroup.length > 0) {
+                console.log(`syncTabsWithCurrent: Tab group "${tabGroup.title}" already exists with ${tabsInGroup.length} tabs`);
+                const groupId = await chrome.tabs.group({ tabIds: tabsInGroup });
+                await chrome.tabGroups.update(groupId, {
+                    title: tabGroup.title,
+                    color: tabGroup.color || 'grey',
+                    collapsed: tabGroup.collapsed || false
+                });
+            }
+        }
+
+        // step 8 & 9: Apply all properties and reorder tabs & tab groups according to tabs_data & discard tabs that are not active
+        const finalCurrentTabs = await getCurrentTabsData();
+        for (const finalTab of finalCurrentTabs.tabs) {
+
+            // skip dummy tab
+            if (finalTab.tabId === dummyTabId) continue;
+
+            // get target tab
+            const targetTab = targetTabsTracker.find(tab => tab.tabId === finalTab.tabId);
+            if (!targetTab) {
+                console.warn(`syncTabsWithCurrent: An existing tab was not found in the target tabs_data: ${finalTab.title} (${finalTab.url})`);
                 continue;
             }
 
-            try {
-                // Add small delay between tab creations to prevent browser deduplication
-                if (successfulTabIndex > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
-                }
+            // skip extension urls
+            if (finalTab.url.startsWith('chrome-extension://') || finalTab.url.startsWith('moz-extension://')) continue;
 
-                // Enhanced handling for common sites that might be deduplicated
-                let urlToCreate = tabData.url;
-                const needsUniqueParam = urlToCreate.includes('mail.google.com') || 
-                                       urlToCreate.includes('accounts.google.com') ||
-                                       urlToCreate.includes('drive.google.com') ||
-                                       urlToCreate.includes('docs.google.com') ||
-                                       urlToCreate.includes('sheets.google.com') ||
-                                       urlToCreate.includes('slides.google.com');
-                
-                if (needsUniqueParam) {
-                    // Add a unique timestamp parameter to prevent browser deduplication
-                    const separator = urlToCreate.includes('?') ? '&' : '?';
-                    const uniqueParam = `tabster_restore_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                    urlToCreate = `${urlToCreate}${separator}${uniqueParam}=1`;
-                    console.log(`Background: 🔗 URL modified to prevent deduplication: ${tabData.url} -> ${urlToCreate}`);
-                    
-                    // Special logging for Gmail
-                    if (urlToCreate.includes('mail.google.com')) {
-                        console.log(`Background: 📧 Gmail account detected: ${tabData.url.match(/\/u\/(\d+)\//) ? `Account ${tabData.url.match(/\/u\/(\d+)\//)[1]}` : 'Default account'}`);
-                    }
-                }
-
-                // Create tab with only supported properties (no windowId to avoid "No window" errors)
-                // Set all tabs to inactive initially - we'll activate the last one after all are created
-                const createProperties = {
-                    url: urlToCreate,
-                    active: false, // Set all tabs to inactive initially
-                    pinned: tabData.pinned || false,
-                    index: successfulTabIndex
-                };
-
-                console.log(`Background: 🔄 Creating tab with properties:`, createProperties);
-                const createdTab = await chrome.tabs.create(createProperties);
-                console.log(`Background: ✅ Created tab ${successfulTabIndex + 1}: ${tabData.pinned ? '📌' : '📄'} "${tabData.title}" - ${tabData.url} (ID: ${createdTab.id}, UniqueId: ${tabData.uniqueId || 'N/A'})`);
-                
-                // Track created tabs so we can activate the last one
-                createdTabs.push(createdTab);
-                successfulTabIndex++;
-            } catch (error) {
-                console.error('Background: ❌ Error creating tab:', {
-                    url: tabData.url,
-                    title: tabData.title,
-                    error: error.message
-                });
-            }
-        }
-        
-        // Activate and focus the last (rightmost) tab, and discard all others
-        if (createdTabs.length > 0) {
-            const lastTab = createdTabs[createdTabs.length - 1];
-            
-            // First activate the last tab
-            try {
-                await chrome.tabs.update(lastTab.id, { active: true });
-                console.log(`Background: ✅ Activated rightmost tab (ID: ${lastTab.id}) - this tab remains loaded`);
-            } catch (error) {
-                console.error('Background: ❌ Error activating last tab:', error);
-            }
-            
-            // Wait a bit for tabs to load their titles and favicons, then discard all except the last one
-            if (createdTabs.length > 1) {
-                console.log(`Background: ⏳ Waiting for titles and favicons to load before discarding...`);
-                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
-                
-                for (let i = 0; i < createdTabs.length - 1; i++) {
-                    try {
-                        // Check if the tab still exists before discarding
-                        const tab = await chrome.tabs.get(createdTabs[i].id);
-                        await chrome.tabs.discard(createdTabs[i].id);
-                        console.log(`Background: 💤 Discarded tab "${tab.title || 'Untitled'}" (ID: ${createdTabs[i].id}) - title and favicon preserved`);
-                    } catch (error) {
-                        // Tab might have been closed or doesn't exist anymore
-                        if (error.message && error.message.includes('No tab with id')) {
-                            console.log(`Background: ℹ️ Tab ${createdTabs[i].id} no longer exists, skipping discard`);
-                        } else {
-                            console.error(`Background: ❌ Error discarding tab ${createdTabs[i].id}:`, error);
-                        }
-                    }
-                }
-                
-                console.log(`Background: ✅ Finished discarding ${createdTabs.length - 1} tabs while preserving titles and favicons`);
-            }
-        }
-
-        console.log(`Background: ✅ Successfully loaded ${successfulTabIndex} tabs from space`);
-
-    } catch (error) {
-        console.error('Background: Error loading tabs from space:', error);
-    }
-}
-
-// Handle messages from popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('Background received message:', message);
-    
-    switch (message.type) {
-        case 'ping':
-            sendResponse({ status: 'pong', timestamp: Date.now() });
-            break;
-            
-        case 'clear_storage':
-            chrome.storage.local.clear().then(() => {
-                console.log('Storage cleared');
-                sendResponse({ success: true });
-            }).catch((error) => {
-                console.error('Error clearing storage:', error);
-                sendResponse({ success: false, error: error.message });
+            // update tab properties
+            await chrome.tabs.update(finalTab.tabId, {
+                pinned: targetTab.pinned,
+                muted: targetTab.audioState?.muted,
+                active: targetTab.active
             });
-            return true; // Keep message channel open for async response
-            
-        case 'switch_to_space':
-            // Handle space switching entirely in background script
-            handleSpaceSwitch(message.spaceId, message.userId, message.userToken)
-                .then((result) => {
-                    sendResponse(result);
-                })
-                .catch((error) => {
-                    console.error('Error in space switch:', error);
-                    sendResponse({ success: false, error: error.message });
-                });
-            return true; // Keep message channel open for async response
-            
-        case 'get_spaces':
-            // Handle getting spaces in background
-            handleGetSpaces(message.userId, message.userToken)
-                .then((result) => {
-                    sendResponse(result);
-                })
-                .catch((error) => {
-                    console.error('Error getting spaces:', error);
-                    sendResponse({ success: false, error: error.message });
-                });
-            return true; // Keep message channel open for async response
-            
-        case 'migrate_spaces':
-            // Handle migrating spaces to new format
-            migrateAllSpacesToNewFormat(message.userId, message.userToken)
-                .then((result) => {
-                    sendResponse(result);
-                })
-                .catch((error) => {
-                    console.error('Error migrating spaces:', error);
-                    sendResponse({ success: false, error: error.message });
-                });
-            return true; // Keep message channel open for async response
-            
-        case 'space_switching_start':
-            isSwitchingSpaces = true;
-            console.log(`🔄 Space switching started - tab saving disabled (${new Date().toISOString()})`);
-            
-            // Safety timeout to prevent flag from getting stuck
-            setTimeout(() => {
-                if (isSwitchingSpaces) {
-                    console.log('⚠️  Space switching flag timeout - auto-clearing after 30 seconds');
-                    isSwitchingSpaces = false;
+
+            // move tab to correct position
+            if (finalTab.index !== targetTab.index) await chrome.tabs.move(finalTab.tabId, { index: targetTab.index });
+
+            // step 9: discard tab if it is not active and url is not empty
+            if (!targetTab.active && finalTab.url !== '') {
+                try {
+                    await chrome.tabs.discard(finalTab.tabId);
+                    console.log(`syncTabsWithCurrent: Discarded tab ${finalTab.title} (${finalTab.url})`);
+                } catch (error) {
+                    console.warn(`syncTabsWithCurrent: Failed to discard tab ${finalTab.title} (${finalTab.url}):`, error);
                 }
-            }, 30000); // 30 second timeout
+            }
+        }
+        
+    } catch (error) {
+        console.error('syncTabsWithCurrent: Error during tab synchronization:', error);
+        throw error;
+    } finally {
+        setTimeout(async () => {
+            //  step 10: Always clean up dummy tab and re-enable syncing
+            if (dummyTabId) {
+                try {
+                    await chrome.tabs.remove(dummyTabId);
+                    console.log('syncTabsWithCurrent: Dummy tab removed successfully');
+                } catch (dummyError) {
+                    console.warn('syncTabsWithCurrent: Failed to remove dummy tab:', dummyError);
+                }
+            }
             
-            sendResponse({ success: true });
-            break;
-            
-        case 'space_switching_end':
-            isSwitchingSpaces = false;
-            console.log(`✅ Space switching ended - tab saving re-enabled (${new Date().toISOString()})`);
-            sendResponse({ success: true });
-            break;
-            
-        default:
-            console.log('Unknown message type:', message.type);
-            sendResponse({ error: 'Unknown message type' });
+
+            // step 11: re-enable tab syncing
+            enableTabSyncing();
+        }, 500);
     }
-});
-
-// Handle extension uninstall (cleanup)
-chrome.runtime.setUninstallURL('https://aodovkzddxblxjhiclci.supabase.co/uninstall');
-
-console.log('Background script initialized');
-
-// Flag to prevent saving during space switching
-let isSwitchingSpaces = false;
-
-// Initialize flag status on startup 
-function initializeFlagStatus() {
-    isSwitchingSpaces = false;
-    console.log('🔧 Initialized isSwitchingSpaces flag to false on startup');
 }
 
-// Call flag initialization
-initializeFlagStatus();
 
-// Debug function to check flag status
-function debugFlagStatus() {
-    console.log(`🔍 Debug: isSwitchingSpaces flag is currently: ${isSwitchingSpaces} at ${new Date().toISOString()}`);
-    return isSwitchingSpaces;
-}
 
-// Tab event listeners for monitoring tab activities
-console.log('Setting up tab event listeners...');
+// =============================================================================
 
-// When a new tab is created
-chrome.tabs.onCreated.addListener((tab) => {
-    console.log('🆕 New tab opened:', {
-        tabId: tab.id,
-        url: tab.url || 'chrome://newtab/',
-        title: tab.title || 'New Tab',
-        timestamp: new Date().toISOString()
-    });
-    
-    // Save tabs to active space
-    saveTabsToActiveSpace();
-});
+// SECTION TAB DATA SYNCHRONIZATION
 
-// When a tab is removed/closed
-chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    console.log('❌ Tab closed:', {
-        tabId: tabId,
-        windowId: removeInfo.windowId,
-        isWindowClosing: removeInfo.isWindowClosing,
-        timestamp: new Date().toISOString()
-    });
-    
-    // Only save tabs if it's not a window closing event
-    // When a window closes, all tabs are removed but we don't want to save empty data
-    if (!removeInfo.isWindowClosing) {
-        console.log('🔄 Individual tab closed - saving current state');
-        saveTabsToActiveSpace();
-    } else {
-        console.log('🚫 Window closing detected - skipping tab save to prevent empty data');
-    }
-});
-
-// When a tab is updated (including URL changes)
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    // Log URL changes specifically
-    if (changeInfo.url) {
-        console.log('🔄 Tab URL updated:', {
-            tabId: tabId,
-            oldUrl: 'Previous URL not directly available',
-            newUrl: changeInfo.url,
-            title: tab.title,
-            timestamp: new Date().toISOString()
-        });
-    }
-    
-    // Log when tab is pinned
-    if (changeInfo.pinned === true) {
-        console.log('📌 Tab pinned:', {
-            tabId: tabId,
-            url: tab.url,
-            title: tab.title,
-            timestamp: new Date().toISOString()
-        });
-    }
-    
-    // Log when tab is unpinned
-    if (changeInfo.pinned === false) {
-        console.log('📌❌ Tab unpinned:', {
-            tabId: tabId,
-            url: tab.url,
-            title: tab.title,
-            timestamp: new Date().toISOString()
-        });
-    }
-    
-    // Save tabs to active space if URL changed or pin status changed
-    if (changeInfo.url || changeInfo.pinned !== undefined) {
-        saveTabsToActiveSpace();
-    }
-});
-
-// Store tab URLs to track URL changes more accurately
-let tabUrls = new Map();
-
-// Track initial tab URLs when tabs are activated
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
+// Main synchronization function that runs every 5 seconds
+async function syncTabsDataToDb() {
     try {
-        const tab = await chrome.tabs.get(activeInfo.tabId);
-        if (tab && tab.url) {
-            tabUrls.set(activeInfo.tabId, tab.url);
+        // Step 0: Check if browser is closed (prevent empty data saves)
+        if (browserClosed) {
+            return { success: true, message: 'Browser closed - sync disabled' };
         }
-    } catch (error) {
-        // Silently handle case where tab no longer exists (common during space switching)
-        if (error.message && error.message.includes('No tab with id')) {
-            // Tab was closed before we could track it, this is normal
-            return;
+        
+        // Step 1: Check user authentication
+        const authResult = await checkUserAuth();
+        
+        if (!authResult.success) {
+            return { success: false, message: 'Authentication check failed', error: authResult.error };
         }
-        console.error('Error tracking tab URL:', error);
-    }
-});
-
-// Enhanced URL change tracking
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.url) {
-        const oldUrl = tabUrls.get(tabId) || 'Unknown';
-        const newUrl = changeInfo.url;
         
-        // Update stored URL
-        tabUrls.set(tabId, newUrl);
-        
-        console.log('🔄 Tab URL updated (enhanced):', {
-            tabId: tabId,
-            oldUrl: oldUrl,
-            newUrl: newUrl,
-            title: tab.title,
-            timestamp: new Date().toISOString()
-        });
-    }
-});
-
-// Clean up stored URLs when tabs are removed
-chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    tabUrls.delete(tabId);
-});
-
-// Store tab orders for each window to track reordering
-let windowTabOrders = new Map();
-
-// Initialize tab orders for existing windows
-chrome.windows.getAll({ populate: true }, (windows) => {
-    windows.forEach(window => {
-        const tabIds = window.tabs.map(tab => tab.id);
-        windowTabOrders.set(window.id, tabIds);
-    });
-});
-
-// Track when tabs are moved/reordered
-chrome.tabs.onMoved.addListener(async (tabId, moveInfo) => {
-    try {
-        if (!moveInfo || !moveInfo.windowId) return;
-        
-        const windowId = moveInfo.windowId;
-        const oldOrder = windowTabOrders.get(windowId) || [];
-        
-        // Get the current tab order after the move
-        const tabs = await chrome.tabs.query({ windowId: windowId });
-        const newOrder = tabs
-            .sort((a, b) => a.index - b.index)
-            .map(tab => tab.id);
-        
-        // Update our stored order
-        windowTabOrders.set(windowId, newOrder);
-        
-        console.log('🔄 Tab reordered:', {
-            tabId: tabId,
-            windowId: windowId,
-            fromIndex: moveInfo.fromIndex,
-            toIndex: moveInfo.toIndex,
-            oldOrder: oldOrder,
-            newOrder: newOrder,
-            timestamp: new Date().toISOString()
-        });
-        
-        // Save tabs to active space
-        saveTabsToActiveSpace();
-        
-    } catch (error) {
-        // Silently handle window/tab access errors during space switching
-        if (error.message && (error.message.includes('No window with id') || error.message.includes('No tab with id'))) {
-            return;
+        if (!authResult.authenticated) {
+            return { success: true, message: 'User not authenticated - no sync needed' };
         }
-        console.error('Error tracking tab reorder:', error);
-    }
-});
-
-// Update tab orders when tabs are created
-chrome.tabs.onCreated.addListener(async (tab) => {
-    try {
-        if (!tab || !tab.windowId) return;
         
-        const tabs = await chrome.tabs.query({ windowId: tab.windowId });
-        const tabIds = tabs
-            .sort((a, b) => a.index - b.index)
-            .map(t => t.id);
-        windowTabOrders.set(tab.windowId, tabIds);
-    } catch (error) {
-        // Silently handle window/tab access errors during space switching
-        if (error.message && (error.message.includes('No window with id') || error.message.includes('No tab with id'))) {
-            return;
+        // Step 2: Get local active space
+        const activeSpace = await getLocalActiveSpace();
+        
+        if (!activeSpace) {
+            return { success: true, message: 'No active space selected - no sync needed' };
         }
-        console.error('Error updating tab order on create:', error);
-    }
-});
-
-// Update tab orders when tabs are removed
-chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-    const windowId = removeInfo.windowId;
-    const currentOrder = windowTabOrders.get(windowId) || [];
-    const newOrder = currentOrder.filter(id => id !== tabId);
-    windowTabOrders.set(windowId, newOrder);
-    
-    // Clean up if window is closing
-    if (removeInfo.isWindowClosing) {
-        windowTabOrders.delete(windowId);
-    }
-});
-
-// Update tab orders when windows are created
-chrome.windows.onCreated.addListener((window) => {
-    windowTabOrders.set(window.id, []);
-});
-
-// Clean up when windows are removed and save current state before window closes
-chrome.windows.onRemoved.addListener(async (windowId) => {
-    console.log('🚪 Window being removed:', windowId);
-    
-    // Save current state before the window is fully removed
-    // This ensures we capture the state before all tabs are removed
-    try {
-        // Check if there are still other windows with tabs
-        const remainingWindows = await chrome.windows.getAll({ populate: true });
-        const hasTabsInOtherWindows = remainingWindows.some(window => 
-            window.id !== windowId && window.tabs && window.tabs.length > 0
-        );
         
-        if (hasTabsInOtherWindows) {
-            console.log('💾 Other windows still exist - saving current state before window close');
-            await saveTabsToActiveSpace();
-        } else {
-            console.log('🚪 Last window closing - not saving to prevent empty state');
-        }
-    } catch (error) {
-        console.error('Error handling window removal:', error);
-    }
-    
-    // Clean up window tab orders
-    windowTabOrders.delete(windowId);
-});
-
-console.log('Tab event listeners configured successfully!');
-
-// Function to get active space from storage
-async function getActiveSpaceFromStorage() {
-    try {
-        const globalStorageKey = 'tabster_current_active_space';
-        const result = await chrome.storage.local.get([globalStorageKey]);
+        // Step 3: Get current tabs data
+        const currentTabsData = await getCurrentTabsData();
         
-        if (result[globalStorageKey]) {
-            const activeSpaceData = result[globalStorageKey];
+        // Step 4: Compare current tabs with stored tabs data
+        const storedTabsData = activeSpace.tabs_data;
+        
+        // Normalized comparison function that ignores property order and focuses on meaningful content
+        const normalizeTabData = (tabsData) => {
+            if (!tabsData || !tabsData.tabs) return null;
+            
             return {
-                spaceId: activeSpaceData.spaceId,
-                userToken: activeSpaceData.userToken || null,
-                userId: activeSpaceData.userId
+                tabGroups: (tabsData.tabGroups || []).map(group => ({
+                    groupId: group.groupId,
+                    title: group.title || '',
+                    color: group.color,
+                    collapsed: group.collapsed,
+                    index: group.index
+                })).sort((a, b) => a.index - b.index),
+                
+                tabs: tabsData.tabs.map(tab => ({
+                    // Only meaningful properties that should trigger syncing
+                    url: tab.url,
+                    title: tab.title,
+                    index: tab.index,
+                    pinned: tab.pinned,
+                    groupId: tab.groupId || null,
+                    favIconUrl: tab.favIconUrl || null,
+                    muted: tab.audioState?.muted || false
+                })).sort((a, b) => a.index - b.index)
+            };
+        };
+        
+        const normalizedCurrent = normalizeTabData(currentTabsData);
+        const normalizedStored = normalizeTabData(storedTabsData);
+        
+        // Compare normalized data
+        const tabsDataMatch = JSON.stringify(normalizedCurrent) === JSON.stringify(normalizedStored);
+        
+        if (tabsDataMatch) {
+            console.log('TABS_DATA_CHECKED');
+            return { 
+                success: true, 
+                message: 'TABS_DATA_CHECKED', 
+                timestamp: new Date().toISOString() 
             };
         }
         
-        return null;
+        // Step 5: Create updated space object with current tabs data
+        const updatedSpace = {
+            ...activeSpace,
+            tabs_data: currentTabsData,
+            last_accessed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        
+        // Step 6: Save updated space to Supabase database first
+        const saveToDbResult = await saveSpaceToDb(updatedSpace);
+        
+        if (!saveToDbResult.success) {
+            console.error('syncTabsDataToDb: Failed to save to database:', saveToDbResult.error);
+            return { 
+                success: false, 
+                message: 'Failed to save to database', 
+                error: saveToDbResult.error 
+            };
+        }
+        
+        // Step 7: Only update local storage if database save succeeded
+        const updateLocalResult = await updateLocalActiveSpace(activeSpace);
+        
+        if (!updateLocalResult.success) {
+            console.error('syncTabsDataToDb: Failed to update local storage:', updateLocalResult.error);
+            return { 
+                success: false, 
+                message: 'Database saved but failed to update local storage', 
+                error: updateLocalResult.error 
+            };
+        }
+        
+        console.log('TABS_DATA_SYNCED');
+        console.log('Current data:', normalizedCurrent);
+        console.log('Stored data:', normalizedStored);
+        
+        return { 
+            success: true, 
+            message: 'TABS_DATA_SYNCED TO DB', 
+            timestamp: new Date().toISOString() 
+        };
+        
     } catch (error) {
-        console.error('Error getting active space from storage:', error);
-        return null;
+        console.error('syncTabsDataToDb: Exception occurred:', error);
+        return { 
+            success: false, 
+            message: 'Sync failed due to exception', 
+            error: error.message 
+        };
     }
 }
 
-// Function to save current tabs to database for active space
-async function saveTabsToActiveSpace() {
-    const timestamp = new Date().toISOString();
-    console.log(`🔄 saveTabsToActiveSpace function triggered at ${timestamp}`);
-    
-    // Skip saving if we're currently switching spaces
-    if (isSwitchingSpaces) {
-        console.log(`⏸️  Currently switching spaces, skipping tab save (flag set at: ${timestamp})`);
+// Interval management for automatic synchronization
+let syncInterval = null;
+
+// Enable tab syncing with configurable interval (default 5 seconds)
+function enableTabSyncing(interval = 5000) {
+    if (syncInterval) {
+        console.log('Tab syncing already enabled');
         return;
     }
     
-    try {
-        // Get the current active space
-        const activeSpaceData = await getActiveSpaceFromStorage();
-        if (!activeSpaceData || !activeSpaceData.spaceId) {
-            console.log('No active space found, skipping tab save');
-            return;
-        }
-        
-        const { spaceId: activeSpaceId, userToken } = activeSpaceData;
-
-        // Get all current tabs (excluding extension pages and invalid URLs)
-        const allTabs = await chrome.tabs.query({});
-        const currentTabs = allTabs.filter(tab => {
-            // Skip if no URL
-            if (!tab.url) return false;
-            
-            // Skip extension and browser URLs
-            if (tab.url.startsWith('chrome-extension://') ||
-                tab.url.startsWith('chrome://') ||
-                tab.url.startsWith('edge-extension://') ||
-                tab.url.startsWith('moz-extension://')) return false;
-            
-            // Skip blank/empty tabs
-            if (tab.url === 'about:blank' || tab.url === '') return false;
-            
-            return true;
-        });
-
-        // Convert tabs to the format expected by the database
-        const tabsData = currentTabs.map(tab => ({
-            id: tab.id,
-            url: tab.url,
-            title: tab.title || 'Untitled',
-            index: tab.index,
-            pinned: tab.pinned,
-            windowId: tab.windowId,
-            active: tab.active,
-            favIconUrl: tab.favIconUrl || null,
-            // Store timestamp to make each save unique
-            savedAt: new Date().toISOString(),
-            // Store a unique identifier for this specific tab instance
-            uniqueId: `${tab.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        }));
-
-        console.log(`Saving ${tabsData.length} tabs to space ${activeSpaceId}`);
-        
-        // Log detailed tab information for debugging
-        console.log('📋 Detailed tabs being saved:');
-        tabsData.forEach((tab, index) => {
-            console.log(`  ${index + 1}. ${tab.pinned ? '📌' : '📄'} "${tab.title}" - ${tab.url}`);
-        });
-
-        // Update the space in the database with the current tabs
-        const { data, error } = await updateSpace(activeSpaceId, {
-            tabs_data: { tabs: tabsData },
-            updated_at: new Date().toISOString()
-        }, userToken);
-
-        if (error) {
-            console.error('Error saving tabs to database:', error);
-        } else {
-            console.log('✅ Successfully saved tabs to database for active space');
-        }
-
-    } catch (error) {
-        console.error('Error in saveTabsToActiveSpace:', error);
-    }
+    console.log(`Enabling tab syncing with ${interval}ms interval`);
+    syncInterval = setInterval(async () => {
+        const result = await syncTabsDataToDb();
+        console.log('syncTabsDataToDb result:', result);
+    }, interval);
 }
 
-// Robust space switching handler - runs entirely in background
-async function handleSpaceSwitch(spaceId, userId, userToken = null) {
-    console.log(`🔄 Background: Starting space switch to ${spaceId}`);
-    
-    try {
-        // Set switching flag to prevent tab save interruptions
-        isSwitchingSpaces = true;
-        const switchStartTime = new Date().toISOString();
-        console.log(`🔄 Space switching started in background - tab saving disabled (${switchStartTime})`);
-        
-        // Safety timeout to prevent flag from getting stuck
-        const safetyTimeout = setTimeout(() => {
-            if (isSwitchingSpaces) {
-                console.log('⚠️  Background space switching flag timeout - auto-clearing after 30 seconds');
-                isSwitchingSpaces = false;
-            }
-        }, 30000); // 30 second timeout
-        
-        // Save the active space to Chrome storage
-        await saveActiveSpaceToStorage(spaceId, userId, userToken);
-        
-        // Get the space data including tabs
-        const spaces = await getUserSpaces(userId, userToken);
-        if (!spaces) {
-            throw new Error('Failed to load spaces');
-        }
-        
-        const currentSpace = spaces.find(space => space.id === spaceId);
-        if (!currentSpace) {
-            throw new Error('Space not found');
-        }
-        
-        console.log(`🔄 Background: Loading tabs for space "${currentSpace.name}"`);
-        
-        // Load tabs from the space (this function is already robust in background)
-        await loadTabsFromSpace(currentSpace);
-        
-        // Clear the safety timeout since we completed successfully
-        clearTimeout(safetyTimeout);
-        
-        // Re-enable tab saving
-        isSwitchingSpaces = false;
-        console.log(`✅ Background space switching completed - tab saving re-enabled (${new Date().toISOString()})`);
-        
-        return {
-            success: true,
-            message: `Switched to ${currentSpace.name}`,
-            spaceName: currentSpace.name,
-            spaceId: spaceId
-        };
-        
-    } catch (error) {
-        // Always clear the flag on error
-        isSwitchingSpaces = false;
-        console.error('❌ Background: Error in space switch:', error);
-        throw error;
+// Disable tab syncing
+function disableTabSyncing() {
+    if (syncInterval) {
+        clearInterval(syncInterval);
+        syncInterval = null;
+        console.log('Tab syncing disabled');
+    } else {
+        console.log('Tab syncing already disabled');
     }
 }
-
-// Handle getting spaces in background
-async function handleGetSpaces(userId, userToken = null) {
-    try {
-        console.log('🔄 Background: Getting spaces for user', userId);
-        const spaces = await getUserSpaces(userId, userToken);
-        
-        console.log(`🔄 Background: getUserSpaces returned ${spaces ? spaces.length : 0} spaces`);
-        
-        if (!spaces) {
-            console.log('❌ Background: getUserSpaces returned null/undefined');
-            throw new Error('Failed to load spaces - getUserSpaces returned null');
-        }
-        
-        // Get active space from storage
-        const activeSpaceData = await getActiveSpaceFromStorage();
-        const activeSpaceId = activeSpaceData ? activeSpaceData.spaceId : null;
-        
-        console.log(`✅ Background: Returning ${spaces.length} spaces with activeSpaceId: ${activeSpaceId}`);
-        
-        return {
-            success: true,
-            spaces: spaces,
-            activeSpaceId: activeSpaceId
-        };
-        
-    } catch (error) {
-        console.error('❌ Background: Error getting spaces:', error);
-        throw error;
-    }
-}
-
-// Enhanced save active space function 
-async function saveActiveSpaceToStorage(spaceId, userId, userToken = null) {
-    try {
-        // Store both user-specific and global active space
-        const userStorageKey = `tabster_active_space_${userId}`;
-        const globalStorageKey = 'tabster_current_active_space';
-        
-        await chrome.storage.local.set({ 
-            [userStorageKey]: spaceId,
-            [globalStorageKey]: {
-                spaceId: spaceId,
-                userId: userId,
-                userToken: userToken,
-                timestamp: new Date().toISOString()
-            }
-        });
-        console.log('🔄 Background: Saved active space to storage:', spaceId);
-        
-    } catch (error) {
-        console.error('❌ Background: Error saving active space to storage:', error);
-        // Don't throw error as this shouldn't block workspace switching
-    }
-}
-
-// Handle popup disconnect (in case popup closes during space switching)
-chrome.runtime.onConnect.addListener((port) => {
-    if (port.name === 'popup') {
-        port.onDisconnect.addListener(() => {
-            if (isSwitchingSpaces) {
-                console.log('⚠️  Popup disconnected during space switching - clearing flag');
-                isSwitchingSpaces = false;
-            }
-        });
-    }
-});
-
-// Helper function to migrate old tabs_data format to new format
-function migrateLegacyTabsData(space) {
-    // Handle NULL or undefined tabs_data
-    if (!space.tabs_data) {
-        space.tabs_data = { tabs: [] };
-        return space;
-    }
-    
-    // If tabs_data is already in new format, return as is
-    if (space.tabs_data.tabs && Array.isArray(space.tabs_data.tabs)) {
-        return space;
-    }
-    
-    // If tabs_data is an array (old format), convert it for this session
-    // Note: This indicates the space needs migration in the database
-    if (Array.isArray(space.tabs_data)) {
-        console.log('Background: Converting legacy array format for session:', space.name);
-        space.tabs_data = { tabs: space.tabs_data };
-        return space;
-    }
-    
-    // Handle any other invalid format by defaulting to empty
-    console.log('Background: Invalid tabs_data format for space:', space.name, 'defaulting to empty');
-    space.tabs_data = { tabs: [] };
-    
-    return space;
-}
-
-// Migration function to update all existing spaces to new tabs_data format
-async function migrateAllSpacesToNewFormat(userId, userToken = null) {
-    try {
-        console.log('Background: Starting migration of all spaces to new tabs_data format');
-        
-        // Get all user spaces
-        const spaces = await getUserSpaces(userId, userToken);
-        if (!spaces || spaces.length === 0) {
-            console.log('Background: No spaces to migrate');
-            return { success: true, migratedCount: 0 };
-        }
-        
-        let migratedCount = 0;
-        const errors = [];
-        
-        for (const space of spaces) {
-            try {
-                // Check if space needs migration
-                if (!space.tabs_data) {
-                    console.log(`Background: Migrating space "${space.name}" from NULL to new format`);
-                    
-                    // Update space with new format
-                    const { data, error } = await updateSpace(space.id, {
-                        tabs_data: { tabs: [] },
-                        updated_at: new Date().toISOString()
-                    }, userToken);
-                    
-                    if (error) {
-                        console.error(`Background: Error migrating space "${space.name}":`, error);
-                        errors.push(`${space.name}: ${error.message}`);
-                    } else {
-                        console.log(`Background: Successfully migrated space "${space.name}"`);
-                        migratedCount++;
-                    }
-                } else if (Array.isArray(space.tabs_data)) {
-                    console.log(`Background: Migrating space "${space.name}" from array to new format`);
-                    
-                    // Update space with new format
-                    const { data, error } = await updateSpace(space.id, {
-                        tabs_data: { tabs: space.tabs_data },
-                        updated_at: new Date().toISOString()
-                    }, userToken);
-                    
-                    if (error) {
-                        console.error(`Background: Error migrating space "${space.name}":`, error);
-                        errors.push(`${space.name}: ${error.message}`);
-                    } else {
-                        console.log(`Background: Successfully migrated space "${space.name}"`);
-                        migratedCount++;
-                    }
-                } else if (space.tabs_data.tabs && Array.isArray(space.tabs_data.tabs)) {
-                    console.log(`Background: Space "${space.name}" already in correct format`);
-                } else {
-                    console.log(`Background: Space "${space.name}" has unexpected format`);
-                }
-            } catch (spaceError) {
-                console.error(`Background: Error processing space "${space.name}":`, spaceError);
-                errors.push(`${space.name}: ${spaceError.message}`);
-            }
-        }
-        
-        console.log(`Background: Migration completed. Migrated ${migratedCount} spaces`);
-        
-        return {
-            success: true,
-            migratedCount: migratedCount,
-            totalSpaces: spaces.length,
-            errors: errors
-        };
-        
-    } catch (error) {
-        console.error('Background: Error during migration:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-} 

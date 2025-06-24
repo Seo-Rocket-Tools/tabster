@@ -4,10 +4,15 @@
     <meta charset="UTF-8">
     <title>Tabster</title>
     <link rel="stylesheet" href="css/popup.css">
-    <script src="lib/supabase.js"></script>
 </head>
 <body>
     <div class="container">
+        <!-- Global Message Banner -->
+        <div id="message-banner" class="message-banner">
+            <div class="message-banner-icon" id="message-banner-icon">✓</div>
+            <div class="message-banner-text" id="message-banner-text">Message</div>
+        </div>
+
         <!-- Theme Switcher -->
         <div class="theme-switcher">
             <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme"></button>
@@ -132,7 +137,7 @@
                         <span class="avatar-initials" id="avatar-initials">U</span>
                     </div>
                     <div class="dropdown-menu" id="dropdown-menu">
-                        <a href="#" id="logout-btn-dropdown" class="dropdown-item">Sign Out</a>
+                        <a href="#" id="logout-btn-dropdown" class="dropdown-item signout-option">Sign Out</a>
                     </div>
                 </div>
             </div>
