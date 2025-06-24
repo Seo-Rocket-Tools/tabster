@@ -142,6 +142,59 @@
                 </div>
             </div>
             <div class="dashboard-content">
+                <div class="essentials-section">
+                    <div class="section-header">
+                        <h3>Essentials</h3>
+                    </div>
+                    
+                    <div class="essentials-grid" id="essentials-grid">
+                        <!-- Essential tab icons will be dynamically populated here -->
+                        <div class="essential-item" data-url="https://google.com" title="Google">
+                            <div class="essential-icon">
+                                <img src="https://www.google.com/favicon.ico" alt="Google" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="fallback-icon" style="display: none;">G</div>
+                            </div>
+                        </div>
+                        
+                        <div class="essential-item" data-url="https://github.com" title="GitHub">
+                            <div class="essential-icon">
+                                <img src="https://github.com/favicon.ico" alt="GitHub" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="fallback-icon" style="display: none;">GH</div>
+                            </div>
+                        </div>
+                        
+                        <div class="essential-item" data-url="https://gmail.com" title="Gmail">
+                            <div class="essential-icon">
+                                <img src="https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" alt="Gmail" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="fallback-icon" style="display: none;">GM</div>
+                            </div>
+                        </div>
+                        
+                        <div class="essential-item" data-url="https://youtube.com" title="YouTube">
+                            <div class="essential-icon">
+                                <img src="https://www.youtube.com/favicon.ico" alt="YouTube" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="fallback-icon" style="display: none;">YT</div>
+                            </div>
+                        </div>
+                        
+                        <div class="essential-item" data-url="https://stackoverflow.com" title="Stack Overflow">
+                            <div class="essential-icon">
+                                <img src="https://cdn.sstatic.net/Sites/stackoverflow/Img/favicon.ico" alt="Stack Overflow" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="fallback-icon" style="display: none;">SO</div>
+                            </div>
+                        </div>
+                        
+                        <div class="essential-item add-essential" title="Add Essential">
+                            <div class="essential-icon add-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="workspaces-section">
                     <div class="section-header">
                         <h3>Spaces</h3>

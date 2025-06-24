@@ -7,11 +7,13 @@
   --text-secondary: #b3b3b3;
   --text-muted: #666666;
   --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-rgb: 255, 255, 255;
   --hover-bg: rgba(255, 255, 255, 0.05);
   --input-bg: rgba(255, 255, 255, 0.08);
   --shadow: rgba(0, 0, 0, 0.3);
   --icon-filter: none;
   --logo-filter: invert(1); /* White logo on dark background */
+  --card-border-radius: 10px;
 }
 
 :root.light-theme {
@@ -23,11 +25,13 @@
   --text-secondary: #495057;
   --text-muted: #6c757d;
   --border-color: rgba(0, 0, 0, 0.1);
+  --border-color-rgb: 0, 0, 0;
   --hover-bg: rgba(0, 0, 0, 0.05);
   --input-bg: rgba(0, 0, 0, 0.03);
   --shadow: rgba(0, 0, 0, 0.1);
   --icon-filter: none;
   --logo-filter: invert(0); /* Black logo on light background */
+  --card-border-radius: 10px;
 }
 
 body {
@@ -945,7 +949,7 @@ body::-webkit-scrollbar {
 .space-card {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: var(--card-border-radius);
     padding: 12px 16px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1981,4 +1985,121 @@ body::-webkit-scrollbar {
 .spaces-disabled .space-card:not(.loading) .space-menu-btn {
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+/* Essentials Section */
+.essentials-section {
+    margin-bottom: 32px;
+    width: 100%;
+}
+
+.essentials-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 0 8px;
+    box-sizing: border-box;
+}
+
+.essential-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    border-radius: var(--card-border-radius);
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    min-height: 48px;
+    box-sizing: border-box;
+}
+
+.essential-item:hover {
+    background: var(--hover-bg);
+    border-color: rgba(var(--border-color-rgb), 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.essential-item:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.essential-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    position: relative;
+}
+
+.essential-icon img {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.fallback-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.essential-item.add-essential {
+    background: transparent;
+    border: 2px dashed var(--border-color);
+    box-sizing: border-box;
+}
+
+.essential-item.add-essential:hover {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.add-icon {
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+
+.essential-item.add-essential:hover .add-icon {
+    color: var(--text-primary);
+}
+
+/* Responsive grid for smaller widths */
+@media (max-width: 360px) {
+    .essentials-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+    }
+    
+    .essential-item {
+        min-height: 44px;
+    }
+    
+    .essential-icon {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .essential-icon img {
+        width: 18px;
+        height: 18px;
+    }
 } 
