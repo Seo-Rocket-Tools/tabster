@@ -1244,7 +1244,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button class="space-menu-btn" disabled>⋯</button>
                 </div>
             </div>
-            <div class="space-tree" style="display: none;">
+            <div class="space-tree" style="display: ${space.isExpanded ? 'block' : 'none'};">
                 ${space.folders ? createFolderTree(space.folders) : ''}
             </div>
         `;
@@ -1270,6 +1270,11 @@ document.addEventListener('DOMContentLoaded', function() {
         card.addEventListener('dragover', handleDragOver);
         card.addEventListener('drop', handleDrop);
         
+        // Set expanded class based on state
+        if (space.isExpanded) {
+            card.classList.add('expanded');
+        }
+        
         // Add expand/collapse functionality
         const treeElement = card.querySelector('.space-tree');
         const cardHeader = card.querySelector('.space-card-header');
@@ -1288,13 +1293,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Helper function to create folder tree HTML
     function createFolderTree(folders) {
         return folders.map((folder, folderIndex) => {
-            const isDefaultFolder = folder.isDefault;
-            const folderState = isDefaultFolder ? 'expanded' : 'collapsed';
-            const folderIcon = isDefaultFolder ? 'folder_open' : 'folder';
+            // Use preserved expansion state if available, otherwise fall back to isDefault
+            const isFolderExpanded = folder.isExpanded !== undefined ? folder.isExpanded : folder.isDefault;
+            const folderState = isFolderExpanded ? 'expanded' : 'collapsed';
+            const folderIcon = isFolderExpanded ? 'folder_open' : 'folder';
             
             return `
                 <div class="tree-folder ${folderState}" data-folder="${folderIndex}">
-                    <div class="tree-folder-header">
+                    <div class="tree-folder-header" data-drop-zone="folder">
+                        ${!folder.isDefault ? `
+                        <div class="folder-drag-handle" draggable="true" title="Drag to reorder folder">
+                            <img src="icons/drag_handle.svg" width="16" height="16">
+                        </div>
+                        ` : `
+                        <div class="folder-drag-handle-spacer"></div>
+                        `}
                         <div class="tree-indent">
                             <div class="tree-icon">
                                 <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
@@ -1321,7 +1334,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </button>
                         </div>
                     </div>
-                    <div class="tree-folder-content" style="display: ${isDefaultFolder ? 'block' : 'none'};">
+                    <div class="tree-folder-content" style="display: ${isFolderExpanded ? 'block' : 'none'};">
                         ${folder.tabs ? createTabList(folder.tabs) : ''}
                     </div>
                 </div>
@@ -1332,7 +1345,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Helper function to create tab list HTML
     function createTabList(tabs) {
         return tabs.map(tab => `
-            <div class="tree-tab" data-tab-id="${tab.tabId}">
+            <div class="tree-tab" data-tab-id="${tab.tabId}" data-drop-zone="tab">
+                <div class="tab-drag-handle" draggable="true" title="Drag to reorder tab">
+                    <img src="icons/drag_handle.svg" width="16" height="16">
+                </div>
                 <div class="tree-indent">
                     <div class="tree-icon">
                         <img src="${tab.favicon}" alt="" width="16" height="16" class="tab-favicon">
@@ -1361,9 +1377,38 @@ document.addEventListener('DOMContentLoaded', function() {
             treeElement.style.display = 'none';
             card.classList.remove('expanded');
         } else {
-            // Expand
+            // First, collapse all other spaces
+            const allSpaceCards = document.querySelectorAll('.space-card:not(.new-space-card)');
+            allSpaceCards.forEach(otherCard => {
+                if (otherCard !== card) {
+                    const otherTreeElement = otherCard.querySelector('.space-tree');
+                    if (otherTreeElement && otherTreeElement.style.display !== 'none') {
+                        otherTreeElement.style.display = 'none';
+                        otherCard.classList.remove('expanded');
+                    }
+                }
+            });
+            
+            // Then expand the clicked space and reset folder states to initial state
             treeElement.style.display = 'block';
             card.classList.add('expanded');
+            
+            // Reset folder expansion states to initial state
+            const spaceId = parseInt(card.getAttribute('data-space-id'));
+            const space = dummySpaces.find(s => s.id === spaceId);
+            
+            if (space && space.folders) {
+                space.folders.forEach(folder => {
+                    // Reset to initial state: default folder expanded, others collapsed
+                    folder.isExpanded = folder.isDefault;
+                });
+                
+                // Update just the tree content without replacing the entire card
+                treeElement.innerHTML = createFolderTree(space.folders);
+                
+                // Re-initialize tree functionality for the updated content
+                initializeTreeFunctionality();
+            }
         }
     }
 
@@ -1383,25 +1428,41 @@ document.addEventListener('DOMContentLoaded', function() {
         const treeClickHandler = (e) => {
             const target = e.target;
             
-            // Handle folder expansion/collapse
-            if (target.closest('.tree-folder-header') && !target.closest('.tree-actions')) {
-                const folderElement = target.closest('.tree-folder');
-                const folderContent = folderElement.querySelector('.tree-folder-content');
-                const folderIcon = folderElement.querySelector('.tree-icon svg');
-                const isExpanded = folderContent.style.display !== 'none';
+            // Don't handle clicks if elements have dragging class (more specific check)
+            if (target.closest('.dragging') || document.querySelector('.tree-folder.dragging, .tree-tab.dragging')) {
+                console.log('Ignoring click due to drag state');
+                return;
+            }
+            
+            // Handle folder expansion/collapse - but not if clicking on actions or during drag
+            if (target.closest('.tree-folder-header') && 
+                !target.closest('.tree-actions') && 
+                !target.closest('.folder-drag-handle') &&
+                !target.closest('.tab-drag-handle') &&
+                !target.classList.contains('folder-drag-handle') &&
+                !target.classList.contains('tab-drag-handle')) {
                 
-                if (isExpanded) {
-                    // Collapse folder
-                    folderContent.style.display = 'none';
-                    folderElement.classList.remove('expanded');
-                    folderElement.classList.add('collapsed');
-                    folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>';
-                } else {
-                    // Expand folder
-                    folderContent.style.display = 'block';
-                    folderElement.classList.remove('collapsed');
-                    folderElement.classList.add('expanded');
-                    folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480l96-320h684L837-217q-8 26-29.5 41.5T760-160H160Z"/>';
+                const folderElement = target.closest('.tree-folder');
+                
+                // Extra check to make sure we're not in a drag state
+                if (folderElement && !folderElement.classList.contains('dragging')) {
+                    const folderContent = folderElement.querySelector('.tree-folder-content');
+                    const folderIcon = folderElement.querySelector('.tree-icon svg');
+                    const isExpanded = folderContent.style.display !== 'none';
+                    
+                    if (isExpanded) {
+                        // Collapse folder
+                        folderContent.style.display = 'none';
+                        folderElement.classList.remove('expanded');
+                        folderElement.classList.add('collapsed');
+                        folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>';
+                    } else {
+                        // Expand folder
+                        folderContent.style.display = 'block';
+                        folderElement.classList.remove('collapsed');
+                        folderElement.classList.add('expanded');
+                        folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480l96-320h684L837-217q-8 26-29.5 41.5T760-160H160Z"/>';
+                    }
                 }
             }
             
@@ -1463,6 +1524,28 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add event listeners
         spacesGrid.addEventListener('click', treeClickHandler);
         spacesGrid.addEventListener('error', treeErrorHandler, true);
+        
+        // Add drag event listeners for folders and tabs
+        spacesGrid.addEventListener('dragstart', handleTreeDragStart);
+        spacesGrid.addEventListener('dragend', handleTreeDragEnd);
+        spacesGrid.addEventListener('dragover', handleTreeDragOver);
+        spacesGrid.addEventListener('drop', handleTreeDrop);
+        
+        // Add direct drop listeners to all tree elements for better reliability
+        const allFolderHeaders = spacesGrid.querySelectorAll('.tree-folder-header');
+        const allTabs = spacesGrid.querySelectorAll('.tree-tab');
+        
+        allFolderHeaders.forEach(header => {
+            header.addEventListener('drop', handleTreeDrop);
+            header.addEventListener('dragover', handleTreeDragOver);
+        });
+        
+        allTabs.forEach(tab => {
+            tab.addEventListener('drop', handleTreeDrop);
+            tab.addEventListener('dragover', handleTreeDragOver);
+        });
+        
+        console.log('Added direct drop listeners to:', allFolderHeaders.length, 'folder headers and', allTabs.length, 'tabs');
     }
 
     // Helper function to create the "New Space" card
@@ -1877,10 +1960,42 @@ document.addEventListener('DOMContentLoaded', function() {
         const spacesGrid = document.getElementById('workspaces-grid');
         if (!spacesGrid) return;
         
+        // Store current expansion states before re-rendering
+        const spaceExpansionStates = {};
+        const folderExpansionStates = {};
+        
+        const existingSpaces = spacesGrid.querySelectorAll('.space-card[data-space-id]');
+        existingSpaces.forEach(spaceCard => {
+            const spaceId = spaceCard.getAttribute('data-space-id');
+            const treeElement = spaceCard.querySelector('.space-tree');
+            spaceExpansionStates[spaceId] = treeElement && treeElement.style.display !== 'none';
+            
+            // Store folder expansion states
+            const folders = spaceCard.querySelectorAll('.tree-folder');
+            folders.forEach((folder, folderIndex) => {
+                const folderContent = folder.querySelector('.tree-folder-content');
+                const folderKey = `${spaceId}-${folderIndex}`;
+                folderExpansionStates[folderKey] = folderContent && folderContent.style.display !== 'none';
+            });
+        });
+        
         spacesGrid.innerHTML = '';
         
         // Create space cards using current dummy data order
         dummySpaces.forEach(space => {
+            // Preserve expansion state from before re-render (default to collapsed for first render)
+            space.isExpanded = spaceExpansionStates[space.id] !== undefined ? spaceExpansionStates[space.id] : false;
+            
+            // Preserve folder expansion states
+            if (space.folders) {
+                space.folders.forEach((folder, folderIndex) => {
+                    const folderKey = `${space.id}-${folderIndex}`;
+                    folder.isExpanded = folderExpansionStates[folderKey] !== undefined 
+                        ? folderExpansionStates[folderKey] 
+                        : folder.isDefault; // Default to original logic for first render
+                });
+            }
+            
             const spaceCard = createSpaceCard(space);
             spacesGrid.appendChild(spaceCard);
         });
@@ -1955,6 +2070,553 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show dashboard screen
         showScreen('dashboard');
+    }
+
+    // Drag and Drop functionality
+    let draggedElement = null;
+    let draggedIndex = null;
+    let insertionLine = null;
+
+    // Folder drag and drop variables
+    let draggedFolder = null;
+    let draggedFolderIndex = null;
+    let draggedFolderSpaceId = null;
+    let folderInsertionLine = null;
+
+    // Tab drag and drop variables  
+    let draggedTab = null;
+    let draggedTabIndex = null;
+    let draggedTabFolderIndex = null;
+    let draggedTabSpaceId = null;
+    let tabInsertionLine = null;
+
+    // Tree-level drag and drop handlers
+    function handleTreeDragStart(e) {
+        // Check if it's a folder drag handle
+        if (e.target.closest('.folder-drag-handle')) {
+            const folderElement = e.target.closest('.tree-folder');
+            const spaceElement = e.target.closest('.space-card');
+            
+            // Get folder data to check if it's default
+            const folderIndex = parseInt(folderElement.getAttribute('data-folder'));
+            const spaceId = parseInt(spaceElement.getAttribute('data-space-id'));
+            const space = dummySpaces.find(s => s.id === spaceId);
+            
+            // Prevent dragging default folders
+            if (space && space.folders && space.folders[folderIndex] && space.folders[folderIndex].isDefault) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            
+            draggedFolder = folderElement;
+            draggedFolderIndex = parseInt(folderElement.getAttribute('data-folder'));
+            draggedFolderSpaceId = spaceElement.getAttribute('data-space-id');
+            
+            // Add dragging class for visual feedback
+            folderElement.classList.add('dragging');
+            
+            // Add dragging class to container
+            const spaceTree = spaceElement.querySelector('.space-tree');
+            if (spaceTree) {
+                spaceTree.classList.add('dragging');
+            }
+            
+            // Create folder insertion line
+            createFolderInsertionLine(spaceElement);
+            
+            // Set drag effect
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', folderElement.outerHTML);
+            
+            // Create custom drag image
+            try {
+                const dragImage = folderElement.cloneNode(true);
+                dragImage.style.opacity = '0.8';
+                dragImage.style.transform = 'scale(0.95)';
+                dragImage.style.position = 'absolute';
+                dragImage.style.top = '-1000px';
+                document.body.appendChild(dragImage);
+                e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
+                setTimeout(() => document.body.removeChild(dragImage), 0);
+            } catch (error) {
+                // Fallback to default drag image if custom fails
+            }
+            
+            console.log('Dragging folder:', draggedFolderIndex, 'from space:', draggedFolderSpaceId);
+        }
+        // Check if it's a tab drag handle
+        else if (e.target.closest('.tab-drag-handle')) {
+            const tabElement = e.target.closest('.tree-tab');
+            const folderElement = e.target.closest('.tree-folder');
+            const spaceElement = e.target.closest('.space-card');
+            
+            draggedTab = tabElement;
+            draggedTabIndex = parseInt(tabElement.getAttribute('data-tab-id'));
+            draggedTabFolderIndex = parseInt(folderElement.getAttribute('data-folder'));
+            draggedTabSpaceId = spaceElement.getAttribute('data-space-id');
+            
+            // Add dragging class for visual feedback
+            tabElement.classList.add('dragging');
+            
+            // Add dragging class to container
+            const folderContent = folderElement.querySelector('.tree-folder-content');
+            if (folderContent) {
+                folderContent.classList.add('dragging');
+            }
+            
+            // Create tab insertion line
+            createTabInsertionLine(folderElement);
+            
+            // Set drag effect
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', tabElement.outerHTML);
+            
+            // Create custom drag image
+            try {
+                const dragImage = tabElement.cloneNode(true);
+                dragImage.style.opacity = '0.8';
+                dragImage.style.transform = 'scale(0.95)';
+                dragImage.style.position = 'absolute';
+                dragImage.style.top = '-1000px';
+                document.body.appendChild(dragImage);
+                e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
+                setTimeout(() => document.body.removeChild(dragImage), 0);
+            } catch (error) {
+                // Fallback to default drag image if custom fails
+            }
+            
+            console.log('Dragging tab:', draggedTabIndex, 'from folder:', draggedTabFolderIndex, 'in space:', draggedTabSpaceId);
+        }
+    }
+
+    function handleTreeDragEnd(e) {
+        // Immediately clear primary drag state to prevent click blocking
+        const hadDraggedFolder = !!draggedFolder;
+        const hadDraggedTab = !!draggedTab;
+        
+        // Clear drag variables immediately
+        draggedFolder = null;
+        draggedTab = null;
+        draggedFolderIndex = null;
+        draggedTabIndex = null;
+        draggedFolderSpaceId = null;
+        draggedTabSpaceId = null;
+        draggedTabFolderIndex = null;
+        
+        // Clean up visual states with a short delay
+        setTimeout(() => {
+            if (hadDraggedFolder) {
+                // Remove dragging class from all folders
+                const allFolders = document.querySelectorAll('.tree-folder');
+                allFolders.forEach(folder => {
+                    folder.classList.remove('dragging');
+                });
+                
+                // Remove dragging class from container
+                const spaceTree = document.querySelector('.space-tree.dragging');
+                if (spaceTree) {
+                    spaceTree.classList.remove('dragging');
+                }
+                
+                // Remove folder insertion line
+                if (folderInsertionLine) {
+                    folderInsertionLine.remove();
+                    folderInsertionLine = null;
+                }
+            }
+            
+            if (hadDraggedTab) {
+                // Remove dragging class from all tabs
+                const allTabs = document.querySelectorAll('.tree-tab');
+                allTabs.forEach(tab => {
+                    tab.classList.remove('dragging');
+                });
+                
+                // Remove dragging class from container
+                const folderContent = document.querySelector('.tree-folder-content.dragging');
+                if (folderContent) {
+                    folderContent.classList.remove('dragging');
+                }
+                
+                // Remove tab insertion line
+                if (tabInsertionLine) {
+                    tabInsertionLine.remove();
+                    tabInsertionLine = null;
+                }
+            }
+        }, 50);
+    }
+
+    function handleTreeDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        // Reduce log spam - only log occasionally
+        if (Math.random() < 0.01) { // Only log ~1% of dragover events
+            console.log('DRAG OVER EVENT (sampled):', e.target);
+        }
+        
+        // Handle folder drag over
+        if (draggedFolder) {
+            const targetFolderHeader = e.target.closest('.tree-folder-header');
+            if (targetFolderHeader) {
+                const targetFolder = targetFolderHeader.closest('.tree-folder');
+                const targetSpaceId = targetFolder.closest('.space-card').getAttribute('data-space-id');
+                const targetFolderIndex = parseInt(targetFolder.getAttribute('data-folder'));
+                
+                // Get target folder data to check if it's default
+                const targetSpaceIdNum = parseInt(targetSpaceId);
+                const targetSpace = dummySpaces.find(s => s.id === targetSpaceIdNum);
+                const targetFolderData = targetSpace && targetSpace.folders ? targetSpace.folders[targetFolderIndex] : null;
+                
+                // Only show visual feedback within the same space
+                if (targetFolder && targetFolder !== draggedFolder && targetSpaceId === draggedFolderSpaceId) {
+                    const rect = targetFolderHeader.getBoundingClientRect();
+                    const midpoint = rect.top + (rect.height / 2);
+                    const isTopHalf = e.clientY < midpoint;
+                    
+                    // Special handling for default folder
+                    if (targetFolderData && targetFolderData.isDefault) {
+                        // Allow insertion line AFTER default folder (bottom half)
+                        if (!isTopHalf) {
+                            showFolderInsertionLineAfter(targetFolder);
+                        } else {
+                            // Hide insertion line BEFORE default folder (top half)
+                            hideFolderInsertionLine();
+                        }
+                    } else {
+                        // Normal folder - show insertion lines normally
+                        // But don't show insertion line before first non-default folder (would be above default)
+                        if (isTopHalf && targetFolderIndex === 1) {
+                            hideFolderInsertionLine();
+                        } else if (isTopHalf) {
+                            showFolderInsertionLine(targetFolder);
+                        } else {
+                            showFolderInsertionLineAfter(targetFolder);
+                        }
+                    }
+                } else {
+                    hideFolderInsertionLine();
+                }
+            } else {
+                hideFolderInsertionLine();
+            }
+        }
+        // Handle tab drag over
+        else if (draggedTab) {
+            const targetTab = e.target.closest('.tree-tab');
+            if (targetTab) {
+                const targetFolder = targetTab.closest('.tree-folder');
+                const targetFolderIndex = parseInt(targetFolder.getAttribute('data-folder'));
+                const targetSpaceId = targetTab.closest('.space-card').getAttribute('data-space-id');
+                
+                // Only show visual feedback within the same folder and space
+                if (targetTab && targetTab !== draggedTab && 
+                    targetFolderIndex === draggedTabFolderIndex && 
+                    targetSpaceId === draggedTabSpaceId) {
+                    
+                    const rect = targetTab.getBoundingClientRect();
+                    const midpoint = rect.top + (rect.height / 2);
+                    const isTopHalf = e.clientY < midpoint;
+                    
+                    if (isTopHalf) {
+                        showTabInsertionLine(targetTab);
+                    } else {
+                        showTabInsertionLineAfter(targetTab);
+                    }
+                } else {
+                    hideTabInsertionLine();
+                }
+            } else {
+                hideTabInsertionLine();
+            }
+        }
+    }
+
+    function handleTreeDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('=== TREE DROP EVENT FIRED! ===');
+        
+        // Handle folder drop
+        if (draggedFolder) {
+            console.log('--- FOLDER DROP HANDLING ---');
+            
+            // Look for any folder header or folder element as drop target
+            const targetFolderHeader = e.target.closest('.tree-folder-header') || 
+                                     e.target.closest('[data-drop-zone="folder"]');
+            
+            if (targetFolderHeader) {
+                const targetFolder = targetFolderHeader.closest('.tree-folder');
+                
+                if (targetFolder && targetFolder !== draggedFolder) {
+                    const targetSpaceId = targetFolder.closest('.space-card').getAttribute('data-space-id');
+                    
+                    // Only allow dropping within the same space
+                    if (targetSpaceId === draggedFolderSpaceId) {
+                        const targetFolderIndex = parseInt(targetFolder.getAttribute('data-folder'));
+                        
+                        if (targetFolderIndex !== draggedFolderIndex) {
+                            console.log('ATTEMPTING FOLDER REORDER');
+                            
+                            // Find the space and get folder data
+                            const space = dummySpaces.find(s => s.id === parseInt(draggedFolderSpaceId));
+                            if (space && space.folders && space.folders[draggedFolderIndex]) {
+                                const draggedFolderData = space.folders[draggedFolderIndex];
+                                const targetFolderData = space.folders[targetFolderIndex];
+                                
+                                // Handle default folder drop restrictions
+                                if (targetFolderData && targetFolderData.isDefault) {
+                                    // Only allow dropping AFTER default folder (bottom half)
+                                    const rect = targetFolderHeader.getBoundingClientRect();
+                                    const midpoint = rect.top + (rect.height / 2);
+                                    const isTopHalf = e.clientY < midpoint;
+                                    
+                                    if (isTopHalf) {
+                                        console.log('Cannot drop before default folder');
+                                        return;
+                                    }
+                                    // Continue with drop after default folder (isTopHalf = false)
+                                }
+                                
+                                // Use precise insertion logic based on mouse position
+                                const rect = targetFolderHeader.getBoundingClientRect();
+                                const midpoint = rect.top + (rect.height / 2);
+                                const isTopHalf = e.clientY < midpoint;
+                                
+                                let insertIndex = targetFolderIndex;
+                                if (!isTopHalf && draggedFolderIndex < targetFolderIndex) {
+                                    insertIndex = targetFolderIndex;
+                                } else if (!isTopHalf && draggedFolderIndex > targetFolderIndex) {
+                                    insertIndex = targetFolderIndex + 1;
+                                } else if (isTopHalf && draggedFolderIndex > targetFolderIndex) {
+                                    insertIndex = targetFolderIndex;
+                                } else if (isTopHalf && draggedFolderIndex < targetFolderIndex) {
+                                    insertIndex = targetFolderIndex - 1;
+                                }
+                                
+                                // Ensure we never insert at index 0 (reserved for default folder)
+                                if (insertIndex === 0) {
+                                    insertIndex = 1;
+                                }
+                                
+                                console.log('Insert index:', insertIndex, 'isTopHalf:', isTopHalf);
+                                
+                                console.log('Reordering folders...');
+                                space.folders.splice(draggedFolderIndex, 1);
+                                space.folders.splice(insertIndex, 0, draggedFolderData);
+                                
+                                // Re-render
+                                renderSpacesGrid();
+                                console.log('Folder reorder complete!');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Handle tab drop
+        else if (draggedTab) {
+            console.log('--- TAB DROP HANDLING ---');
+            
+            // Look for any tab element as drop target
+            const targetTab = e.target.closest('.tree-tab') || 
+                            e.target.closest('[data-drop-zone="tab"]');
+            
+            if (targetTab && targetTab !== draggedTab) {
+                const targetFolder = targetTab.closest('.tree-folder');
+                const targetFolderIndex = parseInt(targetFolder.getAttribute('data-folder'));
+                const targetSpaceId = targetTab.closest('.space-card').getAttribute('data-space-id');
+                
+                // Only allow dropping within the same folder and space
+                if (targetFolderIndex === draggedTabFolderIndex && targetSpaceId === draggedTabSpaceId) {
+                    const targetTabId = parseInt(targetTab.getAttribute('data-tab-id'));
+                    
+                    if (targetTabId !== draggedTabIndex) {
+                        console.log('ATTEMPTING TAB REORDER');
+                        
+                        // Find the space and folder
+                        const space = dummySpaces.find(s => s.id === parseInt(draggedTabSpaceId));
+                        if (space && space.folders && space.folders[draggedTabFolderIndex]) {
+                            const folder = space.folders[draggedTabFolderIndex];
+                            const draggedTabCurrentIndex = folder.tabs.findIndex(tab => tab.tabId === draggedTabIndex);
+                            const targetTabCurrentIndex = folder.tabs.findIndex(tab => tab.tabId === targetTabId);
+                            
+                            if (draggedTabCurrentIndex !== -1 && targetTabCurrentIndex !== -1) {
+                                console.log('Reordering tabs...');
+                                
+                                // Use precise insertion logic based on mouse position (like insertion line)
+                                const rect = targetTab.getBoundingClientRect();
+                                const midpoint = rect.top + (rect.height / 2);
+                                const isTopHalf = e.clientY < midpoint;
+                                
+                                let insertIndex = targetTabCurrentIndex;
+                                if (!isTopHalf && draggedTabCurrentIndex < targetTabCurrentIndex) {
+                                    insertIndex = targetTabCurrentIndex;
+                                } else if (!isTopHalf && draggedTabCurrentIndex > targetTabCurrentIndex) {
+                                    insertIndex = targetTabCurrentIndex + 1;
+                                } else if (isTopHalf && draggedTabCurrentIndex > targetTabCurrentIndex) {
+                                    insertIndex = targetTabCurrentIndex;
+                                } else if (isTopHalf && draggedTabCurrentIndex < targetTabCurrentIndex) {
+                                    insertIndex = targetTabCurrentIndex - 1;
+                                }
+                                
+                                console.log('Tab insert index:', insertIndex, 'isTopHalf:', isTopHalf);
+                                
+                                const draggedTabData = folder.tabs[draggedTabCurrentIndex];
+                                folder.tabs.splice(draggedTabCurrentIndex, 1);
+                                folder.tabs.splice(insertIndex, 0, draggedTabData);
+                                
+                                // Re-render
+                                renderSpacesGrid();
+                                console.log('Tab reorder complete!');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        console.log('=== END DROP EVENT ===\n');
+    }
+
+    // Folder insertion line helpers
+    function createFolderInsertionLine(spaceElement) {
+        // Remove any existing folder insertion line first
+        if (folderInsertionLine) {
+            folderInsertionLine.remove();
+            folderInsertionLine = null;
+        }
+        
+        folderInsertionLine = document.createElement('div');
+        folderInsertionLine.className = 'folder-insertion-line';
+        folderInsertionLine.style.position = 'absolute';
+        folderInsertionLine.style.left = '16px';
+        folderInsertionLine.style.right = '8px';
+        folderInsertionLine.style.height = '1px';
+        folderInsertionLine.style.background = 'var(--text-secondary)';
+        folderInsertionLine.style.pointerEvents = 'none';
+        folderInsertionLine.style.zIndex = '10';
+        folderInsertionLine.style.opacity = '0';
+        folderInsertionLine.style.transition = 'opacity 0.2s ease';
+        
+        const spaceTree = spaceElement.querySelector('.space-tree');
+        if (spaceTree) {
+            // Set the space tree to relative positioning to contain the absolute line
+            spaceTree.style.position = 'relative';
+            spaceTree.appendChild(folderInsertionLine);
+        }
+    }
+    
+    function showFolderInsertionLine(beforeFolder) {
+        if (folderInsertionLine && beforeFolder) {
+            const spaceTree = beforeFolder.closest('.space-tree');
+            if (spaceTree && spaceTree.contains(folderInsertionLine)) {
+                const spaceTreeRect = spaceTree.getBoundingClientRect();
+                const folderRect = beforeFolder.getBoundingClientRect();
+                
+                const relativeTop = folderRect.top - spaceTreeRect.top;
+                folderInsertionLine.style.top = relativeTop + 'px';
+                folderInsertionLine.style.opacity = '0.8';
+            }
+        }
+    }
+    
+    function showFolderInsertionLineAfter(afterFolder) {
+        if (folderInsertionLine && afterFolder) {
+            const spaceTree = afterFolder.closest('.space-tree');
+            if (spaceTree && spaceTree.contains(folderInsertionLine)) {
+                const spaceTreeRect = spaceTree.getBoundingClientRect();
+                
+                // Check if folder is expanded and has content
+                const folderContent = afterFolder.querySelector('.tree-folder-content');
+                const isExpanded = folderContent && folderContent.style.display !== 'none';
+                
+                let bottomPosition;
+                if (isExpanded && folderContent) {
+                    // For expanded folders, position after the entire folder including content
+                    const folderContentRect = folderContent.getBoundingClientRect();
+                    bottomPosition = folderContentRect.bottom - spaceTreeRect.top;
+                } else {
+                    // For collapsed folders, position after just the header
+                    const folderRect = afterFolder.getBoundingClientRect();
+                    bottomPosition = folderRect.bottom - spaceTreeRect.top;
+                }
+                
+                folderInsertionLine.style.top = bottomPosition + 'px';
+                folderInsertionLine.style.opacity = '0.8';
+            }
+        }
+    }
+    
+    function hideFolderInsertionLine() {
+        if (folderInsertionLine) {
+            folderInsertionLine.style.opacity = '0';
+        }
+    }
+    
+    // Tab insertion line helpers
+    function createTabInsertionLine(folderElement) {
+        // Remove any existing tab insertion line first
+        if (tabInsertionLine) {
+            tabInsertionLine.remove();
+            tabInsertionLine = null;
+        }
+        
+        tabInsertionLine = document.createElement('div');
+        tabInsertionLine.className = 'tab-insertion-line';
+        tabInsertionLine.style.position = 'absolute';
+        tabInsertionLine.style.left = '24px'; // Indent to match tab level
+        tabInsertionLine.style.right = '8px';
+        tabInsertionLine.style.height = '1px';
+        tabInsertionLine.style.background = 'var(--text-secondary)';
+        tabInsertionLine.style.pointerEvents = 'none';
+        tabInsertionLine.style.zIndex = '10';
+        tabInsertionLine.style.opacity = '0';
+        tabInsertionLine.style.transition = 'opacity 0.2s ease';
+        
+        const folderContent = folderElement.querySelector('.tree-folder-content');
+        if (folderContent) {
+            // Set the folder content to relative positioning to contain the absolute line
+            folderContent.style.position = 'relative';
+            folderContent.appendChild(tabInsertionLine);
+        }
+    }
+    
+    function showTabInsertionLine(beforeTab) {
+        if (tabInsertionLine && beforeTab) {
+            const folderContent = beforeTab.closest('.tree-folder-content');
+            if (folderContent && folderContent.contains(tabInsertionLine)) {
+                const folderContentRect = folderContent.getBoundingClientRect();
+                const tabRect = beforeTab.getBoundingClientRect();
+                
+                const relativeTop = tabRect.top - folderContentRect.top;
+                tabInsertionLine.style.top = relativeTop + 'px';
+                tabInsertionLine.style.opacity = '0.8';
+            }
+        }
+    }
+    
+    function showTabInsertionLineAfter(afterTab) {
+        if (tabInsertionLine && afterTab) {
+            const folderContent = afterTab.closest('.tree-folder-content');
+            if (folderContent && folderContent.contains(tabInsertionLine)) {
+                const folderContentRect = folderContent.getBoundingClientRect();
+                const tabRect = afterTab.getBoundingClientRect();
+                
+                const relativeTop = tabRect.bottom - folderContentRect.top;
+                tabInsertionLine.style.top = relativeTop + 'px';
+                tabInsertionLine.style.opacity = '0.8';
+            }
+        }
+    }
+    
+    function hideTabInsertionLine() {
+        if (tabInsertionLine) {
+            tabInsertionLine.style.opacity = '0';
+        }
     }
 }); 
 

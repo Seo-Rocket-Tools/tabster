@@ -1130,9 +1130,10 @@ body::-webkit-scrollbar {
 
 .tree-folder-header,
 .tree-tab {
+    position: relative;
     display: flex;
     align-items: center;
-    padding: 6px 16px;
+    padding: 6px 16px 6px 24px;
     cursor: pointer;
     transition: all 0.15s ease;
     min-height: 28px;
@@ -1268,11 +1269,27 @@ body::-webkit-scrollbar {
     z-index: 1000;
 }
 
-.spaces-grid.dragging {
+.tree-folder.dragging {
+    opacity: 0.6;
+    transform: scale(0.98);
+    z-index: 1000;
+}
+
+.tree-tab.dragging {
+    opacity: 0.6;
+    transform: scale(0.98);
+    z-index: 1000;
+}
+
+.spaces-grid.dragging,
+.space-tree.dragging,
+.tree-folder-content.dragging {
     user-select: none;
 }
 
-.insertion-line {
+.insertion-line,
+.folder-insertion-line,
+.tab-insertion-line {
     height: 1px;
     background: var(--text-secondary);
     opacity: 0;
@@ -1281,11 +1298,15 @@ body::-webkit-scrollbar {
     z-index: 10;
 }
 
-.insertion-line.show {
+.insertion-line.show,
+.folder-insertion-line.show,
+.tab-insertion-line.show {
     opacity: 0.8;
 }
 
-.space-card.dropped {
+.space-card.dropped,
+.tree-folder.dropped,
+.tree-tab.dropped {
     animation: dropSuccess 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -2546,4 +2567,62 @@ body::-webkit-scrollbar {
         width: 18px;
         height: 18px;
     }
+}
+
+/* Folder and tab drag handles */
+.folder-drag-handle,
+.tab-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: grab;
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 2;
+}
+
+.tree-folder-header:hover .folder-drag-handle,
+.tree-tab:hover .tab-drag-handle {
+    opacity: 1;
+}
+
+.folder-drag-handle:hover,
+.tab-drag-handle:hover {
+    opacity: 1;
+}
+
+.folder-drag-handle:active,
+.tab-drag-handle:active {
+    cursor: grabbing;
+}
+
+.folder-drag-handle img,
+.tab-drag-handle img {
+    width: 14px;
+    height: 14px;
+    filter: brightness(0) saturate(100%) invert(60%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(90%) contrast(90%);
+    transition: filter 0.15s ease;
+}
+
+.folder-drag-handle:hover img,
+.tab-drag-handle:hover img {
+    filter: brightness(0) saturate(100%) invert(90%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+}
+
+/* Spacer for default folder (no drag handle) */
+.folder-drag-handle-spacer {
+    width: 18px;
+    height: 18px;
+    position: absolute;
+    left: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
 } 
