@@ -1304,7 +1304,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         ${!folder.isDefault ? `
                         <div class="folder-drag-handle" draggable="true" title="Drag to reorder folder">
                             <img src="icons/drag_handle.svg" width="16" height="16">
-                        </div>
+            </div>
                         ` : `
                         <div class="folder-drag-handle-spacer"></div>
                         `}
@@ -1316,8 +1316,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                         '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>'
                                     }
                                 </svg>
-                            </div>
-                        </div>
+                </div>
+                </div>
                         <div class="tree-label">${folder.name}</div>
                         <div class="tree-actions">
                             <button class="tree-action-btn add-tab-btn" title="Add tab to folder">
@@ -1325,20 +1325,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <line x1="12" y1="5" x2="12" y2="19"></line>
                                     <line x1="5" y1="12" x2="19" y2="12"></line>
                                 </svg>
-                            </button>
+                </button>
                             <button class="tree-action-btn load-btn" title="Load folder">
                                 <img src="icons/load_up.svg" width="14" height="14" style="color: currentColor;">
                             </button>
                             <button class="tree-action-btn options-btn" title="Folder options">
                                 <img src="icons/more-vertical.svg" width="14" height="14" style="color: currentColor;">
-                            </button>
+                </button>
                         </div>
                     </div>
                     <div class="tree-folder-content" style="display: ${isFolderExpanded ? 'block' : 'none'};">
                         ${folder.tabs ? createTabList(folder.tabs) : ''}
                     </div>
-                </div>
-            `;
+            </div>
+        `;
         }).join('');
     }
 
@@ -2618,12 +2618,573 @@ document.addEventListener('DOMContentLoaded', function() {
             tabInsertionLine.style.opacity = '0';
         }
     }
+
+
+/* SECTION: Add Essential Modal */
+
+    // Add Essential Modal Functionality
+    function initializeAddEssentialModal() {
+        const addEssentialBtn = document.querySelector('.add-essential');
+        const modal = document.getElementById('add-essential-modal');
+        const form = document.getElementById('add-essential-form');
+        const urlInput = document.getElementById('essential-url');
+        const urlError = document.getElementById('url-error');
+        const cancelBtn = document.getElementById('cancel-essential');
+        const submitBtn = document.getElementById('add-essential-submit');
+
+        // Show modal when add essential button is clicked
+        if (addEssentialBtn) {
+            addEssentialBtn.addEventListener('click', () => {
+                showAddEssentialModal();
+            });
+        }
+
+        // Hide modal when cancel button is clicked
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                hideAddEssentialModal();
+            });
+        }
+
+        // Hide modal when clicking outside
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideAddEssentialModal();
+                }
+            });
+        }
+
+        // Handle form submission (validation only, no actual submission yet)
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                handleAddEssentialSubmit();
+            });
+        }
+
+        // Real-time URL validation and favicon loading
+        if (urlInput) {
+            urlInput.addEventListener('input', () => {
+                clearUrlError();
+                validateUrl();
+                debouncedLoadFavicon();
+            });
+            
+            urlInput.addEventListener('paste', () => {
+                // Small delay to let paste complete
+                setTimeout(() => {
+                    clearUrlError();
+                    validateUrl();
+                    debouncedLoadFavicon();
+                }, 50);
+            });
+        }
+
+        // Handle escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal && modal.style.display !== 'none') {
+                hideAddEssentialModal();
+            }
+        });
+    }
+
+    function showAddEssentialModal() {
+        const modal = document.getElementById('add-essential-modal');
+        const urlInput = document.getElementById('essential-url');
+        
+        if (modal) {
+            modal.style.display = 'flex';
+            // Focus the input after a brief delay to allow the modal to animate in
+            setTimeout(() => {
+                if (urlInput) {
+                    urlInput.focus();
+                }
+            }, 100);
+        }
+    }
+
+    function hideAddEssentialModal() {
+        const modal = document.getElementById('add-essential-modal');
+        const form = document.getElementById('add-essential-form');
+        
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        
+        // Reset form
+        if (form) {
+            form.reset();
+            clearUrlError();
+            resetFaviconPreview();
+        }
+    }
+
+    function validateUrl() {
+        const urlInput = document.getElementById('essential-url');
+        const submitBtn = document.getElementById('add-essential-submit');
+        
+        if (!urlInput || !submitBtn) return false;
+
+        const url = urlInput.value.trim();
+        
+        // Check if URL is empty
+        if (!url) {
+            submitBtn.disabled = true;
+            return false;
+        }
+
+        // Check if URL is valid
+        try {
+            new URL(url);
+            submitBtn.disabled = false;
+            return true;
+        } catch {
+            // Check if it's a domain without protocol
+            if (url && !url.includes(' ') && url.includes('.')) {
+                // Auto-add https:// if missing
+                urlInput.value = `https://${url}`;
+                submitBtn.disabled = false;
+                return true;
+            }
+            
+            showUrlError('Please enter a valid URL (e.g., https://example.com)');
+            submitBtn.disabled = true;
+            return false;
+        }
+    }
+
+    function showUrlError(message) {
+        const urlError = document.getElementById('url-error');
+        if (urlError) {
+            urlError.textContent = message;
+            urlError.style.display = 'block';
+        }
+    }
+
+    function clearUrlError() {
+        const urlError = document.getElementById('url-error');
+        if (urlError) {
+            urlError.style.display = 'none';
+            urlError.textContent = '';
+        }
+    }
+
+    function handleAddEssentialSubmit() {
+        const urlInput = document.getElementById('essential-url');
+        
+        if (!urlInput) return;
+
+        const url = urlInput.value.trim();
+        
+        if (!validateUrl()) {
+            return;
+        }
+
+        // For now, just show a success message and close modal
+        // In the future, this will actually add the essential
+        console.log('Adding essential:', url);
+        
+        // Show success message
+        if (MessageBanner) {
+            MessageBanner.success('Essential will be added (functionality not implemented yet)');
+        }
+        
+        hideAddEssentialModal();
+    }
+
+    // Favicon loading functionality
+    let faviconLoadTimeout = null;
+    const faviconCache = new Map(); // Cache for loaded favicons
+
+    function debouncedLoadFavicon() {
+        // Clear existing timeout
+        if (faviconLoadTimeout) {
+            clearTimeout(faviconLoadTimeout);
+        }
+        
+        // Set new timeout for 500ms delay
+        faviconLoadTimeout = setTimeout(() => {
+            loadFavicon();
+        }, 500);
+    }
+
+    function loadFavicon() {
+        const urlInput = document.getElementById('essential-url');
+        const faviconPreview = document.getElementById('favicon-preview');
+        const faviconImg = document.getElementById('favicon-img');
+        const faviconPlaceholder = faviconPreview?.querySelector('.favicon-placeholder');
+        
+        if (!urlInput || !faviconPreview || !faviconImg) return;
+
+        const url = urlInput.value.trim();
+        
+        // Reset to placeholder if URL is empty or invalid
+        if (!url) {
+            resetFaviconPreview();
+            return;
+        }
+
+        // Validate URL before attempting to load favicon
+        let validUrl;
+        try {
+            validUrl = new URL(url);
+        } catch {
+            // Try adding https:// if missing
+            if (url && !url.includes(' ') && url.includes('.')) {
+                try {
+                    validUrl = new URL(`https://${url}`);
+                } catch {
+                    resetFaviconPreview();
+                    return;
+                }
+            } else {
+                resetFaviconPreview();
+                return;
+            }
+        }
+
+        // Check cache first
+        const cacheKey = validUrl.hostname.toLowerCase();
+        if (faviconCache.has(cacheKey)) {
+            const cachedFavicon = faviconCache.get(cacheKey);
+            if (cachedFavicon) {
+                setFaviconLoaded(cachedFavicon);
+            } else {
+                setFaviconError();
+            }
+            return;
+        }
+
+        // Set loading state
+        setFaviconLoading();
+
+        // Check for special domain handling first
+        const specialFavicon = getSpecialDomainFavicon(validUrl);
+        if (specialFavicon) {
+            const testImg = new Image();
+            testImg.onload = function() {
+                setFaviconLoaded(specialFavicon);
+            };
+            testImg.onerror = function() {
+                // If special favicon fails, continue with normal flow
+                tryStandardFavicon(validUrl);
+            };
+            testImg.src = specialFavicon;
+        } else {
+            tryStandardFavicon(validUrl);
+        }
+    }
+
+    function getSpecialDomainFavicon(validUrl) {
+        const hostname = validUrl.hostname.toLowerCase();
+        
+        // Special handling for popular websites with known favicon patterns
+        const specialDomains = {
+            'mail.google.com': 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico',
+            'gmail.com': 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico',
+            'calendar.google.com': 'https://calendar.google.com/googlecalendar/images/favicon_v2014_4.ico',
+            'drive.google.com': 'https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png',
+            'docs.google.com': 'https://ssl.gstatic.com/docs/common/product/docs_app_icon2.png',
+            'sheets.google.com': 'https://ssl.gstatic.com/docs/common/product/sheets_app_icon2.png',
+            'slides.google.com': 'https://ssl.gstatic.com/docs/common/product/slides_app_icon2.png',
+            'photos.google.com': 'https://ssl.gstatic.com/social/photosui/images/favicon/favicon_square_32.png',
+            'analytics.google.com': 'https://www.google.com/analytics/web/images/favicon.ico',
+            'stackoverflow.com': 'https://cdn.sstatic.net/Sites/stackoverflow/Img/favicon.ico',
+            'github.com': 'https://github.com/favicon.ico',
+            'linkedin.com': 'https://static.licdn.com/aero-v1/sc/h/al2o9zrvru7aqj8e1x2rzsrca',
+            'twitter.com': 'https://abs.twimg.com/favicons/twitter.2.ico',
+            'x.com': 'https://abs.twimg.com/favicons/twitter.2.ico',
+            'facebook.com': 'https://static.xx.fbcdn.net/rsrc.php/yb/r/hLRJ1GG_y0J.ico',
+            'instagram.com': 'https://static.cdninstagram.com/rsrc.php/v3/yt/r/30PrGfR3xhH.ico',
+            'youtube.com': 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_32x32.png',
+            'netflix.com': 'https://assets.nflxext.com/us/ffe/siteui/common/icons/nficon2016.ico',
+            'spotify.com': 'https://open.spotify.com/favicon.ico',
+            'reddit.com': 'https://www.redditstatic.com/shreddit/assets/favicon/64x64.png',
+            'discord.com': 'https://discord.com/assets/f9bb9c4af2b9c32a2c5ee0014661546d.ico',
+            'slack.com': 'https://a.slack-edge.com/80588/img/icons/favicon-32.png',
+            'notion.so': 'https://www.notion.so/images/favicon.ico',
+            'figma.com': 'https://static.figma.com/app/icon/1/favicon.png'
+        };
+        
+        // Check exact hostname match first
+        if (specialDomains[hostname]) {
+            return specialDomains[hostname];
+        }
+        
+        // Check for subdomain matches
+        for (const domain in specialDomains) {
+            if (hostname.endsWith('.' + domain) || hostname === domain) {
+                return specialDomains[domain];
+            }
+        }
+        
+        return null;
+    }
+
+    function tryStandardFavicon(validUrl) {
+        // Try to load standard favicon
+        const faviconUrl = `${validUrl.protocol}//${validUrl.hostname}/favicon.ico`;
+        
+        // Create new image to test if favicon loads
+        const testImg = new Image();
+        
+        testImg.onload = function() {
+            setFaviconLoaded(faviconUrl);
+        };
+        
+        testImg.onerror = function() {
+            // Try alternative favicon URLs
+            tryAlternativeFavicons(validUrl);
+        };
+        
+        testImg.src = faviconUrl;
+    }
+
+    function tryAlternativeFavicons(validUrl) {
+        // Enhanced favicon detection with more comprehensive fallbacks
+        const alternatives = [
+            // Standard favicon formats
+            `${validUrl.protocol}//${validUrl.hostname}/favicon.png`,
+            `${validUrl.protocol}//${validUrl.hostname}/favicon.svg`,
+            `${validUrl.protocol}//${validUrl.hostname}/apple-touch-icon.png`,
+            `${validUrl.protocol}//${validUrl.hostname}/apple-touch-icon-precomposed.png`,
+            `${validUrl.protocol}//${validUrl.hostname}/icon.png`,
+            `${validUrl.protocol}//${validUrl.hostname}/icon.svg`,
+            
+            // Common subdirectories
+            `${validUrl.protocol}//${validUrl.hostname}/images/favicon.ico`,
+            `${validUrl.protocol}//${validUrl.hostname}/images/favicon.png`,
+            `${validUrl.protocol}//${validUrl.hostname}/assets/favicon.ico`,
+            `${validUrl.protocol}//${validUrl.hostname}/assets/favicon.png`,
+            `${validUrl.protocol}//${validUrl.hostname}/static/favicon.ico`,
+            `${validUrl.protocol}//${validUrl.hostname}/static/favicon.png`,
+            
+            // High resolution variants
+            `${validUrl.protocol}//${validUrl.hostname}/favicon-32x32.png`,
+            `${validUrl.protocol}//${validUrl.hostname}/favicon-16x16.png`,
+            `${validUrl.protocol}//${validUrl.hostname}/android-chrome-192x192.png`,
+            `${validUrl.protocol}//${validUrl.hostname}/apple-touch-icon-152x152.png`
+        ];
+
+        let currentIndex = 0;
+
+        function tryNext() {
+            if (currentIndex >= alternatives.length) {
+                // Try multiple favicon services for better coverage
+                tryFaviconServices(validUrl);
+                return;
+            }
+
+            const testImg = new Image();
+            
+            testImg.onload = function() {
+                setFaviconLoaded(alternatives[currentIndex]);
+            };
+            
+            testImg.onerror = function() {
+                currentIndex++;
+                tryNext();
+            };
+            
+            testImg.src = alternatives[currentIndex];
+        }
+
+        tryNext();
+    }
+
+    function tryFaviconServices(validUrl) {
+        // Multiple favicon service providers for better reliability
+        const faviconServices = [
+            // Google's favicon service with different parameters
+            `https://www.google.com/s2/favicons?domain=${validUrl.hostname}&sz=128`,
+            `https://www.google.com/s2/favicons?domain=${validUrl.hostname}&sz=64`,
+            `https://www.google.com/s2/favicons?domain=${validUrl.hostname}&sz=32`,
+            
+            // Try with full URL for better detection of page-specific favicons
+            `https://www.google.com/s2/favicons?domain=${validUrl.host}&sz=64`,
+            
+            // Alternative favicon services
+            `https://icons.duckduckgo.com/ip3/${validUrl.hostname}.ico`,
+            `https://favicons.githubusercontent.com/${validUrl.hostname}`,
+            
+            // Try with www prefix if not present
+            ...(validUrl.hostname.startsWith('www.') ? [] : [
+                `https://www.google.com/s2/favicons?domain=www.${validUrl.hostname}&sz=64`,
+                `https://icons.duckduckgo.com/ip3/www.${validUrl.hostname}.ico`
+            ])
+        ];
+
+        let serviceIndex = 0;
+
+        function tryNextService() {
+            if (serviceIndex >= faviconServices.length) {
+                // All services failed, show error state
+                setFaviconError();
+                return;
+            }
+
+            const testImg = new Image();
+            
+            testImg.onload = function() {
+                // Additional check to ensure the image actually loaded with content
+                if (this.width > 0 && this.height > 0) {
+                    setFaviconLoaded(faviconServices[serviceIndex]);
+                } else {
+                    serviceIndex++;
+                    tryNextService();
+                }
+            };
+            
+            testImg.onerror = function() {
+                serviceIndex++;
+                tryNextService();
+            };
+            
+            testImg.src = faviconServices[serviceIndex];
+        }
+
+        tryNextService();
+    }
+
+    function setFaviconLoading() {
+        const faviconPreview = document.getElementById('favicon-preview');
+        const faviconImg = document.getElementById('favicon-img');
+        const faviconPlaceholder = faviconPreview?.querySelector('.favicon-placeholder');
+        const submitBtn = document.getElementById('add-essential-submit');
+        const cancelBtn = document.getElementById('cancel-essential');
+        
+        if (!faviconPreview || !faviconImg || !faviconPlaceholder) return;
+
+        faviconPreview.classList.add('loading');
+        faviconImg.style.display = 'none';
+        faviconPlaceholder.style.display = 'flex';
+        faviconPlaceholder.textContent = '⏳';
+
+        // Disable buttons during favicon loading
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+        }
+        if (cancelBtn) {
+            cancelBtn.disabled = true;
+            cancelBtn.style.opacity = '0.6';
+        }
+    }
+
+    function setFaviconLoaded(faviconUrl) {
+        const faviconPreview = document.getElementById('favicon-preview');
+        const faviconImg = document.getElementById('favicon-img');
+        const faviconPlaceholder = faviconPreview?.querySelector('.favicon-placeholder');
+        const urlInput = document.getElementById('essential-url');
+        const submitBtn = document.getElementById('add-essential-submit');
+        const cancelBtn = document.getElementById('cancel-essential');
+        
+        if (!faviconPreview || !faviconImg || !faviconPlaceholder) return;
+
+        faviconPreview.classList.remove('loading');
+        faviconImg.src = faviconUrl;
+        faviconImg.style.display = 'block';
+        faviconPlaceholder.style.display = 'none';
+
+        // Re-enable buttons after favicon loading completes
+        if (cancelBtn) {
+            cancelBtn.disabled = false;
+            cancelBtn.style.opacity = '1';
+        }
+        if (submitBtn) {
+            // Only enable submit button if URL is valid
+            const isValidUrl = validateUrl();
+            submitBtn.disabled = !isValidUrl;
+            submitBtn.style.opacity = isValidUrl ? '1' : '0.6';
+        }
+
+        // Cache the successful favicon URL
+        if (urlInput) {
+            const url = urlInput.value.trim();
+            try {
+                const validUrl = new URL(url.includes('://') ? url : `https://${url}`);
+                const cacheKey = validUrl.hostname.toLowerCase();
+                faviconCache.set(cacheKey, faviconUrl);
+            } catch (e) {
+                // Ignore cache errors
+            }
+        }
+    }
+
+    function setFaviconError() {
+        const faviconPreview = document.getElementById('favicon-preview');
+        const faviconImg = document.getElementById('favicon-img');
+        const faviconPlaceholder = faviconPreview?.querySelector('.favicon-placeholder');
+        const urlInput = document.getElementById('essential-url');
+        const submitBtn = document.getElementById('add-essential-submit');
+        const cancelBtn = document.getElementById('cancel-essential');
+        
+        if (!faviconPreview || !faviconImg || !faviconPlaceholder) return;
+
+        faviconPreview.classList.remove('loading');
+        faviconImg.style.display = 'none';
+        faviconPlaceholder.style.display = 'flex';
+        faviconPlaceholder.textContent = '🌐';
+
+        // Re-enable buttons after favicon loading completes
+        if (cancelBtn) {
+            cancelBtn.disabled = false;
+            cancelBtn.style.opacity = '1';
+        }
+        if (submitBtn) {
+            // Only enable submit button if URL is valid
+            const isValidUrl = validateUrl();
+            submitBtn.disabled = !isValidUrl;
+            submitBtn.style.opacity = isValidUrl ? '1' : '0.6';
+        }
+
+        // Cache the failed result to avoid repeated attempts
+        if (urlInput) {
+            const url = urlInput.value.trim();
+            try {
+                const validUrl = new URL(url.includes('://') ? url : `https://${url}`);
+                const cacheKey = validUrl.hostname.toLowerCase();
+                faviconCache.set(cacheKey, null); // null indicates failed favicon load
+            } catch (e) {
+                // Ignore cache errors
+            }
+        }
+    }
+
+    function resetFaviconPreview() {
+        const faviconPreview = document.getElementById('favicon-preview');
+        const faviconImg = document.getElementById('favicon-img');
+        const faviconPlaceholder = faviconPreview?.querySelector('.favicon-placeholder');
+        const submitBtn = document.getElementById('add-essential-submit');
+        const cancelBtn = document.getElementById('cancel-essential');
+        
+        if (!faviconPreview || !faviconImg || !faviconPlaceholder) return;
+
+        // Clear any pending favicon load timeout
+        if (faviconLoadTimeout) {
+            clearTimeout(faviconLoadTimeout);
+            faviconLoadTimeout = null;
+        }
+
+        faviconPreview.classList.remove('loading');
+        faviconImg.style.display = 'none';
+        faviconImg.src = '';
+        faviconPlaceholder.style.display = 'flex';
+        faviconPlaceholder.textContent = '🌐';
+
+        // Reset button states
+        if (cancelBtn) {
+            cancelBtn.disabled = false;
+            cancelBtn.style.opacity = '1';
+        }
+        if (submitBtn) {
+            submitBtn.disabled = true; // Disabled by default since no URL
+            submitBtn.style.opacity = '0.6';
+        }
+    }
+
+    // Initialize the Add Essential modal
+    initializeAddEssentialModal();
 }); 
 
-/** CONTINUE_HERE
- * 1. cleanup and organize this file
- * 2. create and structure dummy space data
- * 3. work on the expand/collapse functionality of each space card
- * 4. list down tables and columns (structure the db)
- * 
- */
