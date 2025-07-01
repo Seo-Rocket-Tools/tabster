@@ -73,6 +73,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             handleSignout(sendResponse);
             return true; // Keep message channel open for async response
             
+        case 'addEssential':
+            handleAddEssentialSubmit(message.url, sendResponse);
+            return true; // Keep message channel open for async response
+            
         default:
             console.log('Background: Unknown message type:', message.type);
             sendResponse({ status: 'unknown', message: 'Unknown message type' });
@@ -81,9 +85,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep message channel open
 }); 
 
-// =============================================================================
 
-// SECTION USER EVENT HANDLERS
+/* SECTION USER EVENT HANDLERS */
+
 
 async function handleSignin(email, password, sendResponse) {
     try {
@@ -222,9 +226,62 @@ async function handleStartup() {
     await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 }
 
-// =============================================================================
+async function handleAddEssentialSubmit(url, sendResponse) {
+    try {
+        // Get current user ID
+        const userId = await getCurrentUserId();
+        
+        if (!userId) {
+            console.error('Background: No user ID found');
+            sendResponse({ success: false, error: 'User not authenticated' });
+            return;
+        }
 
-// SECTION SUPABASE FUNCTIONS
+        // Get existing essentials count for display_order
+        const essentialsResult = await getEssentialsForUser(userId);
+        
+        if (!essentialsResult.success) {
+            console.error('Background: Failed to get essentials count:', essentialsResult.error);
+            sendResponse({ success: false, error: 'Failed to get essentials data' });
+            return;
+        }
+
+        const displayOrder = essentialsResult.data.length;
+
+        // Create essential object
+        const essential = {
+            user_id: userId,
+            url: url,
+            display_order: displayOrder,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        // Save essential to database
+        const saveResult = await saveEssentialToDb(essential);
+        
+        if (!saveResult.success) {
+            console.error('Background: Failed to save essential:', saveResult.error);
+            sendResponse({ success: false, error: saveResult.error });
+            return;
+        }
+
+        console.log('Background: Essential added successfully');
+        sendResponse({
+            success: true,
+            message: 'Essential added successfully',
+            data: saveResult.data
+        });
+
+    } catch (error) {
+        console.error('Background: Add essential exception:', error);
+        sendResponse({ success: false, error: error.message || 'Failed to add essential' });
+    }
+}
+
+
+/* SECTION SUPABASE FUNCTIONS */
 
 // Check user authentication status with Supabase
 async function checkUserAuth() {
@@ -247,6 +304,12 @@ async function checkUserAuth() {
         console.error('Auth check exception:', error);
         return { success: false, error: error.message };
     }
+}
+
+// Get current user id
+async function getCurrentUserId() {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    return session.user.id;
 }
 
 // Sign in user to Supabase auth
@@ -371,9 +434,57 @@ async function getUserData(userId) {
     }
 }
 
-// =============================================================================
+// get all essentials for user
+async function getEssentialsForUser(userId) {
+    try {
+        const { data, error } = await supabase
+            .from('user_essentials')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
+        
+        if (error) {
+            console.error('Get essentials error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        return { success: true, data: data || [] };
+        
+    } catch (error) {
+        console.error('Get essentials exception:', error);
+        return { success: false, error: error.message };
+    }
+}
 
-// SECTION Session Recovery Functions
+
+
+
+// save essential to database
+async function saveEssentialToDb(essential) {
+    try {
+        const { data, error } = await supabase
+            .from('user_essentials')
+            .insert([essential])
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('Save essential error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        return { success: true, data: data };
+        
+    } catch (error) {
+        console.error('Save essential exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+
+/* SECTION Session Recovery Functions */
+
 
 // Save session backup to Chrome storage
 async function saveSessionBackup(session, user) {
@@ -464,9 +575,9 @@ async function clearSessionBackup() {
     }
 }
 
-// =============================================================================
 
-// SECTION SERVICE WORKER LIFECYCLE
+/* SECTION SERVICE WORKER LIFECYCLE */
+
 
 // Handle extension installation, updates, and reloads
 chrome.runtime.onInstalled.addListener(async (details) => {

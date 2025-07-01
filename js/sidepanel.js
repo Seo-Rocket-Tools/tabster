@@ -2770,8 +2770,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function handleAddEssentialSubmit() {
+    async function handleAddEssentialSubmit() {
         const urlInput = document.getElementById('essential-url');
+        const submitBtn = document.getElementById('add-essential-submit');
         
         if (!urlInput) return;
 
@@ -2781,16 +2782,48 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // For now, just show a success message and close modal
-        // In the future, this will actually add the essential
-        console.log('Adding essential:', url);
-        
-        // Show success message
-        if (MessageBanner) {
-            MessageBanner.success('Essential will be added (functionality not implemented yet)');
+        // Show loading state
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Adding...';
         }
         
-        hideAddEssentialModal();
+        MessageBanner.loading('Adding essential...');
+
+        try {
+            // Send message to background script to add essential
+            const response = await chrome.runtime.sendMessage({
+                type: 'addEssential',
+                url: url
+            });
+
+            if (response.success) {
+                MessageBanner.success('Essential added successfully!');
+                
+                // Small delay to show success message before closing modal
+                setTimeout(() => {
+                    hideAddEssentialModal();
+                    MessageBanner.hide();
+                }, 1500);
+            } else {
+                MessageBanner.error(response.error || 'Failed to add essential');
+                
+                // Reset button state on error
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Add Essential';
+                }
+            }
+        } catch (error) {
+            console.error('Add essential error:', error);
+            MessageBanner.error('Failed to add essential. Please try again.');
+            
+            // Reset button state on error
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Add Essential';
+            }
+        }
     }
 
     // Favicon loading functionality
