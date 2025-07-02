@@ -1681,7 +1681,6 @@ async function getUserSpaces(userId) {
     });
 }
 
-
 // save essential to database
 async function saveEssentialToDb(essential) {
     try {
@@ -1824,6 +1823,19 @@ chrome.windows.onCreated.addListener(async (window) => {
         attemptSessionRecovery();
         handleStartup();
     }
+});
+
+// Handle browser startup
+chrome.runtime.onStartup.addListener(async () => {
+    console.log("❗ ON STARTUP FIRED - attempting session restoration");
+    await attemptSessionRecovery();
+    handleStartup();
+});
+
+// Handle service worker activation (when service worker restarts during normal operation)
+self.addEventListener('activate', async (event) => {
+    console.log("❗ SERVICE WORKER ACTIVATED - attempting session restoration");
+    event.waitUntil(attemptSessionRecovery());
 });
 
 // Attempt to recover user session on service worker startup
