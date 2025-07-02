@@ -984,7 +984,7 @@ body::-webkit-scrollbar {
 
 /* Workspaces Section */
 .workspaces-section {
-    padding: 0;
+    padding: 0 0 32px 0;
     margin: 0;
 }
 
@@ -2687,4 +2687,12 @@ body::-webkit-scrollbar {
     top: 50%;
     transform: translateY(-50%);
     z-index: 1;
+}
+
+/* Essential item skeleton styles */
+.skeleton-card .essential-icon .skeleton-shimmer {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
 } 

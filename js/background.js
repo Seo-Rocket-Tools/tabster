@@ -198,7 +198,24 @@ async function handleUserAuthCheck(sendResponse) {
         // User is authenticated - get their data
         const userId = authResult.userId;
         
-        // Get user data
+        // First check chrome storage for cached user data
+        const cachedUserData = await new Promise((resolve) => {
+            chrome.storage.local.get(['tabster_current_user'], (result) => {
+                resolve(result.tabster_current_user || null);
+            });
+        });
+        
+        if (cachedUserData) {
+            // Return cached data
+            sendResponse({
+                success: true,
+                authenticated: true,
+                userData: cachedUserData
+            });
+            return;
+        }
+        
+        // No cached data, get from database
         const userData = await getUserData(userId);
         
         // Check if operation was successful
@@ -207,6 +224,11 @@ async function handleUserAuthCheck(sendResponse) {
             sendResponse({ success: false, error: 'Failed to load user data' });
             return;
         }
+
+        // Save user data to chrome storage for future use
+        await new Promise((resolve) => {
+            chrome.storage.local.set({ 'tabster_current_user': userData.data }, resolve);
+        });
         
         // Send success response
         sendResponse({

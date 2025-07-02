@@ -1,32 +1,13 @@
-// Minimal Tabster Sidepanel - UI Only (Authentication + Dummy Data)
 document.addEventListener('DOMContentLoaded', function() {
-    
-    // Screen elements
-    const welcomeScreen = document.getElementById('welcome-screen');
-    const loginScreen = document.getElementById('login-screen');
-    const signupScreen = document.getElementById('signup-screen');
-    const forgotPasswordScreen = document.getElementById('forgot-password-screen');
-    const dashboardScreen = document.getElementById('dashboard-screen');
-    const createSpaceScreen = document.getElementById('create-space-screen');
 
-    // Navigation buttons
-    const loginBtn = document.getElementById('login-btn');
-    const signupBtn = document.getElementById('signup-btn');
+    console.log('SIDEPANEL LOADED...')
 
-    // Theme toggle
-    const themeToggle = document.getElementById('theme-toggle');
+    /* SECTION INITIALIZATION */
 
-    // Screen navigation links
-    const gotoSignup = document.getElementById('goto-signup');
-    const gotoLogin = document.getElementById('goto-login');
-    const forgotPasswordLink = document.getElementById('forgot-password-link');
-    const backToLogin = document.getElementById('back-to-login');
-    const backToWelcome = document.getElementById('back-to-welcome');
-    const backToWelcome2 = document.getElementById('back-to-welcome-2');
-    const backToWelcome3 = document.getElementById('back-to-welcome-3');
+    let CURRENT_USER = null;
 
     // Dummy spaces data
-    const dummySpaces = [
+    const DUMMY_SPACES = [
         {
             id: 1,
             name: 'Work',
@@ -196,28 +177,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             favicon: 'https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png',
                             muted: false,
                             highlighted: false,
-                        },
-                        {
-                            tabId: 21231231233,
-                            title: 'Google Photos',
-                            url: 'https://photos.google.com',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://ssl.gstatic.com/social/photosui/images/favicon/favicon_square_32.png',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 21231231234,
-                            title: 'WhatsApp Web',
-                            url: 'https://web.whatsapp.com',
-                            index: 3,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://web.whatsapp.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
                         }
                     ]
                 },
@@ -233,78 +192,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             active: false,
                             pinned: false,
                             favicon: 'https://online.mybank.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 21231231236,
-                            title: 'Credit Card Portal',
-                            url: 'https://creditcard.provider.com',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://creditcard.provider.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 21231231237,
-                            title: 'Investment Portfolio',
-                            url: 'https://portfolio.investment.com',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://portfolio.investment.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        }
-                    ]
-                },
-                {
-                    name: 'Health',
-                    isDefault: false,
-                    tabs: [
-                        {
-                            tabId: 21231231238,
-                            title: 'MyFitnessPal',
-                            url: 'https://www.myfitnesspal.com',
-                            index: 0,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://www.myfitnesspal.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 21231231239,
-                            title: 'Doctor Portal',
-                            url: 'https://patient.myhealth.com',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://patient.myhealth.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 21231231240,
-                            title: 'Pharmacy Online',
-                            url: 'https://www.pharmacy.com',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://www.pharmacy.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 21231231241,
-                            title: 'Meditation App',
-                            url: 'https://app.headspace.com',
-                            index: 3,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://app.headspace.com/favicon.ico',
                             muted: false,
                             highlighted: false,
                         }
@@ -333,139 +220,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             favicon: 'https://scholar.google.com/favicon.ico',
                             muted: false,
                             highlighted: false,
-                        },
-                        {
-                            tabId: 31231231232,
-                            title: 'Wikipedia',
-                            url: 'https://wikipedia.org',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://wikipedia.org/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 31231231233,
-                            title: 'Notion - Research Notes',
-                            url: 'https://notion.so/research-workspace',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://www.notion.so/images/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        }
-                    ]
-                },
-                {
-                    name: 'AI & Machine Learning',
-                    isDefault: false,
-                    tabs: [
-                        {
-                            tabId: 31231231234,
-                            title: 'arXiv.org',
-                            url: 'https://arxiv.org',
-                            index: 0,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://arxiv.org/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 31231231235,
-                            title: 'Papers with Code',
-                            url: 'https://paperswithcode.com',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://paperswithcode.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 31231231236,
-                            title: 'Hugging Face',
-                            url: 'https://huggingface.co',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://huggingface.co/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 31231231237,
-                            title: 'OpenAI Documentation',
-                            url: 'https://platform.openai.com/docs',
-                            index: 3,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://platform.openai.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        }
-                    ]
-                },
-                {
-                    name: 'Web Development',
-                    isDefault: false,
-                    tabs: [
-                        {
-                            tabId: 31231231238,
-                            title: 'MDN Web Docs',
-                            url: 'https://developer.mozilla.org',
-                            index: 0,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://developer.mozilla.org/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 31231231239,
-                            title: 'Stack Overflow',
-                            url: 'https://stackoverflow.com',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://stackoverflow.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 31231231240,
-                            title: 'React Documentation',
-                            url: 'https://react.dev',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://react.dev/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 31231231241,
-                            title: 'CSS-Tricks',
-                            url: 'https://css-tricks.com',
-                            index: 3,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://css-tricks.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 31231231242,
-                            title: 'CodePen',
-                            url: 'https://codepen.io',
-                            index: 4,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://codepen.io/favicon.ico',
-                            muted: false,
-                            highlighted: false,
                         }
                     ]
                 }
@@ -490,117 +244,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             active: false,
                             pinned: false,
                             favicon: 'https://amazon.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 41231231232,
-                            title: 'Shopping Cart',
-                            url: 'https://amazon.com/gp/cart',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://amazon.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 41231231233,
-                            title: 'Wishlist',
-                            url: 'https://amazon.com/hz/wishlist/ls',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://amazon.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        }
-                    ]
-                },
-                {
-                    name: 'Electronics',
-                    isDefault: false,
-                    tabs: [
-                        {
-                            tabId: 41231231234,
-                            title: 'Best Buy',
-                            url: 'https://bestbuy.com',
-                            index: 0,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://bestbuy.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 41231231235,
-                            title: 'B&H Photo',
-                            url: 'https://bhphotovideo.com',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://bhphotovideo.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 41231231236,
-                            title: 'Newegg',
-                            url: 'https://newegg.com',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://newegg.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 41231231237,
-                            title: 'Apple Store',
-                            url: 'https://apple.com/store',
-                            index: 3,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://apple.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        }
-                    ]
-                },
-                {
-                    name: 'Fashion',
-                    isDefault: false,
-                    tabs: [
-                        {
-                            tabId: 41231231238,
-                            title: 'Nike',
-                            url: 'https://nike.com',
-                            index: 0,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://nike.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 41231231239,
-                            title: 'ASOS',
-                            url: 'https://asos.com',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://asos.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 41231231240,
-                            title: 'Zara',
-                            url: 'https://zara.com',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://zara.com/favicon.ico',
                             muted: false,
                             highlighted: false,
                         }
@@ -629,128 +272,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             favicon: 'https://netflix.com/favicon.ico',
                             muted: false,
                             highlighted: false,
-                        },
-                        {
-                            tabId: 51231231232,
-                            title: 'Spotify',
-                            url: 'https://open.spotify.com',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://open.spotify.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 51231231233,
-                            title: 'YouTube',
-                            url: 'https://youtube.com',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://youtube.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 51231231234,
-                            title: 'Twitch',
-                            url: 'https://twitch.tv',
-                            index: 3,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://twitch.tv/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        }
-                    ]
-                },
-                {
-                    name: 'Gaming',
-                    isDefault: false,
-                    tabs: [
-                        {
-                            tabId: 51231231235,
-                            title: 'Steam',
-                            url: 'https://store.steampowered.com',
-                            index: 0,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://store.steampowered.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 51231231236,
-                            title: 'Epic Games Store',
-                            url: 'https://store.epicgames.com',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://store.epicgames.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 51231231237,
-                            title: 'IGN Reviews',
-                            url: 'https://ign.com',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://ign.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 51231231238,
-                            title: 'GameSpot',
-                            url: 'https://gamespot.com',
-                            index: 3,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://gamespot.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        }
-                    ]
-                },
-                {
-                    name: 'Movies & TV',
-                    isDefault: false,
-                    tabs: [
-                        {
-                            tabId: 51231231239,
-                            title: 'Disney+',
-                            url: 'https://disneyplus.com',
-                            index: 0,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://disneyplus.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 51231231240,
-                            title: 'HBO Max',
-                            url: 'https://hbomax.com',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://hbomax.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 51231231241,
-                            title: 'IMDb',
-                            url: 'https://imdb.com',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://imdb.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
                         }
                     ]
                 }
@@ -777,139 +298,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             favicon: 'https://x.com/favicon.ico',
                             muted: false,
                             highlighted: false,
-                        },
-                        {
-                            tabId: 61231231232,
-                            title: 'Facebook',
-                            url: 'https://facebook.com',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://facebook.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 61231231233,
-                            title: 'Instagram',
-                            url: 'https://instagram.com',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://instagram.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        }
-                    ]
-                },
-                {
-                    name: 'Professional',
-                    isDefault: false,
-                    tabs: [
-                        {
-                            tabId: 61231231234,
-                            title: 'LinkedIn',
-                            url: 'https://linkedin.com',
-                            index: 0,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://linkedin.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 61231231235,
-                            title: 'LinkedIn Messages',
-                            url: 'https://linkedin.com/messaging',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://linkedin.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 61231231236,
-                            title: 'GitHub Profile',
-                            url: 'https://github.com/username',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://github.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 61231231237,
-                            title: 'Dribbble',
-                            url: 'https://dribbble.com',
-                            index: 3,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://dribbble.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        }
-                    ]
-                },
-                {
-                    name: 'Communities',
-                    isDefault: false,
-                    tabs: [
-                        {
-                            tabId: 61231231238,
-                            title: 'Reddit',
-                            url: 'https://reddit.com',
-                            index: 0,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://reddit.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 61231231239,
-                            title: 'Discord',
-                            url: 'https://discord.com/app',
-                            index: 1,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://discord.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 61231231240,
-                            title: 'Hacker News',
-                            url: 'https://news.ycombinator.com',
-                            index: 2,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://news.ycombinator.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 61231231241,
-                            title: 'Product Hunt',
-                            url: 'https://producthunt.com',
-                            index: 3,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://producthunt.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
-                        },
-                        {
-                            tabId: 61231231242,
-                            title: 'Medium',
-                            url: 'https://medium.com',
-                            index: 4,
-                            active: false,
-                            pinned: false,
-                            favicon: 'https://medium.com/favicon.ico',
-                            muted: false,
-                            highlighted: false,
                         }
                     ]
                 }
@@ -917,31 +305,58 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     ];
 
-    // Initialize the app
-    initializeTheme();
-    setupNavigation();
-    setupThemeToggle();
-    setupUserMenu();
-    
-    // Check user authentication on sidepanel open
-    checkUserAuthOnOpen();
-    
-    // Listen for close sidepanel message from background script
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
- 
-        switch (message.type) {
-            case 'closeSidepanel':
-                window.close();
-                sendResponse({ success: true });
-                break;
-            default:
-                break;
+    const DUMMY_ESSENTIALS = [
+        {
+            url: 'https://google.com',
+            title: 'Google',
+            favicon: 'https://www.google.com/favicon.ico',
+            fallback: 'G'
+        },
+        {
+            url: 'https://github.com',
+            title: 'GitHub', 
+            favicon: 'https://github.com/favicon.ico',
+            fallback: 'GH'
+        },
+        {
+            url: 'https://gmail.com',
+            title: 'Gmail',
+            favicon: 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico',
+            fallback: 'GM'
+        },
+        {
+            url: 'https://youtube.com',
+            title: 'YouTube',
+            favicon: 'https://www.youtube.com/favicon.ico',
+            fallback: 'YT'
+        },
+        {
+            url: 'https://stackoverflow.com',
+            title: 'Stack Overflow',
+            favicon: 'https://cdn.sstatic.net/Sites/stackoverflow/Img/favicon.ico',
+            fallback: 'SO'
         }
-    });
+    ]
 
-    // SECTION UI RELATED FUNCTIONS
+    /* SECTION POPUP INITIALIZATION */
+    async function initializePopup() {
+        if (await checkUserAuth()) {
+            UI_DASHBOARD_DATA.loading();
+            showScreen('dashboard');
+            UI_DASHBOARD_DATA.updateData({userData: CURRENT_USER});
 
-    // Modern Message Banner System
+            setTimeout(() => {
+                UI_DASHBOARD_DATA.updateData({essentials: DUMMY_ESSENTIALS, spaces: DUMMY_SPACES});
+            }, 1000);
+        } else {
+            showScreen('welcome');
+        }
+    }
+
+    initializePopup();
+
+
+    /* SECTION MESSAGE BANNER SYSTEM */
     const MessageBanner = {
         element: null,
         iconElement: null,
@@ -1034,117 +449,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    function initializeTheme() {
-        const savedTheme = localStorage.getItem('tabster-theme') || 'dark';
-        applyTheme(savedTheme);
-    }
-
-    function setupThemeToggle() {
-        if (themeToggle) {
-            themeToggle.addEventListener('click', function() {
-                const currentTheme = document.documentElement.classList.contains('light-theme') ? 'light' : 'dark';
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                applyTheme(newTheme);
-                localStorage.setItem('tabster-theme', newTheme);
-            });
-        }
-    }
-
-    function applyTheme(theme) {
-        if (theme === 'light') {
-            document.documentElement.classList.add('light-theme');
-        } else {
-            document.documentElement.classList.remove('light-theme');
-        }
-    }
-
-    function setupNavigation() {
-        // Main auth buttons
-        if (loginBtn) loginBtn.addEventListener('click', () => showScreen('login'));
-        if (signupBtn) signupBtn.addEventListener('click', () => showScreen('signup'));
-
-        // Navigation links
-        if (gotoSignup) gotoSignup.addEventListener('click', (e) => {
-            e.preventDefault();
-            showScreen('signup');
-        });
-        if (gotoLogin) gotoLogin.addEventListener('click', (e) => {
-            e.preventDefault();
-            showScreen('login');
-        });
-        if (forgotPasswordLink) forgotPasswordLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            showScreen('forgot-password');
-        });
-        if (backToLogin) backToLogin.addEventListener('click', (e) => {
-            e.preventDefault();
-            showScreen('login');
-        });
-        if (backToWelcome) backToWelcome.addEventListener('click', (e) => {
-            e.preventDefault();
-            showScreen('welcome');
-        });
-        if (backToWelcome2) backToWelcome2.addEventListener('click', (e) => {
-            e.preventDefault();
-            showScreen('welcome');
-        });
-        if (backToWelcome3) backToWelcome3.addEventListener('click', (e) => {
-            e.preventDefault();
-            showScreen('welcome');
-        });
-    }
-
-    function setupUserMenu() {
-        const userAvatar = document.getElementById('user-avatar');
-        const dropdownMenu = document.getElementById('dropdown-menu');
-        const logoutBtn = document.getElementById('logout-btn-dropdown');
-
-        // Reset signout button state in case it was disabled
-        if (logoutBtn) {
-            logoutBtn.style.pointerEvents = 'auto';
-            // Remove any existing click listeners to prevent duplicates
-            const newLogoutBtn = logoutBtn.cloneNode(true);
-            logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-        }
-
-        // Get the fresh reference after cloning
-        const freshLogoutBtn = document.getElementById('logout-btn-dropdown');
-
-        // Toggle dropdown when avatar is clicked
-        if (userAvatar && dropdownMenu) {
-            // Remove existing avatar listeners to prevent duplicates
-            const newUserAvatar = userAvatar.cloneNode(true);
-            userAvatar.parentNode.replaceChild(newUserAvatar, userAvatar);
-            
-            // Get fresh reference and add listener
-            const freshAvatar = document.getElementById('user-avatar');
-            if (freshAvatar) {
-                freshAvatar.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    dropdownMenu.classList.toggle('show');
-                });
-            }
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                const currentAvatar = document.getElementById('user-avatar');
-                if (currentAvatar && !currentAvatar.contains(e.target) && !dropdownMenu.contains(e.target)) {
-                    dropdownMenu.classList.remove('show');
-                }
-            });
-        }
-
-        // Handle signout click
-        if (freshLogoutBtn) {
-            freshLogoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleUserSignout();
-            });
-        }
-    }
-
+    /* SECTION SCREEN MANAGEMENT */
     function showScreen(screenName) {
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const loginScreen = document.getElementById('login-screen');
+        const signupScreen = document.getElementById('signup-screen');
+        const forgotPasswordScreen = document.getElementById('forgot-password-screen');
+        const dashboardScreen = document.getElementById('dashboard-screen');
+        const createSpaceScreen = document.getElementById('create-space-screen');
         const editSpaceScreen = document.getElementById('edit-space-screen');
         const screens = [welcomeScreen, loginScreen, signupScreen, forgotPasswordScreen, dashboardScreen, createSpaceScreen, editSpaceScreen];
         
@@ -1191,546 +503,64 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('tabster-current-screen', screenName);
     }
 
+    /* SECTION AUTHENTICATION */
+    async function checkUserAuth() {
+        try {
+            const response = await chrome.runtime.sendMessage({ type: 'checkAuth' });
+            CURRENT_USER = response.userData;
+            return response.success && response.authenticated;
+        } catch (error) {
+            console.error('Auth check error:', error);
+            return false;
+        }
+    }
+
+    /* SECTION NAVIGATION HANDLERS */
+
+    const loginNavs = [
+        document.getElementById('login-btn'),
+        document.getElementById('goto-login'),
+        document.getElementById('back-to-login')
+    ].forEach(nav => {
+        nav.addEventListener('click', () => {
+            showScreen('login');
+        });
+    });
+
+    const signupNavs = [
+        document.getElementById('signup-btn'),
+        document.getElementById('goto-signup'),
+        document.getElementById('back-to-welcome-2')
+    ].forEach(nav => {
+        nav.addEventListener('click', () => {
+            showScreen('signup');
+        });
+    });
     
-
-    // Helper function to update main dashboard with user data and dummy spaces
-    function updateMainDashboard(userData) {
-        // Update welcome message with user's display name or full name
-        const welcomeMessage = document.getElementById('welcome-message');
-        if (welcomeMessage && userData) {
-            const displayName = userData.display_name || userData.full_name || 'User';
-            welcomeMessage.textContent = `Welcome back, ${displayName}!`;
-        }
-        
-        // Update user avatar initials and clear loading state
-        const avatarInitials = document.getElementById('avatar-initials');
-        if (avatarInitials && userData) {
-            const name = userData.display_name || userData.full_name || userData.email;
-            const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            avatarInitials.textContent = initials;
-            avatarInitials.classList.remove('skeleton-shimmer'); // Remove shimmer animation
-        }
-        
-        // Reset and setup user menu to ensure proper state
-        setupUserMenu();
-        
-        // Update spaces grid with dummy data
-        renderSpacesGrid();
-    }
-
-    // Helper function to create a space card element with expandable tree
-    function createSpaceCard(space) {
-        const card = document.createElement('div');
-        card.className = 'space-card';
-        card.setAttribute('data-space-id', space.id);
-        card.setAttribute('data-index', dummySpaces.findIndex(s => s.id === space.id));
-        
-        card.innerHTML = `
-            <div class="space-card-header" data-space-id="${space.id}">
-                <div class="drag-handle" draggable="true" title="Drag to reorder">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
-                        <path d="M360-160q-33 0-56.5-23.5T280-240q0-33 23.5-56.5T360-320q33 0 56.5 23.5T440-240q0 33-23.5 56.5T360-160Zm240 0q-33 0-56.5-23.5T520-240q0-33 23.5-56.5T600-320q33 0 56.5 23.5T680-240q0 33-23.5 56.5T600-160ZM360-400q-33 0-56.5-23.5T280-480q0-33 23.5-56.5T360-560q33 0 56.5 23.5T440-480q0 33-23.5 56.5T360-400Zm240 0q-33 0-56.5-23.5T520-480q0-33 23.5-56.5T600-560q33 0 56.5 23.5T680-480q0 33-23.5 56.5T600-400ZM360-640q-33 0-56.5-23.5T280-720q0-33 23.5-56.5T360-800q33 0 56.5 23.5T440-720q0 33-23.5 56.5T360-640Zm240 0q-33 0-56.5-23.5T520-720q0-33 23.5-56.5T600-800q33 0 56.5 23.5T680-720q0 33-23.5 56.5T600-640Z"/>
-                    </svg>
-                </div>
-            <div class="space-icon">${space.emoji || '📁'}</div>
-            <div class="space-content">
-                <div class="space-name">${space.name}</div>
-                <div class="space-description">${space.description || 'No description'}</div>
-            </div>
-            <div class="space-actions">
-                <button class="space-switch-btn" title="Switch to ${space.name}" disabled>
-                    <img src="icons/load_space.svg" width="14" height="14" style="color: currentColor;">
-                </button>
-                <button class="space-menu-btn" disabled>⋯</button>
-                </div>
-            </div>
-            <div class="space-tree" style="display: ${space.isExpanded ? 'block' : 'none'};">
-                ${space.folders ? createFolderTree(space.folders) : ''}
-            </div>
-        `;
-        
-        // Apply custom color styling to the space icon if space has a color
-        if (space.color) {
-            const spaceIcon = card.querySelector('.space-icon');
-            if (spaceIcon) {
-                spaceIcon.style.cssText = `
-                    border: 2px solid ${space.color} !important;
-                    background-color: ${space.color}1A !important;
-                    transition: all 0.2s ease !important;
-                `;
-            }
-        }
-        
-        // Add drag event listeners to the drag handle only
-        const dragHandle = card.querySelector('.drag-handle');
-        dragHandle.addEventListener('dragstart', handleDragStart);
-        dragHandle.addEventListener('dragend', handleDragEnd);
-        
-        // Add drag over and drop listeners to the card for drop zones
-        card.addEventListener('dragover', handleDragOver);
-        card.addEventListener('drop', handleDrop);
-        
-        // Set expanded class based on state
-        if (space.isExpanded) {
-            card.classList.add('expanded');
-        }
-        
-        // Add expand/collapse functionality
-        const treeElement = card.querySelector('.space-tree');
-        const cardHeader = card.querySelector('.space-card-header');
-        
-        cardHeader.addEventListener('click', (e) => {
-            // Don't trigger expand if clicking on action buttons or drag handle
-            if (e.target.closest('.space-actions') || e.target.closest('.drag-handle')) {
-                return;
-            }
-            toggleSpaceExpansion(card);
+    const resetPasswordNavs = [
+        document.getElementById('forgot-password-link')
+    ].forEach(nav => {
+        nav.addEventListener('click', () => {
+            showScreen('forgot-password');
         });
-        
-        return card;
-    }
+    });
 
-    // Helper function to create folder tree HTML
-    function createFolderTree(folders) {
-        return folders.map((folder, folderIndex) => {
-            // Use preserved expansion state if available, otherwise fall back to isDefault
-            const isFolderExpanded = folder.isExpanded !== undefined ? folder.isExpanded : folder.isDefault;
-            const folderState = isFolderExpanded ? 'expanded' : 'collapsed';
-            const folderIcon = isFolderExpanded ? 'folder_open' : 'folder';
-            
-            return `
-                <div class="tree-folder ${folderState}" data-folder="${folderIndex}">
-                    <div class="tree-folder-header" data-drop-zone="folder">
-                        ${!folder.isDefault ? `
-                        <div class="folder-drag-handle" draggable="true" title="Drag to reorder folder">
-                            <img src="icons/drag_handle.svg" width="16" height="16">
-            </div>
-                        ` : `
-                        <div class="folder-drag-handle-spacer"></div>
-                        `}
-                        <div class="tree-indent">
-                            <div class="tree-icon">
-                                <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
-                                    ${folderIcon === 'folder_open' ? 
-                                        '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480l96-320h684L837-217q-8 26-29.5 41.5T760-160H160Z"/>' :
-                                        '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>'
-                                    }
-                                </svg>
-                </div>
-                </div>
-                        <div class="tree-label">${folder.name}</div>
-                        <div class="tree-actions">
-                            <button class="tree-action-btn add-tab-btn" title="Add tab to folder">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                                </svg>
-                </button>
-                            <button class="tree-action-btn load-btn" title="Load folder">
-                                <img src="icons/load_up.svg" width="14" height="14" style="color: currentColor;">
-                            </button>
-                            <button class="tree-action-btn options-btn" title="Folder options">
-                                <img src="icons/more-vertical.svg" width="14" height="14" style="color: currentColor;">
-                </button>
-                        </div>
-                    </div>
-                    <div class="tree-folder-content" style="display: ${isFolderExpanded ? 'block' : 'none'};">
-                        ${folder.tabs ? createTabList(folder.tabs) : ''}
-                    </div>
-            </div>
-        `;
-        }).join('');
-    }
-
-    // Helper function to create tab list HTML
-    function createTabList(tabs) {
-        return tabs.map(tab => `
-            <div class="tree-tab" data-tab-id="${tab.tabId}" data-drop-zone="tab">
-                <div class="tab-drag-handle" draggable="true" title="Drag to reorder tab">
-                    <img src="icons/drag_handle.svg" width="16" height="16">
-                </div>
-                <div class="tree-indent">
-                    <div class="tree-icon">
-                        <img src="${tab.favicon}" alt="" width="16" height="16" class="tab-favicon">
-                    </div>
-                </div>
-                <div class="tree-label" title="${tab.title}">${tab.title}</div>
-                <div class="tree-actions">
-                    <button class="tree-action-btn load-btn" title="Load tab">
-                        <img src="icons/load_up.svg" width="14" height="14" style="color: currentColor;">
-                    </button>
-                    <button class="tree-action-btn options-btn" title="Tab options">
-                        <img src="icons/more-vertical.svg" width="14" height="14" style="color: currentColor;">
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Function to toggle space expansion
-    function toggleSpaceExpansion(card) {
-        const treeElement = card.querySelector('.space-tree');
-        const isExpanded = treeElement.style.display !== 'none';
-        
-        if (isExpanded) {
-            // Collapse
-            treeElement.style.display = 'none';
-            card.classList.remove('expanded');
-        } else {
-            // First, collapse all other spaces
-            const allSpaceCards = document.querySelectorAll('.space-card:not(.new-space-card)');
-            allSpaceCards.forEach(otherCard => {
-                if (otherCard !== card) {
-                    const otherTreeElement = otherCard.querySelector('.space-tree');
-                    if (otherTreeElement && otherTreeElement.style.display !== 'none') {
-                        otherTreeElement.style.display = 'none';
-                        otherCard.classList.remove('expanded');
-                    }
-                }
-            });
-            
-            // Then expand the clicked space and reset folder states to initial state
-            treeElement.style.display = 'block';
-            card.classList.add('expanded');
-            
-            // Reset folder expansion states to initial state
-            const spaceId = parseInt(card.getAttribute('data-space-id'));
-            const space = dummySpaces.find(s => s.id === spaceId);
-            
-            if (space && space.folders) {
-                space.folders.forEach(folder => {
-                    // Reset to initial state: default folder expanded, others collapsed
-                    folder.isExpanded = folder.isDefault;
-                });
-                
-                // Update just the tree content without replacing the entire card
-                treeElement.innerHTML = createFolderTree(space.folders);
-                
-                // Re-initialize tree functionality for the updated content
-                initializeTreeFunctionality();
-            }
-        }
-    }
-
-    // Initialize tree functionality
-    function initializeTreeFunctionality() {
-        const spacesGrid = document.getElementById('workspaces-grid');
-        
-        // Remove existing tree event listeners to prevent duplicates
-        if (spacesGrid.treeClickHandler) {
-            spacesGrid.removeEventListener('click', spacesGrid.treeClickHandler);
-        }
-        if (spacesGrid.treeErrorHandler) {
-            spacesGrid.removeEventListener('error', spacesGrid.treeErrorHandler, true);
-        }
-        
-        // Create new event handlers
-        const treeClickHandler = (e) => {
-            const target = e.target;
-            
-            // Don't handle clicks if elements have dragging class (more specific check)
-            if (target.closest('.dragging') || document.querySelector('.tree-folder.dragging, .tree-tab.dragging')) {
-                console.log('Ignoring click due to drag state');
-                return;
-            }
-            
-            // Handle folder expansion/collapse - but not if clicking on actions or during drag
-            if (target.closest('.tree-folder-header') && 
-                !target.closest('.tree-actions') && 
-                !target.closest('.folder-drag-handle') &&
-                !target.closest('.tab-drag-handle') &&
-                !target.classList.contains('folder-drag-handle') &&
-                !target.classList.contains('tab-drag-handle')) {
-                
-                const folderElement = target.closest('.tree-folder');
-                
-                // Extra check to make sure we're not in a drag state
-                if (folderElement && !folderElement.classList.contains('dragging')) {
-                    const folderContent = folderElement.querySelector('.tree-folder-content');
-                    const folderIcon = folderElement.querySelector('.tree-icon svg');
-                    const isExpanded = folderContent.style.display !== 'none';
-                    
-                    if (isExpanded) {
-                        // Collapse folder
-                        folderContent.style.display = 'none';
-                        folderElement.classList.remove('expanded');
-                        folderElement.classList.add('collapsed');
-                        folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>';
-                    } else {
-                        // Expand folder
-                        folderContent.style.display = 'block';
-                        folderElement.classList.remove('collapsed');
-                        folderElement.classList.add('expanded');
-                        folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480l96-320h684L837-217q-8 26-29.5 41.5T760-160H160Z"/>';
-                    }
-                }
-            }
-            
-            // Handle action buttons
-            if (target.closest('.tree-action-btn')) {
-                e.stopPropagation();
-                const btn = target.closest('.tree-action-btn');
-                
-                if (btn.classList.contains('load-btn')) {
-                    // Handle load action
-                    const isFolder = btn.closest('.tree-folder-header');
-                    const isTab = btn.closest('.tree-tab');
-                    
-                    if (isFolder) {
-                        const folderName = btn.closest('.tree-folder').querySelector('.tree-label').textContent;
-                        console.log('Load folder:', folderName);
-                        // TODO: Implement folder loading functionality
-                    } else if (isTab) {
-                        const tabTitle = btn.closest('.tree-tab').querySelector('.tree-label').textContent;
-                        console.log('Load tab:', tabTitle);
-                        // TODO: Implement tab loading functionality
-                    }
-                } else if (btn.classList.contains('add-tab-btn')) {
-                    // Handle add tab action (only for folders)
-                    const folderElement = btn.closest('.tree-folder');
-                    if (folderElement) {
-                        const folderName = folderElement.querySelector('.tree-label').textContent;
-                        console.log('Add tab to folder:', folderName);
-                        // TODO: Implement add tab to folder functionality
-                    }
-                } else if (btn.classList.contains('options-btn')) {
-                    // Handle options action
-                    const isFolder = btn.closest('.tree-folder-header');
-                    const isTab = btn.closest('.tree-tab');
-                    
-                    if (isFolder) {
-                        const folderName = btn.closest('.tree-folder').querySelector('.tree-label').textContent;
-                        console.log('Folder options:', folderName);
-                        // TODO: Implement folder options menu
-                    } else if (isTab) {
-                        const tabTitle = btn.closest('.tree-tab').querySelector('.tree-label').textContent;
-                        console.log('Tab options:', tabTitle);
-                        // TODO: Implement tab options menu
-                    }
-                }
-            }
-        };
-        
-        const treeErrorHandler = (e) => {
-            if (e.target.classList.contains('tab-favicon')) {
-                e.target.style.display = 'none';
-            }
-        };
-        
-        // Store handlers on the element for later removal
-        spacesGrid.treeClickHandler = treeClickHandler;
-        spacesGrid.treeErrorHandler = treeErrorHandler;
-        
-        // Add event listeners
-        spacesGrid.addEventListener('click', treeClickHandler);
-        spacesGrid.addEventListener('error', treeErrorHandler, true);
-        
-        // Add drag event listeners for folders and tabs
-        spacesGrid.addEventListener('dragstart', handleTreeDragStart);
-        spacesGrid.addEventListener('dragend', handleTreeDragEnd);
-        spacesGrid.addEventListener('dragover', handleTreeDragOver);
-        spacesGrid.addEventListener('drop', handleTreeDrop);
-        
-        // Add direct drop listeners to all tree elements for better reliability
-        const allFolderHeaders = spacesGrid.querySelectorAll('.tree-folder-header');
-        const allTabs = spacesGrid.querySelectorAll('.tree-tab');
-        
-        allFolderHeaders.forEach(header => {
-            header.addEventListener('drop', handleTreeDrop);
-            header.addEventListener('dragover', handleTreeDragOver);
-        });
-        
-        allTabs.forEach(tab => {
-            tab.addEventListener('drop', handleTreeDrop);
-            tab.addEventListener('dragover', handleTreeDragOver);
-        });
-        
-        console.log('Added direct drop listeners to:', allFolderHeaders.length, 'folder headers and', allTabs.length, 'tabs');
-    }
-
-    // Helper function to create the "New Space" card
-    function createNewSpaceCard() {
-        const card = document.createElement('div');
-        card.className = 'space-card new-space-card';
-        
-        card.innerHTML = `
-            <div class="new-space-icon">+</div>
-            <div class="new-space-content">
-                <div class="new-space-title">New Space</div>
-                <div class="new-space-subtitle">Organize your tabs</div>
-            </div>
-        `;
-        
-        // Add click event listener properly
-        card.addEventListener('click', () => showScreen('create-space-screen'));
-        
-        return card;
-    }
-
-    // SECTION ON SIDEPANEL OPEN FLOW
-
-    // Check user authentication when sidepanel opens
-    async function checkUserAuthOnOpen() {
-        // Show loading dashboard immediately for better UX
-        showLoadingDashboard();
-        
-        try {
-            // Send auth check request to background script
-            const response = await chrome.runtime.sendMessage({
-                type: 'checkAuth'
-            });
-            
-            if (!response.success) {
-                showScreen('welcome');
-                return;
-            }
-            
-            if (!response.authenticated) {
-                showScreen('welcome');
-                return;
-            }
-            
-            // User is authenticated - update dashboard with dummy data
-            updateMainDashboard(response.userData);
-            
-        } catch (error) {
+    const backToWelcomeNavs = [
+        document.getElementById('back-to-welcome'),
+        document.getElementById('back-to-welcome-2'),
+        document.getElementById('back-to-welcome-3')
+    ].forEach(nav => {
+        nav.addEventListener('click', () => {
             showScreen('welcome');
-        }
-    }
-
-    // SECTION USER LOGOUT HANDLER
-
-    // Handle user signout
-    async function handleUserSignout() {
-        try {
-            // Show loading banner and disable signout option
-            const signoutBtn = document.querySelector('.signout-option');
-            if (signoutBtn) {
-                signoutBtn.style.pointerEvents = 'none';
-            }
-            
-            MessageBanner.loading('Signing out...');
-            
-            // Send signout request to background script
-            const response = await chrome.runtime.sendMessage({
-                type: 'signout'
-            });
-            
-            if (!response.success) {
-                console.error('Sidepanel: Signout failed:', response.error);
-                MessageBanner.error('Signout failed: ' + response.error);
-                
-                // Reset button state
-                if (signoutBtn) {
-                    signoutBtn.style.pointerEvents = 'auto';
-                }
-                return;
-            }
-            
-            MessageBanner.success('Signed out successfully!');
-            
-            // Reset button state immediately after successful signout
-            if (signoutBtn) {
-                signoutBtn.style.pointerEvents = 'auto';
-            }
-            
-            // Small delay to show success message before switching screens
-            setTimeout(() => {
-                clearDashboardState();
-                showScreen('welcome');
-                MessageBanner.hide(); // Hide banner when switching screens
-            }, 1000);
-            
-        } catch (error) {
-            console.error('Sidepanel: Signout exception:', error);
-            MessageBanner.error('Signout failed: ' + error.message);
-            
-            // Reset button state
-            const signoutBtn = document.querySelector('.signout-option');
-            if (signoutBtn) {
-                signoutBtn.style.pointerEvents = 'auto';
-            }
-        }
-    }
-
-    // Clear dashboard state and reset UI
-    function clearDashboardState() {
-        // Clear welcome message
-        const welcomeMessage = document.getElementById('welcome-message');
-        if (welcomeMessage) {
-            welcomeMessage.textContent = '';
-        }
-        
-        // Clear avatar
-        const avatarInitials = document.getElementById('avatar-initials');
-        if (avatarInitials) {
-            avatarInitials.textContent = '';
-            avatarInitials.classList.remove('skeleton-shimmer');
-        }
-        
-        // Clear spaces grid
-        const spacesGrid = document.getElementById('workspaces-grid');
-        if (spacesGrid) {
-            spacesGrid.innerHTML = '';
-        }
-        
-        // Hide any open dropdowns
-        const dropdown = document.querySelector('.dropdown-menu');
-        if (dropdown) {
-            dropdown.classList.remove('show');
-        }
-    }
-
-    /* SECTION USER SIGNUP HANDLER */
-
-    // On user sign-up / signup form submit listener
-    document.getElementById('signup-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const fullName = document.getElementById('signup-name').value;
-        const email = document.getElementById('signup-email').value;
-        const password = document.getElementById('signup-password').value;
-        
-        // Show loading banner and disable button
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        MessageBanner.loading('Creating account...');
-        
-        try {
-            // Send signup credentials to background script
-            const response = await chrome.runtime.sendMessage({
-                type: 'signup',
-                fullName: fullName,
-                email: email,
-                password: password
-            });
-            
-            if (response.success) {
-                MessageBanner.success(response.message);
-                
-                // Small delay to show success message before switching screens
-                setTimeout(() => {
-                    showScreen('login');
-                    MessageBanner.hide(); // Hide banner when switching screens
-                }, 2000);
-            } else {
-                MessageBanner.error(response.error || 'Sign up failed. Please try again.');
-            }
-        } catch (error) {
-            MessageBanner.error('Connection error. Please try again.');
-        } finally {
-            // Reset button state
-            submitBtn.disabled = false;
-        }
+        });
     });
 
 
-    /* SECTION USER LOGIN HANDLER */
+    /* SECTION AUTHENTICATION */
 
-    // On user sign-in / login form submit listener
+    // handle login
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         
@@ -1738,7 +568,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const submitBtn = e.target.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
         MessageBanner.loading('Signing in...');
-        
+
+
         try {
             // Send login credentials to background script
             const response = await chrome.runtime.sendMessage({
@@ -1752,7 +583,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Small delay to show success message before switching screens
                 setTimeout(() => {
-                    updateMainDashboard(response.userData);
+                    // updateMainDashboard(response.userData);
+                    UI_DASHBOARD_DATA.loading();
+                    CURRENT_USER = response.userData;
+                    console.log(CURRENT_USER);
                     showScreen('dashboard');
                     MessageBanner.hide(); // Hide banner when switching screens
                 }, 1000);
@@ -1767,1457 +601,479 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    function handleDragStart(e) {
-        // Get the parent card from the drag handle
-        const card = e.target.closest('.space-card');
-        draggedElement = card;
-        draggedIndex = parseInt(card.getAttribute('data-index'));
-        
-        // Add dragging class for visual feedback to the card
-        card.classList.add('dragging');
-        
-        // Add dragging class to container to prevent text selection
-        const spacesGrid = document.getElementById('workspaces-grid');
-        if (spacesGrid) {
-            spacesGrid.classList.add('dragging');
-        }
-        
-        // Create insertion line element
-        createInsertionLine();
-        
-        // Set drag effect
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', card.outerHTML);
-        
-        // Create a custom drag image using the entire card
-        try {
-            const dragImage = card.cloneNode(true);
-            dragImage.style.opacity = '0.8';
-            dragImage.style.transform = 'scale(0.95)';
-            dragImage.style.position = 'absolute';
-            dragImage.style.top = '-1000px';
-            document.body.appendChild(dragImage);
-            e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
-            setTimeout(() => document.body.removeChild(dragImage), 0);
-        } catch (error) {
-            // Fallback to default drag image if custom fails
-        }
-    }
+    // handle logout
+    document.getElementById('logout-btn-dropdown').addEventListener('click', async (e) => {
+        e.preventDefault();
+        await chrome.runtime.sendMessage({ type: 'signout' });
+        MessageBanner.success('Signed out successfully.');
+        showScreen('welcome');
+    });
+    
 
-    function createInsertionLine() {
-        insertionLine = document.createElement('div');
-        insertionLine.className = 'insertion-line';
-        insertionLine.style.position = 'absolute';
-        insertionLine.style.width = 'calc(100% - 16px)';
-        insertionLine.style.left = '8px';
-        document.getElementById('workspaces-grid').appendChild(insertionLine);
-    }
+    /* SECTION MINOR UI HANDLERS */
 
-    function showInsertionLine(beforeElement) {
-        if (!insertionLine || !beforeElement) return;
-        
-        const container = document.getElementById('workspaces-grid');
-        const containerRect = container.getBoundingClientRect();
-        const elementRect = beforeElement.getBoundingClientRect();
-        
-        // Position the line just above the target element
-        const relativeTop = elementRect.top - containerRect.top;
-        insertionLine.style.top = (relativeTop - 4) + 'px';
-        insertionLine.classList.add('show');
-    }
-
-    function showInsertionLineAfter(afterElement) {
-        if (!insertionLine || !afterElement) return;
-        
-        const container = document.getElementById('workspaces-grid');
-        const containerRect = container.getBoundingClientRect();
-        const elementRect = afterElement.getBoundingClientRect();
-        
-        // Position the line just below the target element
-        const relativeTop = elementRect.bottom - containerRect.top;
-        insertionLine.style.top = (relativeTop + 4) + 'px';
-        insertionLine.classList.add('show');
-    }
-
-    function handleDragEnd(e) {
-        // Clean up drag classes
-        const allCards = document.querySelectorAll('.space-card');
-        allCards.forEach(card => {
-            card.classList.remove('dragging');
-        });
-        
-        // Remove dragging class from container
-        const spacesGrid = document.getElementById('workspaces-grid');
-        if (spacesGrid) {
-            spacesGrid.classList.remove('dragging');
-        }
-        
-        // Remove insertion line
-        if (insertionLine) {
-            insertionLine.remove();
-            insertionLine = null;
-        }
-        
-        draggedElement = null;
-        draggedIndex = null;
-    }
-
-    function handleDragOver(e) {
-        if (e.preventDefault) {
-            e.preventDefault();
-        }
-        
-        // Don't allow dropping on the new space card
-        const newSpaceCard = e.target.closest('.new-space-card');
-        if (newSpaceCard) {
-            hideInsertionLine();
-            return false;
-        }
-        
-        e.dataTransfer.dropEffect = 'move';
-        
-        const dropTarget = e.target.closest('.space-card:not(.new-space-card):not(.dragging)');
-        if (dropTarget && dropTarget !== draggedElement) {
-            // Determine if we're in the top or bottom half of the target
-            const rect = dropTarget.getBoundingClientRect();
-            const midpoint = rect.top + (rect.height / 2);
-            const isTopHalf = e.clientY < midpoint;
-            
-            if (isTopHalf) {
-                showInsertionLine(dropTarget);
-            } else {
-                showInsertionLineAfter(dropTarget);
-            }
-        } else {
-            hideInsertionLine();
-        }
-        
-        return false;
-    }
-
-    function handleDrop(e) {
-        if (e.stopPropagation) {
+    // Toggle dropdown when avatar is clicked
+    const UI_USER_AVATAR = document.getElementById('user-avatar');
+    const UI_USER_MENU = document.getElementById('dropdown-menu');
+    if (UI_USER_AVATAR && UI_USER_MENU) {
+        UI_USER_AVATAR.addEventListener('click', (e) => {
             e.stopPropagation();
-        }
+            UI_USER_MENU.classList.toggle('show');
+        });
         
-        const dropTarget = e.target.closest('.space-card:not(.new-space-card)');
-        
-        // Don't allow dropping on the new space card or invalid targets
-        if (!dropTarget || dropTarget.classList.contains('new-space-card') || dropTarget === draggedElement) {
-            return false;
-        }
-        
-        const dropIndex = parseInt(dropTarget.getAttribute('data-index'));
-        
-        if (draggedIndex !== null && dropIndex !== null && draggedIndex !== dropIndex) {
-            // Determine insertion point based on drop position
-            const rect = dropTarget.getBoundingClientRect();
-            const midpoint = rect.top + (rect.height / 2);
-            const isTopHalf = e.clientY < midpoint;
-            
-            let insertIndex = dropIndex;
-            if (!isTopHalf && draggedIndex < dropIndex) {
-                insertIndex = dropIndex;
-            } else if (!isTopHalf && draggedIndex > dropIndex) {
-                insertIndex = dropIndex + 1;
-            } else if (isTopHalf && draggedIndex > dropIndex) {
-                insertIndex = dropIndex;
-            } else if (isTopHalf && draggedIndex < dropIndex) {
-                insertIndex = dropIndex - 1;
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!UI_USER_AVATAR.contains(e.target) && !UI_USER_MENU.contains(e.target)) {
+                UI_USER_MENU.classList.remove('show');
             }
-            
-            // Reorder the spaces array
-            const draggedSpace = dummySpaces[draggedIndex];
-            dummySpaces.splice(draggedIndex, 1);
-            dummySpaces.splice(insertIndex, 0, draggedSpace);
-            
-            // Re-render the spaces grid
-            renderSpacesGrid();
-            
-            // Add success animation to the dropped item
-            setTimeout(() => {
-                const newCard = document.querySelector(`[data-space-id="${draggedSpace.id}"]`);
-                if (newCard) {
-                    newCard.classList.add('dropped');
-                    setTimeout(() => {
-                        newCard.classList.remove('dropped');
-                    }, 400);
+        });
+    }
+
+
+    // Dashboard data handlers
+    const UI_DASHBOARD_DATA = {
+        welcomeMessage: document.getElementById('welcome-message'),
+        avatarInitials: document.getElementById('avatar-initials'),
+        essentialsGrid: document.getElementById('essentials-grid'),
+        spacesGrid: document.getElementById('workspaces-grid'),
+        userData: null,
+        essentials: null,
+        spaces: null,
+        
+        loading () {
+            // Update welcome message to "Please wait..."
+            if (this.welcomeMessage) {
+                this.welcomeMessage.textContent = 'Please wait...';
+            }
+
+            // Update user avatar with loading state and shimmer animation
+            if (this.avatarInitials) {
+                this.avatarInitials.textContent = ''; // Clear text content
+                this.avatarInitials.classList.add('skeleton-shimmer'); // Add shimmer animation
+            }
+
+            // Show essentials grid with skeleton cards
+            const essentialsGrid = document.getElementById('essentials-grid');
+            if (essentialsGrid) {
+                essentialsGrid.innerHTML = ''; // Clear existing content
+                
+                // Add skeleton loading cards (5 essentials + 1 add button)
+                for (let i = 0; i < 6; i++) {
+                    const skeletonCard = this._createEssentialSkeletonCard();
+                    essentialsGrid.appendChild(skeletonCard);
                 }
-            }, 50);
-        }
-        
-        return false;
-    }
-
-    function hideInsertionLine() {
-        if (insertionLine) {
-            insertionLine.classList.remove('show');
-        }
-    }
-
-    // Helper function to render the spaces grid
-    function renderSpacesGrid() {
-        const spacesGrid = document.getElementById('workspaces-grid');
-        if (!spacesGrid) return;
-        
-        // Store current expansion states before re-rendering
-        const spaceExpansionStates = {};
-        const folderExpansionStates = {};
-        
-        const existingSpaces = spacesGrid.querySelectorAll('.space-card[data-space-id]');
-        existingSpaces.forEach(spaceCard => {
-            const spaceId = spaceCard.getAttribute('data-space-id');
-            const treeElement = spaceCard.querySelector('.space-tree');
-            spaceExpansionStates[spaceId] = treeElement && treeElement.style.display !== 'none';
-            
-            // Store folder expansion states
-            const folders = spaceCard.querySelectorAll('.tree-folder');
-            folders.forEach((folder, folderIndex) => {
-                const folderContent = folder.querySelector('.tree-folder-content');
-                const folderKey = `${spaceId}-${folderIndex}`;
-                folderExpansionStates[folderKey] = folderContent && folderContent.style.display !== 'none';
-            });
-        });
-        
-        spacesGrid.innerHTML = '';
-        
-        // Create space cards using current dummy data order
-        dummySpaces.forEach(space => {
-            // Preserve expansion state from before re-render (default to collapsed for first render)
-            space.isExpanded = spaceExpansionStates[space.id] !== undefined ? spaceExpansionStates[space.id] : false;
-            
-            // Preserve folder expansion states
-            if (space.folders) {
-                space.folders.forEach((folder, folderIndex) => {
-                    const folderKey = `${space.id}-${folderIndex}`;
-                    folder.isExpanded = folderExpansionStates[folderKey] !== undefined 
-                        ? folderExpansionStates[folderKey] 
-                        : folder.isDefault; // Default to original logic for first render
-                });
             }
-            
-            const spaceCard = createSpaceCard(space);
-            spacesGrid.appendChild(spaceCard);
-        });
-        
-        // Add "New Space" card at the end
-        const newSpaceCard = createNewSpaceCard();
-        spacesGrid.appendChild(newSpaceCard);
-        
-        // Re-initialize tree functionality for new elements
-        initializeTreeFunctionality();
-    }
 
-    // Helper function to create a skeleton loading card
-    function createSkeletonCard() {
-        const card = document.createElement('div');
-        card.className = 'space-card skeleton-card';
-        
-        card.innerHTML = `
-            <div class="space-card-header">
-                <div class="space-icon">
+            // Show spaces grid with skeleton card
+            const spacesGrid = document.getElementById('workspaces-grid');
+            if (spacesGrid) {
+                spacesGrid.innerHTML = ''; // Clear existing content
+                
+                // Add skeleton loading card
+                const skeletonCard = this._createSpaceSkeletonCard();
+                spacesGrid.appendChild(skeletonCard);
+            }
+        },
+
+        updateData({userData, essentials, spaces}) {
+            this.userData = userData;
+            this.essentials = essentials;
+            this.spaces = spaces;
+
+
+            if (userData) {
+                // Update welcome message with user's display name or full name
+                if (this.welcomeMessage) {
+                    this.welcomeMessage.textContent = `Welcome back, ${userData.full_name || userData.email}`;
+                }
+
+                // Update user avatar initials
+                if (this.avatarInitials) {
+                    const name = userData.display_name || userData.full_name || userData.email;
+                    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    this.avatarInitials.textContent = initials;
+                    this.avatarInitials.classList.remove('skeleton-shimmer'); // Remove shimmer animation
+                }
+            }
+
+            if (essentials) {
+                // Clear existing skeleton cards and populate with actual essentials
+                if (this.essentialsGrid) {
+                    this.essentialsGrid.innerHTML = ''; // Clear existing content
+                    
+                    // Add essential items
+                    essentials.forEach(essential => {
+                        const essentialItem = document.createElement('div');
+                        essentialItem.className = 'essential-item';
+                        essentialItem.setAttribute('data-url', essential.url);
+                        essentialItem.setAttribute('title', essential.title);
+                        
+                        essentialItem.innerHTML = `
+                            <div class="essential-icon">
+                                <img src="${essential.favicon}" alt="${essential.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="fallback-icon" style="display: none;">${essential.title.substring(0, 2).toUpperCase()}</div>
+                            </div>
+                        `;
+                        
+                        this.essentialsGrid.appendChild(essentialItem);
+                    });
+                    
+                    // Add "Add Essential" button at the end
+                    const addEssentialItem = document.createElement('div');
+                    addEssentialItem.className = 'essential-item add-essential';
+                    addEssentialItem.setAttribute('title', 'Add Essential');
+                    
+                    addEssentialItem.innerHTML = `
+                        <div class="essential-icon add-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </div>
+                    `;
+                    
+                    this.essentialsGrid.appendChild(addEssentialItem);
+                }
+            }
+
+            if (spaces) {
+                // Clear existing skeleton cards and populate with actual spaces
+                if (this.spacesGrid) {
+                    this.spacesGrid.innerHTML = ''; // Clear existing content
+                    
+                    // Render each space card
+                    spaces.forEach(space => {
+                        const spaceCard = this._createSpaceCard(space);
+                        this.spacesGrid.appendChild(spaceCard);
+                    });
+                    
+                    // Add "New Space" card at the end
+                    const newSpaceCard = this._createNewSpaceCard();
+                    this.spacesGrid.appendChild(newSpaceCard);
+                    
+                    // Initialize space interactions
+                    this._initializeSpaceInteractions();
+                }
+            }
+        },
+
+        _createSpaceSkeletonCard() {
+            const card = document.createElement('div');
+            card.className = 'space-card skeleton-card';
+            
+            card.innerHTML = `
+                <div class="space-card-header">
+                    <div class="space-icon">
+                        <div class="skeleton-shimmer"></div>
+                    </div>
+                    <div class="space-content">
+                        <div class="space-name">
+                            <div class="skeleton-shimmer"></div>
+                        </div>
+                        <div class="space-description">
+                            <div class="skeleton-shimmer"></div>
+                        </div>
+                    </div>
+                    <div class="space-actions">
+                        <button class="space-expand-btn">
+                            <div class="skeleton-shimmer"></div>
+                        </button>
+                        <button class="space-switch-btn">
+                            <div class="skeleton-shimmer"></div>
+                        </button>
+                        <button class="space-menu-btn">
+                            <div class="skeleton-shimmer"></div>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        },
+
+        _createEssentialSkeletonCard() {
+            const card = document.createElement('div');
+            card.className = 'essential-item skeleton-card';
+            
+            card.innerHTML = `
+                <div class="essential-icon">
                     <div class="skeleton-shimmer"></div>
                 </div>
-                <div class="space-content">
-                    <div class="space-name">
-                        <div class="skeleton-shimmer"></div>
+            `;
+            
+            return card;
+        },
+
+        // spaces helpers
+        
+        _createSpaceCard(space) {
+            const card = document.createElement('div');
+            card.className = 'space-card';
+            card.setAttribute('data-space-id', space.id);
+            
+            card.innerHTML = `
+                <div class="space-card-header" data-space-id="${space.id}">
+                    <div class="space-icon">${space.emoji || '📁'}</div>
+                    <div class="space-content">
+                        <div class="space-name">${space.name}</div>
+                        <div class="space-description">${space.description || 'No description'}</div>
                     </div>
-                    <div class="space-description">
-                        <div class="skeleton-shimmer"></div>
+                    <div class="space-actions">
+                        <button class="space-switch-btn" title="Switch to ${space.name}" disabled>
+                            <img src="icons/load_space.svg" width="14" height="14" style="color: currentColor;">
+                        </button>
+                        <button class="space-menu-btn" disabled>⋯</button>
                     </div>
                 </div>
-                <div class="space-actions">
-                    <button class="space-expand-btn">
-                        <div class="skeleton-shimmer"></div>
-                    </button>
-                    <button class="space-switch-btn">
-                        <div class="skeleton-shimmer"></div>
-                    </button>
-                    <button class="space-menu-btn">
-                        <div class="skeleton-shimmer"></div>
-                    </button>
+                <div class="space-tree" style="display: none;">
+                    ${space.folders ? this._createFolderTree(space.folders) : ''}
                 </div>
-            </div>
-        `;
-        
-        return card;
-    }
-
-    // Helper function to show loading dashboard
-    function showLoadingDashboard() {
-        // Update welcome message to "Please wait..."
-        const welcomeMessage = document.getElementById('welcome-message');
-        if (welcomeMessage) {
-            welcomeMessage.textContent = 'Please wait...';
-        }
-        
-        // Update user avatar with loading state and shimmer animation
-        const avatarInitials = document.getElementById('avatar-initials');
-        if (avatarInitials) {
-            avatarInitials.textContent = ''; // Clear text content
-            avatarInitials.classList.add('skeleton-shimmer'); // Add shimmer animation
-        }
-        
-        // Show spaces grid with skeleton card
-        const spacesGrid = document.getElementById('workspaces-grid');
-        if (spacesGrid) {
-            spacesGrid.innerHTML = ''; // Clear existing content
+            `;
             
-            // Add skeleton loading card
-            const skeletonCard = createSkeletonCard();
-            spacesGrid.appendChild(skeletonCard);
-        }
-        
-        // Show dashboard screen
-        showScreen('dashboard');
-    }
-
-    // Drag and Drop functionality
-    let draggedElement = null;
-    let draggedIndex = null;
-    let insertionLine = null;
-
-    // Folder drag and drop variables
-    let draggedFolder = null;
-    let draggedFolderIndex = null;
-    let draggedFolderSpaceId = null;
-    let folderInsertionLine = null;
-
-    // Tab drag and drop variables  
-    let draggedTab = null;
-    let draggedTabIndex = null;
-    let draggedTabFolderIndex = null;
-    let draggedTabSpaceId = null;
-    let tabInsertionLine = null;
-
-    // Tree-level drag and drop handlers
-    function handleTreeDragStart(e) {
-        // Check if it's a folder drag handle
-        if (e.target.closest('.folder-drag-handle')) {
-            const folderElement = e.target.closest('.tree-folder');
-            const spaceElement = e.target.closest('.space-card');
+            // Apply custom color styling to the space icon
+            if (space.color) {
+                const spaceIcon = card.querySelector('.space-icon');
+                if (spaceIcon) {
+                    spaceIcon.style.cssText = `
+                        border: 2px solid ${space.color} !important;
+                        background-color: ${space.color}1A !important;
+                        transition: all 0.2s ease !important;
+                    `;
+                }
+            }
             
-            // Get folder data to check if it's default
-            const folderIndex = parseInt(folderElement.getAttribute('data-folder'));
-            const spaceId = parseInt(spaceElement.getAttribute('data-space-id'));
-            const space = dummySpaces.find(s => s.id === spaceId);
+            return card;
+        },
+
+        _createFolderTree(folders) {
+            return folders.map((folder, folderIndex) => {
+                const isFolderExpanded = folder.isDefault || false; // Default folders start expanded
+                const folderState = isFolderExpanded ? 'expanded' : 'collapsed';
+                const folderIcon = isFolderExpanded ? 'folder_open' : 'folder';
+                
+                return `
+                    <div class="tree-folder ${folderState}" data-folder="${folderIndex}">
+                        <div class="tree-folder-header" data-drop-zone="folder">
+                            <div class="folder-drag-handle-spacer"></div>
+                            <div class="tree-indent">
+                                <div class="tree-icon">
+                                    <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
+                                        ${folderIcon === 'folder_open' ? 
+                                            '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480l96-320h684L837-217q-8 26-29.5 41.5T760-160H160Z"/>' :
+                                            '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>'
+                                        }
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="tree-label">${folder.name}</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn add-tab-btn" title="Add tab to folder">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </button>
+                                <button class="tree-action-btn load-btn" title="Load folder">
+                                    <img src="icons/load_up.svg" width="14" height="14" style="color: currentColor;">
+                                </button>
+                                <button class="tree-action-btn options-btn" title="Folder options">
+                                    <img src="icons/more-vertical.svg" width="14" height="14" style="color: currentColor;">
+                                </button>
+                            </div>
+                        </div>
+                        <div class="tree-folder-content" style="display: ${isFolderExpanded ? 'block' : 'none'};">
+                            ${folder.tabs ? this._createTabList(folder.tabs) : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        },
+
+        _createTabList(tabs) {
+            return tabs.map(tab => `
+                <div class="tree-tab" data-tab-id="${tab.tabId}" data-drop-zone="tab">
+                    <div class="tab-drag-handle-spacer"></div>
+                    <div class="tree-indent">
+                        <div class="tree-icon">
+                            <img src="${tab.favicon}" alt="" width="16" height="16" class="tab-favicon">
+                        </div>
+                    </div>
+                    <div class="tree-label" title="${tab.title}">${tab.title}</div>
+                    <div class="tree-actions">
+                        <button class="tree-action-btn load-btn" title="Load tab">
+                            <img src="icons/load_up.svg" width="14" height="14" style="color: currentColor;">
+                        </button>
+                        <button class="tree-action-btn options-btn" title="Tab options">
+                            <img src="icons/more-vertical.svg" width="14" height="14" style="color: currentColor;">
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        },
+
+        _createNewSpaceCard() {
+            const card = document.createElement('div');
+            card.className = 'space-card new-space-card';
             
-            // Prevent dragging default folders
-            if (space && space.folders && space.folders[folderIndex] && space.folders[folderIndex].isDefault) {
-                e.preventDefault();
+            card.innerHTML = `
+                <div class="new-space-icon">+</div>
+                <div class="new-space-content">
+                    <div class="new-space-title">New Space</div>
+                    <div class="new-space-subtitle">Organize your tabs</div>
+                </div>
+            `;
+            
+            // Add click event listener for creating new space
+            card.addEventListener('click', () => {
+                console.log('Create new space clicked'); // Placeholder for future implementation
+            });
+            
+            return card;
+        },
+
+        _initializeSpaceInteractions() {
+            if (!this.spacesGrid) return;
+            
+            // Remove existing event listeners to prevent duplicates
+            if (this.spacesGrid._spaceClickHandler) {
+                this.spacesGrid.removeEventListener('click', this.spacesGrid._spaceClickHandler);
+            }
+            if (this.spacesGrid._spaceErrorHandler) {
+                this.spacesGrid.removeEventListener('error', this.spacesGrid._spaceErrorHandler, true);
+            }
+            
+            // Create new click handler
+            const spaceClickHandler = (e) => {
+                this._handleSpaceClick(e);
+            };
+            
+            // Create error handler for favicon images
+            const spaceErrorHandler = (e) => {
+                if (e.target.classList.contains('tab-favicon')) {
+                    e.target.style.display = 'none';
+                }
+            };
+            
+            // Store handler references for cleanup
+            this.spacesGrid._spaceClickHandler = spaceClickHandler;
+            this.spacesGrid._spaceErrorHandler = spaceErrorHandler;
+            
+            // Add event listeners
+            this.spacesGrid.addEventListener('click', spaceClickHandler);
+            this.spacesGrid.addEventListener('error', spaceErrorHandler, true);
+        },
+
+        _handleSpaceClick(e) {
+            const target = e.target;
+            
+            // Handle space card header clicks for expansion/collapse
+            if (target.closest('.space-card-header') && !target.closest('.space-actions')) {
+                const spaceCard = target.closest('.space-card');
+                if (spaceCard && !spaceCard.classList.contains('new-space-card')) {
+                    this._toggleSpaceExpansion(spaceCard);
+                }
+                return;
+            }
+            
+            // Handle folder header clicks for expansion/collapse
+            if (target.closest('.tree-folder-header') && !target.closest('.tree-actions')) {
+                const folderElement = target.closest('.tree-folder');
+                if (folderElement) {
+                    this._toggleFolderExpansion(folderElement);
+                }
+                return;
+            }
+            
+            // Handle action button clicks
+            if (target.closest('.tree-action-btn')) {
                 e.stopPropagation();
+                this._handleActionButton(target.closest('.tree-action-btn'));
                 return;
             }
+        },
+
+        _toggleSpaceExpansion(spaceCard) {
+            const treeElement = spaceCard.querySelector('.space-tree');
+            const isExpanded = treeElement.style.display !== 'none';
             
-            draggedFolder = folderElement;
-            draggedFolderIndex = parseInt(folderElement.getAttribute('data-folder'));
-            draggedFolderSpaceId = spaceElement.getAttribute('data-space-id');
-            
-            // Add dragging class for visual feedback
-            folderElement.classList.add('dragging');
-            
-            // Add dragging class to container
-            const spaceTree = spaceElement.querySelector('.space-tree');
-            if (spaceTree) {
-                spaceTree.classList.add('dragging');
+            if (isExpanded) {
+                // Collapse this space
+                treeElement.style.display = 'none';
+                spaceCard.classList.remove('expanded');
+            } else {
+                // Collapse all other spaces first
+                const allSpaceCards = this.spacesGrid.querySelectorAll('.space-card:not(.new-space-card)');
+                allSpaceCards.forEach(otherCard => {
+                    if (otherCard !== spaceCard) {
+                        const otherTreeElement = otherCard.querySelector('.space-tree');
+                        if (otherTreeElement && otherTreeElement.style.display !== 'none') {
+                            otherTreeElement.style.display = 'none';
+                            otherCard.classList.remove('expanded');
+                        }
+                    }
+                });
+                
+                // Expand the clicked space
+                treeElement.style.display = 'block';
+                spaceCard.classList.add('expanded');
             }
-            
-            // Create folder insertion line
-            createFolderInsertionLine(spaceElement);
-            
-            // Set drag effect
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', folderElement.outerHTML);
-            
-            // Create custom drag image
-            try {
-                const dragImage = folderElement.cloneNode(true);
-                dragImage.style.opacity = '0.8';
-                dragImage.style.transform = 'scale(0.95)';
-                dragImage.style.position = 'absolute';
-                dragImage.style.top = '-1000px';
-                document.body.appendChild(dragImage);
-                e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
-                setTimeout(() => document.body.removeChild(dragImage), 0);
-            } catch (error) {
-                // Fallback to default drag image if custom fails
-            }
-            
-            console.log('Dragging folder:', draggedFolderIndex, 'from space:', draggedFolderSpaceId);
-        }
-        // Check if it's a tab drag handle
-        else if (e.target.closest('.tab-drag-handle')) {
-            const tabElement = e.target.closest('.tree-tab');
-            const folderElement = e.target.closest('.tree-folder');
-            const spaceElement = e.target.closest('.space-card');
-            
-            draggedTab = tabElement;
-            draggedTabIndex = parseInt(tabElement.getAttribute('data-tab-id'));
-            draggedTabFolderIndex = parseInt(folderElement.getAttribute('data-folder'));
-            draggedTabSpaceId = spaceElement.getAttribute('data-space-id');
-            
-            // Add dragging class for visual feedback
-            tabElement.classList.add('dragging');
-            
-            // Add dragging class to container
+        },
+
+        _toggleFolderExpansion(folderElement) {
             const folderContent = folderElement.querySelector('.tree-folder-content');
-            if (folderContent) {
-                folderContent.classList.add('dragging');
-            }
+            const folderIcon = folderElement.querySelector('.tree-icon svg');
+            const isExpanded = folderContent.style.display !== 'none';
             
-            // Create tab insertion line
-            createTabInsertionLine(folderElement);
-            
-            // Set drag effect
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', tabElement.outerHTML);
-            
-            // Create custom drag image
-            try {
-                const dragImage = tabElement.cloneNode(true);
-                dragImage.style.opacity = '0.8';
-                dragImage.style.transform = 'scale(0.95)';
-                dragImage.style.position = 'absolute';
-                dragImage.style.top = '-1000px';
-                document.body.appendChild(dragImage);
-                e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
-                setTimeout(() => document.body.removeChild(dragImage), 0);
-            } catch (error) {
-                // Fallback to default drag image if custom fails
-            }
-            
-            console.log('Dragging tab:', draggedTabIndex, 'from folder:', draggedTabFolderIndex, 'in space:', draggedTabSpaceId);
-        }
-    }
-
-    function handleTreeDragEnd(e) {
-        // Immediately clear primary drag state to prevent click blocking
-        const hadDraggedFolder = !!draggedFolder;
-        const hadDraggedTab = !!draggedTab;
-        
-        // Clear drag variables immediately
-        draggedFolder = null;
-        draggedTab = null;
-        draggedFolderIndex = null;
-        draggedTabIndex = null;
-        draggedFolderSpaceId = null;
-        draggedTabSpaceId = null;
-        draggedTabFolderIndex = null;
-        
-        // Clean up visual states with a short delay
-        setTimeout(() => {
-            if (hadDraggedFolder) {
-                // Remove dragging class from all folders
-                const allFolders = document.querySelectorAll('.tree-folder');
-                allFolders.forEach(folder => {
-                    folder.classList.remove('dragging');
-                });
-                
-                // Remove dragging class from container
-                const spaceTree = document.querySelector('.space-tree.dragging');
-                if (spaceTree) {
-                    spaceTree.classList.remove('dragging');
-                }
-                
-                // Remove folder insertion line
-                if (folderInsertionLine) {
-                    folderInsertionLine.remove();
-                    folderInsertionLine = null;
-                }
-            }
-            
-            if (hadDraggedTab) {
-                // Remove dragging class from all tabs
-                const allTabs = document.querySelectorAll('.tree-tab');
-                allTabs.forEach(tab => {
-                    tab.classList.remove('dragging');
-                });
-                
-                // Remove dragging class from container
-                const folderContent = document.querySelector('.tree-folder-content.dragging');
-                if (folderContent) {
-                    folderContent.classList.remove('dragging');
-                }
-                
-                // Remove tab insertion line
-                if (tabInsertionLine) {
-                    tabInsertionLine.remove();
-                    tabInsertionLine = null;
-                }
-            }
-        }, 50);
-    }
-
-    function handleTreeDragOver(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        
-        // Reduce log spam - only log occasionally
-        if (Math.random() < 0.01) { // Only log ~1% of dragover events
-            console.log('DRAG OVER EVENT (sampled):', e.target);
-        }
-        
-        // Handle folder drag over
-        if (draggedFolder) {
-            const targetFolderHeader = e.target.closest('.tree-folder-header');
-            if (targetFolderHeader) {
-                const targetFolder = targetFolderHeader.closest('.tree-folder');
-                const targetSpaceId = targetFolder.closest('.space-card').getAttribute('data-space-id');
-                const targetFolderIndex = parseInt(targetFolder.getAttribute('data-folder'));
-                
-                // Get target folder data to check if it's default
-                const targetSpaceIdNum = parseInt(targetSpaceId);
-                const targetSpace = dummySpaces.find(s => s.id === targetSpaceIdNum);
-                const targetFolderData = targetSpace && targetSpace.folders ? targetSpace.folders[targetFolderIndex] : null;
-                
-                // Only show visual feedback within the same space
-                if (targetFolder && targetFolder !== draggedFolder && targetSpaceId === draggedFolderSpaceId) {
-                    const rect = targetFolderHeader.getBoundingClientRect();
-                    const midpoint = rect.top + (rect.height / 2);
-                    const isTopHalf = e.clientY < midpoint;
-                    
-                    // Special handling for default folder
-                    if (targetFolderData && targetFolderData.isDefault) {
-                        // Allow insertion line AFTER default folder (bottom half)
-                        if (!isTopHalf) {
-                            showFolderInsertionLineAfter(targetFolder);
-                        } else {
-                            // Hide insertion line BEFORE default folder (top half)
-                            hideFolderInsertionLine();
-                        }
-                    } else {
-                        // Normal folder - show insertion lines normally
-                        // But don't show insertion line before first non-default folder (would be above default)
-                        if (isTopHalf && targetFolderIndex === 1) {
-                            hideFolderInsertionLine();
-                        } else if (isTopHalf) {
-                            showFolderInsertionLine(targetFolder);
-                        } else {
-                            showFolderInsertionLineAfter(targetFolder);
-                        }
-                    }
-                } else {
-                    hideFolderInsertionLine();
-                }
+            if (isExpanded) {
+                // Collapse folder
+                folderContent.style.display = 'none';
+                folderElement.classList.remove('expanded');
+                folderElement.classList.add('collapsed');
+                folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>';
             } else {
-                hideFolderInsertionLine();
+                // Expand folder
+                folderContent.style.display = 'block';
+                folderElement.classList.remove('collapsed');
+                folderElement.classList.add('expanded');
+                folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480l96-320h684L837-217q-8 26-29.5 41.5T760-160H160Z"/>';
             }
-        }
-        // Handle tab drag over
-        else if (draggedTab) {
-            const targetTab = e.target.closest('.tree-tab');
-            if (targetTab) {
-                const targetFolder = targetTab.closest('.tree-folder');
-                const targetFolderIndex = parseInt(targetFolder.getAttribute('data-folder'));
-                const targetSpaceId = targetTab.closest('.space-card').getAttribute('data-space-id');
-                
-                // Only show visual feedback within the same folder and space
-                if (targetTab && targetTab !== draggedTab && 
-                    targetFolderIndex === draggedTabFolderIndex && 
-                    targetSpaceId === draggedTabSpaceId) {
-                    
-                    const rect = targetTab.getBoundingClientRect();
-                    const midpoint = rect.top + (rect.height / 2);
-                    const isTopHalf = e.clientY < midpoint;
-                    
-                    if (isTopHalf) {
-                        showTabInsertionLine(targetTab);
-                    } else {
-                        showTabInsertionLineAfter(targetTab);
-                    }
-                } else {
-                    hideTabInsertionLine();
-                }
-            } else {
-                hideTabInsertionLine();
-            }
-        }
-    }
+        },
 
-    function handleTreeDrop(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        console.log('=== TREE DROP EVENT FIRED! ===');
-        
-        // Handle folder drop
-        if (draggedFolder) {
-            console.log('--- FOLDER DROP HANDLING ---');
-            
-            // Look for any folder header or folder element as drop target
-            const targetFolderHeader = e.target.closest('.tree-folder-header') || 
-                                     e.target.closest('[data-drop-zone="folder"]');
-            
-            if (targetFolderHeader) {
-                const targetFolder = targetFolderHeader.closest('.tree-folder');
+        _handleActionButton(btn) {
+            if (btn.classList.contains('load-btn')) {
+                const isFolder = btn.closest('.tree-folder-header');
+                const isTab = btn.closest('.tree-tab');
                 
-                if (targetFolder && targetFolder !== draggedFolder) {
-                    const targetSpaceId = targetFolder.closest('.space-card').getAttribute('data-space-id');
-                    
-                    // Only allow dropping within the same space
-                    if (targetSpaceId === draggedFolderSpaceId) {
-                        const targetFolderIndex = parseInt(targetFolder.getAttribute('data-folder'));
-                        
-                        if (targetFolderIndex !== draggedFolderIndex) {
-                            console.log('ATTEMPTING FOLDER REORDER');
-                            
-                            // Find the space and get folder data
-                            const space = dummySpaces.find(s => s.id === parseInt(draggedFolderSpaceId));
-                            if (space && space.folders && space.folders[draggedFolderIndex]) {
-                                const draggedFolderData = space.folders[draggedFolderIndex];
-                                const targetFolderData = space.folders[targetFolderIndex];
-                                
-                                // Handle default folder drop restrictions
-                                if (targetFolderData && targetFolderData.isDefault) {
-                                    // Only allow dropping AFTER default folder (bottom half)
-                                    const rect = targetFolderHeader.getBoundingClientRect();
-                                    const midpoint = rect.top + (rect.height / 2);
-                                    const isTopHalf = e.clientY < midpoint;
-                                    
-                                    if (isTopHalf) {
-                                        console.log('Cannot drop before default folder');
-                                        return;
-                                    }
-                                    // Continue with drop after default folder (isTopHalf = false)
-                                }
-                                
-                                // Use precise insertion logic based on mouse position
-                                const rect = targetFolderHeader.getBoundingClientRect();
-                                const midpoint = rect.top + (rect.height / 2);
-                                const isTopHalf = e.clientY < midpoint;
-                                
-                                let insertIndex = targetFolderIndex;
-                                if (!isTopHalf && draggedFolderIndex < targetFolderIndex) {
-                                    insertIndex = targetFolderIndex;
-                                } else if (!isTopHalf && draggedFolderIndex > targetFolderIndex) {
-                                    insertIndex = targetFolderIndex + 1;
-                                } else if (isTopHalf && draggedFolderIndex > targetFolderIndex) {
-                                    insertIndex = targetFolderIndex;
-                                } else if (isTopHalf && draggedFolderIndex < targetFolderIndex) {
-                                    insertIndex = targetFolderIndex - 1;
-                                }
-                                
-                                // Ensure we never insert at index 0 (reserved for default folder)
-                                if (insertIndex === 0) {
-                                    insertIndex = 1;
-                                }
-                                
-                                console.log('Insert index:', insertIndex, 'isTopHalf:', isTopHalf);
-                                
-                                console.log('Reordering folders...');
-                                space.folders.splice(draggedFolderIndex, 1);
-                                space.folders.splice(insertIndex, 0, draggedFolderData);
-                                
-                                // Re-render
-                                renderSpacesGrid();
-                                console.log('Folder reorder complete!');
-                            }
-                        }
-                    }
+                if (isFolder) {
+                    const folderName = btn.closest('.tree-folder').querySelector('.tree-label').textContent;
+                    console.log('Load folder:', folderName);
+                    // TODO: Implement folder loading functionality
+                } else if (isTab) {
+                    const tabTitle = btn.closest('.tree-tab').querySelector('.tree-label').textContent;
+                    console.log('Load tab:', tabTitle);
+                    // TODO: Implement tab loading functionality
+                }
+            } else if (btn.classList.contains('add-tab-btn')) {
+                const folderElement = btn.closest('.tree-folder');
+                if (folderElement) {
+                    const folderName = folderElement.querySelector('.tree-label').textContent;
+                    console.log('Add tab to folder:', folderName);
+                    // TODO: Implement add tab to folder functionality
+                }
+            } else if (btn.classList.contains('options-btn')) {
+                const isFolder = btn.closest('.tree-folder-header');
+                const isTab = btn.closest('.tree-tab');
+                
+                if (isFolder) {
+                    const folderName = btn.closest('.tree-folder').querySelector('.tree-label').textContent;
+                    console.log('Folder options:', folderName);
+                    // TODO: Implement folder options menu
+                } else if (isTab) {
+                    const tabTitle = btn.closest('.tree-tab').querySelector('.tree-label').textContent;
+                    console.log('Tab options:', tabTitle);
+                    // TODO: Implement tab options menu
                 }
             }
         }
-        // Handle tab drop
-        else if (draggedTab) {
-            console.log('--- TAB DROP HANDLING ---');
-            
-            // Look for any tab element as drop target
-            const targetTab = e.target.closest('.tree-tab') || 
-                            e.target.closest('[data-drop-zone="tab"]');
-            
-            if (targetTab && targetTab !== draggedTab) {
-                const targetFolder = targetTab.closest('.tree-folder');
-                const targetFolderIndex = parseInt(targetFolder.getAttribute('data-folder'));
-                const targetSpaceId = targetTab.closest('.space-card').getAttribute('data-space-id');
-                
-                // Only allow dropping within the same folder and space
-                if (targetFolderIndex === draggedTabFolderIndex && targetSpaceId === draggedTabSpaceId) {
-                    const targetTabId = parseInt(targetTab.getAttribute('data-tab-id'));
-                    
-                    if (targetTabId !== draggedTabIndex) {
-                        console.log('ATTEMPTING TAB REORDER');
-                        
-                        // Find the space and folder
-                        const space = dummySpaces.find(s => s.id === parseInt(draggedTabSpaceId));
-                        if (space && space.folders && space.folders[draggedTabFolderIndex]) {
-                            const folder = space.folders[draggedTabFolderIndex];
-                            const draggedTabCurrentIndex = folder.tabs.findIndex(tab => tab.tabId === draggedTabIndex);
-                            const targetTabCurrentIndex = folder.tabs.findIndex(tab => tab.tabId === targetTabId);
-                            
-                            if (draggedTabCurrentIndex !== -1 && targetTabCurrentIndex !== -1) {
-                                console.log('Reordering tabs...');
-                                
-                                // Use precise insertion logic based on mouse position (like insertion line)
-                                const rect = targetTab.getBoundingClientRect();
-                                const midpoint = rect.top + (rect.height / 2);
-                                const isTopHalf = e.clientY < midpoint;
-                                
-                                let insertIndex = targetTabCurrentIndex;
-                                if (!isTopHalf && draggedTabCurrentIndex < targetTabCurrentIndex) {
-                                    insertIndex = targetTabCurrentIndex;
-                                } else if (!isTopHalf && draggedTabCurrentIndex > targetTabCurrentIndex) {
-                                    insertIndex = targetTabCurrentIndex + 1;
-                                } else if (isTopHalf && draggedTabCurrentIndex > targetTabCurrentIndex) {
-                                    insertIndex = targetTabCurrentIndex;
-                                } else if (isTopHalf && draggedTabCurrentIndex < targetTabCurrentIndex) {
-                                    insertIndex = targetTabCurrentIndex - 1;
-                                }
-                                
-                                console.log('Tab insert index:', insertIndex, 'isTopHalf:', isTopHalf);
-                                
-                                const draggedTabData = folder.tabs[draggedTabCurrentIndex];
-                                folder.tabs.splice(draggedTabCurrentIndex, 1);
-                                folder.tabs.splice(insertIndex, 0, draggedTabData);
-                                
-                                // Re-render
-                                renderSpacesGrid();
-                                console.log('Tab reorder complete!');
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        console.log('=== END DROP EVENT ===\n');
     }
-
-    // Folder insertion line helpers
-    function createFolderInsertionLine(spaceElement) {
-        // Remove any existing folder insertion line first
-        if (folderInsertionLine) {
-            folderInsertionLine.remove();
-            folderInsertionLine = null;
-        }
-        
-        folderInsertionLine = document.createElement('div');
-        folderInsertionLine.className = 'folder-insertion-line';
-        folderInsertionLine.style.position = 'absolute';
-        folderInsertionLine.style.left = '16px';
-        folderInsertionLine.style.right = '8px';
-        folderInsertionLine.style.height = '1px';
-        folderInsertionLine.style.background = 'var(--text-secondary)';
-        folderInsertionLine.style.pointerEvents = 'none';
-        folderInsertionLine.style.zIndex = '10';
-        folderInsertionLine.style.opacity = '0';
-        folderInsertionLine.style.transition = 'opacity 0.2s ease';
-        
-        const spaceTree = spaceElement.querySelector('.space-tree');
-        if (spaceTree) {
-            // Set the space tree to relative positioning to contain the absolute line
-            spaceTree.style.position = 'relative';
-            spaceTree.appendChild(folderInsertionLine);
-        }
-    }
-    
-    function showFolderInsertionLine(beforeFolder) {
-        if (folderInsertionLine && beforeFolder) {
-            const spaceTree = beforeFolder.closest('.space-tree');
-            if (spaceTree && spaceTree.contains(folderInsertionLine)) {
-                const spaceTreeRect = spaceTree.getBoundingClientRect();
-                const folderRect = beforeFolder.getBoundingClientRect();
-                
-                const relativeTop = folderRect.top - spaceTreeRect.top;
-                folderInsertionLine.style.top = relativeTop + 'px';
-                folderInsertionLine.style.opacity = '0.8';
-            }
-        }
-    }
-    
-    function showFolderInsertionLineAfter(afterFolder) {
-        if (folderInsertionLine && afterFolder) {
-            const spaceTree = afterFolder.closest('.space-tree');
-            if (spaceTree && spaceTree.contains(folderInsertionLine)) {
-                const spaceTreeRect = spaceTree.getBoundingClientRect();
-                
-                // Check if folder is expanded and has content
-                const folderContent = afterFolder.querySelector('.tree-folder-content');
-                const isExpanded = folderContent && folderContent.style.display !== 'none';
-                
-                let bottomPosition;
-                if (isExpanded && folderContent) {
-                    // For expanded folders, position after the entire folder including content
-                    const folderContentRect = folderContent.getBoundingClientRect();
-                    bottomPosition = folderContentRect.bottom - spaceTreeRect.top;
-                } else {
-                    // For collapsed folders, position after just the header
-                    const folderRect = afterFolder.getBoundingClientRect();
-                    bottomPosition = folderRect.bottom - spaceTreeRect.top;
-                }
-                
-                folderInsertionLine.style.top = bottomPosition + 'px';
-                folderInsertionLine.style.opacity = '0.8';
-            }
-        }
-    }
-    
-    function hideFolderInsertionLine() {
-        if (folderInsertionLine) {
-            folderInsertionLine.style.opacity = '0';
-        }
-    }
-    
-    // Tab insertion line helpers
-    function createTabInsertionLine(folderElement) {
-        // Remove any existing tab insertion line first
-        if (tabInsertionLine) {
-            tabInsertionLine.remove();
-            tabInsertionLine = null;
-        }
-        
-        tabInsertionLine = document.createElement('div');
-        tabInsertionLine.className = 'tab-insertion-line';
-        tabInsertionLine.style.position = 'absolute';
-        tabInsertionLine.style.left = '24px'; // Indent to match tab level
-        tabInsertionLine.style.right = '8px';
-        tabInsertionLine.style.height = '1px';
-        tabInsertionLine.style.background = 'var(--text-secondary)';
-        tabInsertionLine.style.pointerEvents = 'none';
-        tabInsertionLine.style.zIndex = '10';
-        tabInsertionLine.style.opacity = '0';
-        tabInsertionLine.style.transition = 'opacity 0.2s ease';
-        
-        const folderContent = folderElement.querySelector('.tree-folder-content');
-        if (folderContent) {
-            // Set the folder content to relative positioning to contain the absolute line
-            folderContent.style.position = 'relative';
-            folderContent.appendChild(tabInsertionLine);
-        }
-    }
-    
-    function showTabInsertionLine(beforeTab) {
-        if (tabInsertionLine && beforeTab) {
-            const folderContent = beforeTab.closest('.tree-folder-content');
-            if (folderContent && folderContent.contains(tabInsertionLine)) {
-                const folderContentRect = folderContent.getBoundingClientRect();
-                const tabRect = beforeTab.getBoundingClientRect();
-                
-                const relativeTop = tabRect.top - folderContentRect.top;
-                tabInsertionLine.style.top = relativeTop + 'px';
-                tabInsertionLine.style.opacity = '0.8';
-            }
-        }
-    }
-    
-    function showTabInsertionLineAfter(afterTab) {
-        if (tabInsertionLine && afterTab) {
-            const folderContent = afterTab.closest('.tree-folder-content');
-            if (folderContent && folderContent.contains(tabInsertionLine)) {
-                const folderContentRect = folderContent.getBoundingClientRect();
-                const tabRect = afterTab.getBoundingClientRect();
-                
-                const relativeTop = tabRect.bottom - folderContentRect.top;
-                tabInsertionLine.style.top = relativeTop + 'px';
-                tabInsertionLine.style.opacity = '0.8';
-            }
-        }
-    }
-    
-    function hideTabInsertionLine() {
-        if (tabInsertionLine) {
-            tabInsertionLine.style.opacity = '0';
-        }
-    }
-
-
-/* SECTION: Add Essential Modal */
-
-    // Add Essential Modal Functionality
-    function initializeAddEssentialModal() {
-        const addEssentialBtn = document.querySelector('.add-essential');
-        const modal = document.getElementById('add-essential-modal');
-        const form = document.getElementById('add-essential-form');
-        const urlInput = document.getElementById('essential-url');
-        const urlError = document.getElementById('url-error');
-        const cancelBtn = document.getElementById('cancel-essential');
-        const submitBtn = document.getElementById('add-essential-submit');
-
-        // Show modal when add essential button is clicked
-        if (addEssentialBtn) {
-            addEssentialBtn.addEventListener('click', () => {
-                showAddEssentialModal();
-            });
-        }
-
-        // Hide modal when cancel button is clicked
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
-                hideAddEssentialModal();
-            });
-        }
-
-        // Hide modal when clicking outside
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    hideAddEssentialModal();
-                }
-            });
-        }
-
-        // Handle form submission (validation only, no actual submission yet)
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                handleAddEssentialSubmit();
-            });
-        }
-
-        // Real-time URL validation and favicon loading
-        if (urlInput) {
-            urlInput.addEventListener('input', () => {
-                clearUrlError();
-                validateUrl();
-                debouncedLoadFavicon();
-            });
-            
-            urlInput.addEventListener('paste', () => {
-                // Small delay to let paste complete
-                setTimeout(() => {
-                    clearUrlError();
-                    validateUrl();
-                    debouncedLoadFavicon();
-                }, 50);
-            });
-        }
-
-        // Handle escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && modal && modal.style.display !== 'none') {
-                hideAddEssentialModal();
-            }
-        });
-    }
-
-    function showAddEssentialModal() {
-        const modal = document.getElementById('add-essential-modal');
-        const urlInput = document.getElementById('essential-url');
-        
-        if (modal) {
-            modal.style.display = 'flex';
-            // Focus the input after a brief delay to allow the modal to animate in
-            setTimeout(() => {
-                if (urlInput) {
-                    urlInput.focus();
-                }
-            }, 100);
-        }
-    }
-
-    function hideAddEssentialModal() {
-        const modal = document.getElementById('add-essential-modal');
-        const form = document.getElementById('add-essential-form');
-        
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        
-        // Reset form
-        if (form) {
-            form.reset();
-            clearUrlError();
-            resetFaviconPreview();
-        }
-    }
-
-    function validateUrl() {
-        const urlInput = document.getElementById('essential-url');
-        const submitBtn = document.getElementById('add-essential-submit');
-        
-        if (!urlInput || !submitBtn) return false;
-
-        const url = urlInput.value.trim();
-        
-        // Check if URL is empty
-        if (!url) {
-            submitBtn.disabled = true;
-            return false;
-        }
-
-        // Check if URL is valid
-        try {
-            new URL(url);
-            submitBtn.disabled = false;
-            return true;
-        } catch {
-            // Check if it's a domain without protocol
-            if (url && !url.includes(' ') && url.includes('.')) {
-                // Auto-add https:// if missing
-                urlInput.value = `https://${url}`;
-                submitBtn.disabled = false;
-                return true;
-            }
-            
-            showUrlError('Please enter a valid URL (e.g., https://example.com)');
-            submitBtn.disabled = true;
-            return false;
-        }
-    }
-
-    function showUrlError(message) {
-        const urlError = document.getElementById('url-error');
-        if (urlError) {
-            urlError.textContent = message;
-            urlError.style.display = 'block';
-        }
-    }
-
-    function clearUrlError() {
-        const urlError = document.getElementById('url-error');
-        if (urlError) {
-            urlError.style.display = 'none';
-            urlError.textContent = '';
-        }
-    }
-
-    async function handleAddEssentialSubmit() {
-        const urlInput = document.getElementById('essential-url');
-        const submitBtn = document.getElementById('add-essential-submit');
-        
-        if (!urlInput) return;
-
-        const url = urlInput.value.trim();
-        
-        if (!validateUrl()) {
-            return;
-        }
-
-        // Show loading state
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Adding...';
-        }
-        
-        MessageBanner.loading('Adding essential...');
-
-        try {
-            // Send message to background script to add essential
-            const response = await chrome.runtime.sendMessage({
-                type: 'addEssential',
-                url: url
-            });
-
-            if (response.success) {
-                MessageBanner.success('Essential added successfully!');
-                
-                // Small delay to show success message before closing modal
-                setTimeout(() => {
-                    hideAddEssentialModal();
-                    MessageBanner.hide();
-                }, 1500);
-            } else {
-                MessageBanner.error(response.error || 'Failed to add essential');
-                
-                // Reset button state on error
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Add Essential';
-                }
-            }
-        } catch (error) {
-            console.error('Add essential error:', error);
-            MessageBanner.error('Failed to add essential. Please try again.');
-            
-            // Reset button state on error
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Add Essential';
-            }
-        }
-    }
-
-    // Favicon loading functionality
-    let faviconLoadTimeout = null;
-    const faviconCache = new Map(); // Cache for loaded favicons
-
-    function debouncedLoadFavicon() {
-        // Clear existing timeout
-        if (faviconLoadTimeout) {
-            clearTimeout(faviconLoadTimeout);
-        }
-        
-        // Set new timeout for 500ms delay
-        faviconLoadTimeout = setTimeout(() => {
-            loadFavicon();
-        }, 500);
-    }
-
-    function loadFavicon() {
-        const urlInput = document.getElementById('essential-url');
-        const faviconPreview = document.getElementById('favicon-preview');
-        const faviconImg = document.getElementById('favicon-img');
-        const faviconPlaceholder = faviconPreview?.querySelector('.favicon-placeholder');
-        
-        if (!urlInput || !faviconPreview || !faviconImg) return;
-
-        const url = urlInput.value.trim();
-        
-        // Reset to placeholder if URL is empty or invalid
-        if (!url) {
-            resetFaviconPreview();
-            return;
-        }
-
-        // Validate URL before attempting to load favicon
-        let validUrl;
-        try {
-            validUrl = new URL(url);
-        } catch {
-            // Try adding https:// if missing
-            if (url && !url.includes(' ') && url.includes('.')) {
-                try {
-                    validUrl = new URL(`https://${url}`);
-                } catch {
-                    resetFaviconPreview();
-                    return;
-                }
-            } else {
-                resetFaviconPreview();
-                return;
-            }
-        }
-
-        // Check cache first
-        const cacheKey = validUrl.hostname.toLowerCase();
-        if (faviconCache.has(cacheKey)) {
-            const cachedFavicon = faviconCache.get(cacheKey);
-            if (cachedFavicon) {
-                setFaviconLoaded(cachedFavicon);
-            } else {
-                setFaviconError();
-            }
-            return;
-        }
-
-        // Set loading state
-        setFaviconLoading();
-
-        // Check for special domain handling first
-        const specialFavicon = getSpecialDomainFavicon(validUrl);
-        if (specialFavicon) {
-            const testImg = new Image();
-            testImg.onload = function() {
-                setFaviconLoaded(specialFavicon);
-            };
-            testImg.onerror = function() {
-                // If special favicon fails, continue with normal flow
-                tryStandardFavicon(validUrl);
-            };
-            testImg.src = specialFavicon;
-        } else {
-            tryStandardFavicon(validUrl);
-        }
-    }
-
-    function getSpecialDomainFavicon(validUrl) {
-        const hostname = validUrl.hostname.toLowerCase();
-        
-        // Special handling for popular websites with known favicon patterns
-        const specialDomains = {
-            'mail.google.com': 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico',
-            'gmail.com': 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico',
-            'calendar.google.com': 'https://calendar.google.com/googlecalendar/images/favicon_v2014_4.ico',
-            'drive.google.com': 'https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png',
-            'docs.google.com': 'https://ssl.gstatic.com/docs/common/product/docs_app_icon2.png',
-            'sheets.google.com': 'https://ssl.gstatic.com/docs/common/product/sheets_app_icon2.png',
-            'slides.google.com': 'https://ssl.gstatic.com/docs/common/product/slides_app_icon2.png',
-            'photos.google.com': 'https://ssl.gstatic.com/social/photosui/images/favicon/favicon_square_32.png',
-            'analytics.google.com': 'https://www.google.com/analytics/web/images/favicon.ico',
-            'stackoverflow.com': 'https://cdn.sstatic.net/Sites/stackoverflow/Img/favicon.ico',
-            'github.com': 'https://github.com/favicon.ico',
-            'linkedin.com': 'https://static.licdn.com/aero-v1/sc/h/al2o9zrvru7aqj8e1x2rzsrca',
-            'twitter.com': 'https://abs.twimg.com/favicons/twitter.2.ico',
-            'x.com': 'https://abs.twimg.com/favicons/twitter.2.ico',
-            'facebook.com': 'https://static.xx.fbcdn.net/rsrc.php/yb/r/hLRJ1GG_y0J.ico',
-            'instagram.com': 'https://static.cdninstagram.com/rsrc.php/v3/yt/r/30PrGfR3xhH.ico',
-            'youtube.com': 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_32x32.png',
-            'netflix.com': 'https://assets.nflxext.com/us/ffe/siteui/common/icons/nficon2016.ico',
-            'spotify.com': 'https://open.spotify.com/favicon.ico',
-            'reddit.com': 'https://www.redditstatic.com/shreddit/assets/favicon/64x64.png',
-            'discord.com': 'https://discord.com/assets/f9bb9c4af2b9c32a2c5ee0014661546d.ico',
-            'slack.com': 'https://a.slack-edge.com/80588/img/icons/favicon-32.png',
-            'notion.so': 'https://www.notion.so/images/favicon.ico',
-            'figma.com': 'https://static.figma.com/app/icon/1/favicon.png'
-        };
-        
-        // Check exact hostname match first
-        if (specialDomains[hostname]) {
-            return specialDomains[hostname];
-        }
-        
-        // Check for subdomain matches
-        for (const domain in specialDomains) {
-            if (hostname.endsWith('.' + domain) || hostname === domain) {
-                return specialDomains[domain];
-            }
-        }
-        
-        return null;
-    }
-
-    function tryStandardFavicon(validUrl) {
-        // Try to load standard favicon
-        const faviconUrl = `${validUrl.protocol}//${validUrl.hostname}/favicon.ico`;
-        
-        // Create new image to test if favicon loads
-        const testImg = new Image();
-        
-        testImg.onload = function() {
-            setFaviconLoaded(faviconUrl);
-        };
-        
-        testImg.onerror = function() {
-            // Try alternative favicon URLs
-            tryAlternativeFavicons(validUrl);
-        };
-        
-        testImg.src = faviconUrl;
-    }
-
-    function tryAlternativeFavicons(validUrl) {
-        // Enhanced favicon detection with more comprehensive fallbacks
-        const alternatives = [
-            // Standard favicon formats
-            `${validUrl.protocol}//${validUrl.hostname}/favicon.png`,
-            `${validUrl.protocol}//${validUrl.hostname}/favicon.svg`,
-            `${validUrl.protocol}//${validUrl.hostname}/apple-touch-icon.png`,
-            `${validUrl.protocol}//${validUrl.hostname}/apple-touch-icon-precomposed.png`,
-            `${validUrl.protocol}//${validUrl.hostname}/icon.png`,
-            `${validUrl.protocol}//${validUrl.hostname}/icon.svg`,
-            
-            // Common subdirectories
-            `${validUrl.protocol}//${validUrl.hostname}/images/favicon.ico`,
-            `${validUrl.protocol}//${validUrl.hostname}/images/favicon.png`,
-            `${validUrl.protocol}//${validUrl.hostname}/assets/favicon.ico`,
-            `${validUrl.protocol}//${validUrl.hostname}/assets/favicon.png`,
-            `${validUrl.protocol}//${validUrl.hostname}/static/favicon.ico`,
-            `${validUrl.protocol}//${validUrl.hostname}/static/favicon.png`,
-            
-            // High resolution variants
-            `${validUrl.protocol}//${validUrl.hostname}/favicon-32x32.png`,
-            `${validUrl.protocol}//${validUrl.hostname}/favicon-16x16.png`,
-            `${validUrl.protocol}//${validUrl.hostname}/android-chrome-192x192.png`,
-            `${validUrl.protocol}//${validUrl.hostname}/apple-touch-icon-152x152.png`
-        ];
-
-        let currentIndex = 0;
-
-        function tryNext() {
-            if (currentIndex >= alternatives.length) {
-                // Try multiple favicon services for better coverage
-                tryFaviconServices(validUrl);
-                return;
-            }
-
-            const testImg = new Image();
-            
-            testImg.onload = function() {
-                setFaviconLoaded(alternatives[currentIndex]);
-            };
-            
-            testImg.onerror = function() {
-                currentIndex++;
-                tryNext();
-            };
-            
-            testImg.src = alternatives[currentIndex];
-        }
-
-        tryNext();
-    }
-
-    function tryFaviconServices(validUrl) {
-        // Multiple favicon service providers for better reliability
-        const faviconServices = [
-            // Google's favicon service with different parameters
-            `https://www.google.com/s2/favicons?domain=${validUrl.hostname}&sz=128`,
-            `https://www.google.com/s2/favicons?domain=${validUrl.hostname}&sz=64`,
-            `https://www.google.com/s2/favicons?domain=${validUrl.hostname}&sz=32`,
-            
-            // Try with full URL for better detection of page-specific favicons
-            `https://www.google.com/s2/favicons?domain=${validUrl.host}&sz=64`,
-            
-            // Alternative favicon services
-            `https://icons.duckduckgo.com/ip3/${validUrl.hostname}.ico`,
-            `https://favicons.githubusercontent.com/${validUrl.hostname}`,
-            
-            // Try with www prefix if not present
-            ...(validUrl.hostname.startsWith('www.') ? [] : [
-                `https://www.google.com/s2/favicons?domain=www.${validUrl.hostname}&sz=64`,
-                `https://icons.duckduckgo.com/ip3/www.${validUrl.hostname}.ico`
-            ])
-        ];
-
-        let serviceIndex = 0;
-
-        function tryNextService() {
-            if (serviceIndex >= faviconServices.length) {
-                // All services failed, show error state
-                setFaviconError();
-                return;
-            }
-
-            const testImg = new Image();
-            
-            testImg.onload = function() {
-                // Additional check to ensure the image actually loaded with content
-                if (this.width > 0 && this.height > 0) {
-                    setFaviconLoaded(faviconServices[serviceIndex]);
-                } else {
-                    serviceIndex++;
-                    tryNextService();
-                }
-            };
-            
-            testImg.onerror = function() {
-                serviceIndex++;
-                tryNextService();
-            };
-            
-            testImg.src = faviconServices[serviceIndex];
-        }
-
-        tryNextService();
-    }
-
-    function setFaviconLoading() {
-        const faviconPreview = document.getElementById('favicon-preview');
-        const faviconImg = document.getElementById('favicon-img');
-        const faviconPlaceholder = faviconPreview?.querySelector('.favicon-placeholder');
-        const submitBtn = document.getElementById('add-essential-submit');
-        const cancelBtn = document.getElementById('cancel-essential');
-        
-        if (!faviconPreview || !faviconImg || !faviconPlaceholder) return;
-
-        faviconPreview.classList.add('loading');
-        faviconImg.style.display = 'none';
-        faviconPlaceholder.style.display = 'flex';
-        faviconPlaceholder.textContent = '⏳';
-
-        // Disable buttons during favicon loading
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.style.opacity = '0.6';
-        }
-        if (cancelBtn) {
-            cancelBtn.disabled = true;
-            cancelBtn.style.opacity = '0.6';
-        }
-    }
-
-    function setFaviconLoaded(faviconUrl) {
-        const faviconPreview = document.getElementById('favicon-preview');
-        const faviconImg = document.getElementById('favicon-img');
-        const faviconPlaceholder = faviconPreview?.querySelector('.favicon-placeholder');
-        const urlInput = document.getElementById('essential-url');
-        const submitBtn = document.getElementById('add-essential-submit');
-        const cancelBtn = document.getElementById('cancel-essential');
-        
-        if (!faviconPreview || !faviconImg || !faviconPlaceholder) return;
-
-        faviconPreview.classList.remove('loading');
-        faviconImg.src = faviconUrl;
-        faviconImg.style.display = 'block';
-        faviconPlaceholder.style.display = 'none';
-
-        // Re-enable buttons after favicon loading completes
-        if (cancelBtn) {
-            cancelBtn.disabled = false;
-            cancelBtn.style.opacity = '1';
-        }
-        if (submitBtn) {
-            // Only enable submit button if URL is valid
-            const isValidUrl = validateUrl();
-            submitBtn.disabled = !isValidUrl;
-            submitBtn.style.opacity = isValidUrl ? '1' : '0.6';
-        }
-
-        // Cache the successful favicon URL
-        if (urlInput) {
-            const url = urlInput.value.trim();
-            try {
-                const validUrl = new URL(url.includes('://') ? url : `https://${url}`);
-                const cacheKey = validUrl.hostname.toLowerCase();
-                faviconCache.set(cacheKey, faviconUrl);
-            } catch (e) {
-                // Ignore cache errors
-            }
-        }
-    }
-
-    function setFaviconError() {
-        const faviconPreview = document.getElementById('favicon-preview');
-        const faviconImg = document.getElementById('favicon-img');
-        const faviconPlaceholder = faviconPreview?.querySelector('.favicon-placeholder');
-        const urlInput = document.getElementById('essential-url');
-        const submitBtn = document.getElementById('add-essential-submit');
-        const cancelBtn = document.getElementById('cancel-essential');
-        
-        if (!faviconPreview || !faviconImg || !faviconPlaceholder) return;
-
-        faviconPreview.classList.remove('loading');
-        faviconImg.style.display = 'none';
-        faviconPlaceholder.style.display = 'flex';
-        faviconPlaceholder.textContent = '🌐';
-
-        // Re-enable buttons after favicon loading completes
-        if (cancelBtn) {
-            cancelBtn.disabled = false;
-            cancelBtn.style.opacity = '1';
-        }
-        if (submitBtn) {
-            // Only enable submit button if URL is valid
-            const isValidUrl = validateUrl();
-            submitBtn.disabled = !isValidUrl;
-            submitBtn.style.opacity = isValidUrl ? '1' : '0.6';
-        }
-
-        // Cache the failed result to avoid repeated attempts
-        if (urlInput) {
-            const url = urlInput.value.trim();
-            try {
-                const validUrl = new URL(url.includes('://') ? url : `https://${url}`);
-                const cacheKey = validUrl.hostname.toLowerCase();
-                faviconCache.set(cacheKey, null); // null indicates failed favicon load
-            } catch (e) {
-                // Ignore cache errors
-            }
-        }
-    }
-
-    function resetFaviconPreview() {
-        const faviconPreview = document.getElementById('favicon-preview');
-        const faviconImg = document.getElementById('favicon-img');
-        const faviconPlaceholder = faviconPreview?.querySelector('.favicon-placeholder');
-        const submitBtn = document.getElementById('add-essential-submit');
-        const cancelBtn = document.getElementById('cancel-essential');
-        
-        if (!faviconPreview || !faviconImg || !faviconPlaceholder) return;
-
-        // Clear any pending favicon load timeout
-        if (faviconLoadTimeout) {
-            clearTimeout(faviconLoadTimeout);
-            faviconLoadTimeout = null;
-        }
-
-        faviconPreview.classList.remove('loading');
-        faviconImg.style.display = 'none';
-        faviconImg.src = '';
-        faviconPlaceholder.style.display = 'flex';
-        faviconPlaceholder.textContent = '🌐';
-
-        // Reset button states
-        if (cancelBtn) {
-            cancelBtn.disabled = false;
-            cancelBtn.style.opacity = '1';
-        }
-        if (submitBtn) {
-            submitBtn.disabled = true; // Disabled by default since no URL
-            submitBtn.style.opacity = '0.6';
-        }
-    }
-
-    // Initialize the Add Essential modal
-    initializeAddEssentialModal();
-}); 
-
+});
