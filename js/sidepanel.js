@@ -439,6 +439,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const addEssentialItem = document.createElement('div');
                     addEssentialItem.className = 'essential-item add-essential';
                     addEssentialItem.setAttribute('title', 'Add Essential');
+                    addEssentialItem.addEventListener('click', UI_NEW_ESSENTIAL_MODAL.show);
                     
                     addEssentialItem.innerHTML = `
                         <div class="essential-icon add-icon">
@@ -532,6 +533,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             return card;
         },
+
 
         // spaces helpers
 
@@ -866,4 +868,495 @@ document.addEventListener('DOMContentLoaded', function() {
             return card;
         }
     }
+
+    // new essential modal handlers
+    const UI_NEW_ESSENTIAL_MODAL = {
+        modal: document.getElementById('add-essential-modal'),
+        form: document.getElementById('add-essential-form'),
+        urlInput: document.getElementById('essential-url'),
+        urlError: document.getElementById('url-error'),
+        cancelBtn: document.getElementById('cancel-essential'),
+        submitBtn: document.getElementById('add-essential-submit'),
+        faviconPreview: document.getElementById('favicon-preview'),
+        faviconImg: document.getElementById('favicon-img'),
+        
+        // Internal state
+        _faviconLoadTimeout: null,
+        _faviconCache: new Map(),
+
+        init() {
+
+            // Hide modal when cancel button is clicked
+            if (this.cancelBtn) {
+                this.cancelBtn.addEventListener('click', () => {
+                    this.hide();
+                });
+            }
+
+            // Hide modal when clicking outside
+            this.modal.addEventListener('click', (e) => {
+                if (e.target === this.modal) {
+                    this.hide();
+                }
+            });
+
+            // Handle form submission
+            this.form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this._handleSubmit();
+            });
+
+            // Real-time URL validation and favicon loading
+            if (this.urlInput) {
+                this.urlInput.addEventListener('input', () => {
+                    this._clearUrlError();
+                    this._validateUrl();
+                    this._debouncedLoadFavicon();
+                });
+                
+                this.urlInput.addEventListener('paste', () => {
+                    setTimeout(() => {
+                        this._clearUrlError();
+                        this._validateUrl();
+                        this._debouncedLoadFavicon();
+                    }, 50);
+                });
+            }
+
+            // Handle escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this.modal && this.modal.style.display !== 'none') {
+                    this.hide();
+                }
+            });
+        },
+
+        show() {
+            document.getElementById('add-essential-modal').style.display = 'flex';
+
+            setTimeout(() => {
+                if (this.urlInput) {
+                    this.urlInput.focus();
+                }
+            }, 100);
+        },
+
+        hide() {
+            if (this.modal) {
+                this.modal.style.display = 'none';
+            }
+            
+            if (this.form) {
+                this.form.reset();
+                this._clearUrlError();
+                this._resetFaviconPreview();
+            }
+        },
+
+        _validateUrl() {
+            if (!this.urlInput || !this.submitBtn) return false;
+
+            const url = this.urlInput.value.trim();
+            
+            if (!url) {
+                this.submitBtn.disabled = true;
+                return false;
+            }
+
+            try {
+                new URL(url);
+                this.submitBtn.disabled = false;
+                return true;
+            } catch {
+                if (url && !url.includes(' ') && url.includes('.')) {
+                    this.urlInput.value = `https://${url}`;
+                    this.submitBtn.disabled = false;
+                    return true;
+                }
+                
+                this._showUrlError('Please enter a valid URL (e.g., https://example.com)');
+                this.submitBtn.disabled = true;
+                return false;
+            }
+        },
+
+        _showUrlError(message) {
+            if (this.urlError) {
+                this.urlError.textContent = message;
+                this.urlError.style.display = 'block';
+            }
+        },
+
+        _clearUrlError() {
+            if (this.urlError) {
+                this.urlError.style.display = 'none';
+                this.urlError.textContent = '';
+            }
+        },
+
+        async _handleSubmit() {
+            if (!this.urlInput) return;
+
+            const url = this.urlInput.value.trim();
+            
+            if (!this._validateUrl()) {
+                return;
+            }
+
+            if (this.submitBtn) {
+                this.submitBtn.disabled = true;
+                this.submitBtn.textContent = 'Adding...';
+            }
+            
+            MessageBanner.loading('Adding essential...');
+
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    type: 'addEssential',
+                    url: url
+                });
+
+                if (response.success) {
+                    MessageBanner.success('Essential added successfully!');
+                    
+                    setTimeout(() => {
+                        this.hide();
+                        MessageBanner.hide();
+                    }, 1500);
+                } else {
+                    MessageBanner.error(response.error || 'Failed to add essential');
+                    
+                    if (this.submitBtn) {
+                        this.submitBtn.disabled = false;
+                        this.submitBtn.textContent = 'Add Essential';
+                    }
+                }
+            } catch (error) {
+                console.error('Add essential error:', error);
+                MessageBanner.error('Failed to add essential. Please try again.');
+                
+                if (this.submitBtn) {
+                    this.submitBtn.disabled = false;
+                    this.submitBtn.textContent = 'Add Essential';
+                }
+            }
+        },
+
+        _debouncedLoadFavicon() {
+            if (this._faviconLoadTimeout) {
+                clearTimeout(this._faviconLoadTimeout);
+            }
+            
+            this._faviconLoadTimeout = setTimeout(() => {
+                this._loadFavicon();
+            }, 500);
+        },
+
+        _loadFavicon() {
+            if (!this.urlInput || !this.faviconPreview || !this.faviconImg) return;
+
+            const url = this.urlInput.value.trim();
+            
+            if (!url) {
+                this._resetFaviconPreview();
+                return;
+            }
+
+            let validUrl;
+            try {
+                validUrl = new URL(url);
+            } catch {
+                if (url && !url.includes(' ') && url.includes('.')) {
+                    try {
+                        validUrl = new URL(`https://${url}`);
+                    } catch {
+                        this._resetFaviconPreview();
+                        return;
+                    }
+                } else {
+                    this._resetFaviconPreview();
+                    return;
+                }
+            }
+
+            const cacheKey = validUrl.hostname.toLowerCase();
+            if (this._faviconCache.has(cacheKey)) {
+                const cachedFavicon = this._faviconCache.get(cacheKey);
+                if (cachedFavicon) {
+                    this._setFaviconLoaded(cachedFavicon);
+                } else {
+                    this._setFaviconError();
+                }
+                return;
+            }
+
+            this._setFaviconLoading();
+
+            const specialFavicon = this._getSpecialDomainFavicon(validUrl);
+            if (specialFavicon) {
+                const testImg = new Image();
+                testImg.onload = () => {
+                    this._setFaviconLoaded(specialFavicon);
+                };
+                testImg.onerror = () => {
+                    this._tryStandardFavicon(validUrl);
+                };
+                testImg.src = specialFavicon;
+            } else {
+                this._tryStandardFavicon(validUrl);
+            }
+        },
+
+        _getSpecialDomainFavicon(validUrl) {
+            const hostname = validUrl.hostname.toLowerCase();
+            
+            const specialDomains = {
+                'mail.google.com': 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico',
+                'gmail.com': 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico',
+                'calendar.google.com': 'https://calendar.google.com/googlecalendar/images/favicon_v2014_4.ico',
+                'drive.google.com': 'https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png',
+                'docs.google.com': 'https://ssl.gstatic.com/docs/common/product/docs_app_icon2.png',
+                'sheets.google.com': 'https://ssl.gstatic.com/docs/common/product/sheets_app_icon2.png',
+                'slides.google.com': 'https://ssl.gstatic.com/docs/common/product/slides_app_icon2.png',
+                'photos.google.com': 'https://ssl.gstatic.com/social/photosui/images/favicon/favicon_square_32.png',
+                'analytics.google.com': 'https://www.google.com/analytics/web/images/favicon.ico',
+                'stackoverflow.com': 'https://cdn.sstatic.net/Sites/stackoverflow/Img/favicon.ico',
+                'github.com': 'https://github.com/favicon.ico',
+                'linkedin.com': 'https://static.licdn.com/aero-v1/sc/h/al2o9zrvru7aqj8e1x2rzsrca',
+                'twitter.com': 'https://abs.twimg.com/favicons/twitter.2.ico',
+                'x.com': 'https://abs.twimg.com/favicons/twitter.2.ico',
+                'facebook.com': 'https://static.xx.fbcdn.net/rsrc.php/yb/r/hLRJ1GG_y0J.ico',
+                'instagram.com': 'https://static.cdninstagram.com/rsrc.php/v3/yt/r/30PrGfR3xhH.ico',
+                'youtube.com': 'https://www.youtube.com/s/desktop/12d6b690/img/favicon_32x32.png',
+                'netflix.com': 'https://assets.nflxext.com/us/ffe/siteui/common/icons/nficon2016.ico',
+                'spotify.com': 'https://open.spotify.com/favicon.ico',
+                'reddit.com': 'https://www.redditstatic.com/shreddit/assets/favicon/64x64.png',
+                'discord.com': 'https://discord.com/assets/f9bb9c4af2b9c32a2c5ee0014661546d.ico',
+                'slack.com': 'https://a.slack-edge.com/80588/img/icons/favicon-32.png',
+                'notion.so': 'https://www.notion.so/images/favicon.ico',
+                'figma.com': 'https://static.figma.com/app/icon/1/favicon.png'
+            };
+            
+            if (specialDomains[hostname]) {
+                return specialDomains[hostname];
+            }
+            
+            for (const domain in specialDomains) {
+                if (hostname.endsWith('.' + domain) || hostname === domain) {
+                    return specialDomains[domain];
+                }
+            }
+            
+            return null;
+        },
+
+        _tryStandardFavicon(validUrl) {
+            const faviconUrl = `${validUrl.protocol}//${validUrl.hostname}/favicon.ico`;
+            
+            const testImg = new Image();
+            testImg.onload = () => {
+                this._setFaviconLoaded(faviconUrl);
+            };
+            testImg.onerror = () => {
+                this._tryAlternativeFavicons(validUrl);
+            };
+            testImg.src = faviconUrl;
+        },
+
+        _tryAlternativeFavicons(validUrl) {
+            const alternatives = [
+                `${validUrl.protocol}//${validUrl.hostname}/favicon.png`,
+                `${validUrl.protocol}//${validUrl.hostname}/favicon.svg`,
+                `${validUrl.protocol}//${validUrl.hostname}/apple-touch-icon.png`,
+                `${validUrl.protocol}//${validUrl.hostname}/apple-touch-icon-precomposed.png`,
+                `${validUrl.protocol}//${validUrl.hostname}/icon.png`,
+                `${validUrl.protocol}//${validUrl.hostname}/icon.svg`,
+                `${validUrl.protocol}//${validUrl.hostname}/images/favicon.ico`,
+                `${validUrl.protocol}//${validUrl.hostname}/images/favicon.png`,
+                `${validUrl.protocol}//${validUrl.hostname}/assets/favicon.ico`,
+                `${validUrl.protocol}//${validUrl.hostname}/assets/favicon.png`,
+                `${validUrl.protocol}//${validUrl.hostname}/static/favicon.ico`,
+                `${validUrl.protocol}//${validUrl.hostname}/static/favicon.png`,
+                `${validUrl.protocol}//${validUrl.hostname}/favicon-32x32.png`,
+                `${validUrl.protocol}//${validUrl.hostname}/favicon-16x16.png`,
+                `${validUrl.protocol}//${validUrl.hostname}/android-chrome-192x192.png`,
+                `${validUrl.protocol}//${validUrl.hostname}/apple-touch-icon-152x152.png`
+            ];
+
+            let currentIndex = 0;
+
+            const tryNext = () => {
+                if (currentIndex >= alternatives.length) {
+                    this._tryFaviconServices(validUrl);
+                    return;
+                }
+
+                const testImg = new Image();
+                testImg.onload = () => {
+                    this._setFaviconLoaded(alternatives[currentIndex]);
+                };
+                testImg.onerror = () => {
+                    currentIndex++;
+                    tryNext();
+                };
+                testImg.src = alternatives[currentIndex];
+            };
+
+            tryNext();
+        },
+
+        _tryFaviconServices(validUrl) {
+            const faviconServices = [
+                `https://www.google.com/s2/favicons?domain=${validUrl.hostname}&sz=128`,
+                `https://www.google.com/s2/favicons?domain=${validUrl.hostname}&sz=64`,
+                `https://www.google.com/s2/favicons?domain=${validUrl.hostname}&sz=32`,
+                `https://www.google.com/s2/favicons?domain=${validUrl.host}&sz=64`,
+                `https://icons.duckduckgo.com/ip3/${validUrl.hostname}.ico`,
+                `https://favicons.githubusercontent.com/${validUrl.hostname}`,
+                ...(validUrl.hostname.startsWith('www.') ? [] : [
+                    `https://www.google.com/s2/favicons?domain=www.${validUrl.hostname}&sz=64`,
+                    `https://icons.duckduckgo.com/ip3/www.${validUrl.hostname}.ico`
+                ])
+            ];
+
+            let serviceIndex = 0;
+
+            const tryNextService = () => {
+                if (serviceIndex >= faviconServices.length) {
+                    this._setFaviconError();
+                    return;
+                }
+
+                const testImg = new Image();
+                testImg.onload = function() {
+                    if (this.width > 0 && this.height > 0) {
+                        UI_NEW_ESSENTIAL_MODAL._setFaviconLoaded(faviconServices[serviceIndex]);
+                    } else {
+                        serviceIndex++;
+                        tryNextService();
+                    }
+                };
+                testImg.onerror = () => {
+                    serviceIndex++;
+                    tryNextService();
+                };
+                testImg.src = faviconServices[serviceIndex];
+            };
+
+            tryNextService();
+        },
+
+        _setFaviconLoading() {
+            const faviconPlaceholder = this.faviconPreview?.querySelector('.favicon-placeholder');
+            
+            if (!this.faviconPreview || !this.faviconImg || !faviconPlaceholder) return;
+
+            this.faviconPreview.classList.add('loading');
+            this.faviconImg.style.display = 'none';
+            faviconPlaceholder.style.display = 'flex';
+            faviconPlaceholder.textContent = '⏳';
+
+            if (this.submitBtn) {
+                this.submitBtn.disabled = true;
+                this.submitBtn.style.opacity = '0.6';
+            }
+            if (this.cancelBtn) {
+                this.cancelBtn.disabled = true;
+                this.cancelBtn.style.opacity = '0.6';
+            }
+        },
+
+        _setFaviconLoaded(faviconUrl) {
+            const faviconPlaceholder = this.faviconPreview?.querySelector('.favicon-placeholder');
+            
+            if (!this.faviconPreview || !this.faviconImg || !faviconPlaceholder) return;
+
+            this.faviconPreview.classList.remove('loading');
+            this.faviconImg.src = faviconUrl;
+            this.faviconImg.style.display = 'block';
+            faviconPlaceholder.style.display = 'none';
+
+            if (this.cancelBtn) {
+                this.cancelBtn.disabled = false;
+                this.cancelBtn.style.opacity = '1';
+            }
+            if (this.submitBtn) {
+                const isValidUrl = this._validateUrl();
+                this.submitBtn.disabled = !isValidUrl;
+                this.submitBtn.style.opacity = isValidUrl ? '1' : '0.6';
+            }
+
+            if (this.urlInput) {
+                const url = this.urlInput.value.trim();
+                try {
+                    const validUrl = new URL(url.includes('://') ? url : `https://${url}`);
+                    const cacheKey = validUrl.hostname.toLowerCase();
+                    this._faviconCache.set(cacheKey, faviconUrl);
+                } catch (e) {
+                    // Ignore cache errors
+                }
+            }
+        },
+
+        _setFaviconError() {
+            const faviconPlaceholder = this.faviconPreview?.querySelector('.favicon-placeholder');
+            
+            if (!this.faviconPreview || !this.faviconImg || !faviconPlaceholder) return;
+
+            this.faviconPreview.classList.remove('loading');
+            this.faviconImg.style.display = 'none';
+            faviconPlaceholder.style.display = 'flex';
+            faviconPlaceholder.textContent = '🌐';
+
+            if (this.cancelBtn) {
+                this.cancelBtn.disabled = false;
+                this.cancelBtn.style.opacity = '1';
+            }
+            if (this.submitBtn) {
+                const isValidUrl = this._validateUrl();
+                this.submitBtn.disabled = !isValidUrl;
+                this.submitBtn.style.opacity = isValidUrl ? '1' : '0.6';
+            }
+
+            if (this.urlInput) {
+                const url = this.urlInput.value.trim();
+                try {
+                    const validUrl = new URL(url.includes('://') ? url : `https://${url}`);
+                    const cacheKey = validUrl.hostname.toLowerCase();
+                    this._faviconCache.set(cacheKey, null);
+                } catch (e) {
+                    // Ignore cache errors
+                }
+            }
+        },
+
+        _resetFaviconPreview() {
+            const faviconPlaceholder = this.faviconPreview?.querySelector('.favicon-placeholder');
+            
+            if (!this.faviconPreview || !this.faviconImg || !faviconPlaceholder) return;
+
+            if (this._faviconLoadTimeout) {
+                clearTimeout(this._faviconLoadTimeout);
+                this._faviconLoadTimeout = null;
+            }
+
+            this.faviconPreview.classList.remove('loading');
+            this.faviconImg.style.display = 'none';
+            this.faviconImg.src = '';
+            faviconPlaceholder.style.display = 'flex';
+            faviconPlaceholder.textContent = '🌐';
+
+            if (this.cancelBtn) {
+                this.cancelBtn.disabled = false;
+                this.cancelBtn.style.opacity = '1';
+            }
+            if (this.submitBtn) {
+                this.submitBtn.disabled = true;
+                this.submitBtn.style.opacity = '0.6';
+            }
+        }
+    }
+
+    UI_NEW_ESSENTIAL_MODAL.init();
+
 });
