@@ -177,6 +177,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             favicon: 'https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png',
                             muted: false,
                             highlighted: false,
+                        },
+                        {
+                            tabId: 21231231233,
+                            title: 'Google Photos',
+                            url: 'https://photos.google.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://ssl.gstatic.com/social/photosui/images/favicon/favicon_square_32.png',
+                            muted: false,
+                            highlighted: false,
                         }
                     ]
                 },
@@ -192,6 +203,128 @@ document.addEventListener('DOMContentLoaded', function() {
                             active: false,
                             pinned: false,
                             favicon: 'https://online.mybank.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 21231231236,
+                            title: 'Credit Card Portal',
+                            url: 'https://creditcard.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://creditcard.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 21231231237,
+                            title: 'Investment Dashboard',
+                            url: 'https://robinhood.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://robinhood.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 21231231238,
+                            title: 'Budgeting App',
+                            url: 'https://mint.com',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://mint.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Health & Fitness',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 21231231239,
+                            title: 'MyFitnessPal',
+                            url: 'https://myfitnesspal.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://myfitnesspal.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 21231231240,
+                            title: 'Strava',
+                            url: 'https://strava.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://strava.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 21231231241,
+                            title: 'Headspace',
+                            url: 'https://headspace.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://headspace.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Travel',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 21231231242,
+                            title: 'Google Maps',
+                            url: 'https://maps.google.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://maps.google.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 21231231243,
+                            title: 'Airbnb',
+                            url: 'https://airbnb.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://airbnb.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 21231231244,
+                            title: 'TripAdvisor',
+                            url: 'https://tripadvisor.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://tripadvisor.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 21231231245,
+                            title: 'Expedia',
+                            url: 'https://expedia.com',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://expedia.com/favicon.ico',
                             muted: false,
                             highlighted: false,
                         }
@@ -220,6 +353,167 @@ document.addEventListener('DOMContentLoaded', function() {
                             favicon: 'https://scholar.google.com/favicon.ico',
                             muted: false,
                             highlighted: false,
+                        },
+                        {
+                            tabId: 31231231232,
+                            title: 'Wikipedia',
+                            url: 'https://wikipedia.org',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://wikipedia.org/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 31231231233,
+                            title: 'ResearchGate',
+                            url: 'https://researchgate.net',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://researchgate.net/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Online Learning',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 31231231234,
+                            title: 'Coursera',
+                            url: 'https://coursera.org',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://coursera.org/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 31231231235,
+                            title: 'Khan Academy',
+                            url: 'https://khanacademy.org',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://khanacademy.org/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 31231231236,
+                            title: 'edX',
+                            url: 'https://edx.org',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://edx.org/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 31231231237,
+                            title: 'Udemy',
+                            url: 'https://udemy.com',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://udemy.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Tech Resources',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 31231231238,
+                            title: 'Stack Overflow',
+                            url: 'https://stackoverflow.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://cdn.sstatic.net/Sites/stackoverflow/Img/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 31231231239,
+                            title: 'MDN Web Docs',
+                            url: 'https://developer.mozilla.org',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://developer.mozilla.org/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 31231231240,
+                            title: 'GitHub',
+                            url: 'https://github.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://github.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Documentation',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 31231231241,
+                            title: 'React Docs',
+                            url: 'https://react.dev',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://react.dev/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 31231231242,
+                            title: 'Node.js Docs',
+                            url: 'https://nodejs.org',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://nodejs.org/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 31231231243,
+                            title: 'Python Docs',
+                            url: 'https://docs.python.org',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://docs.python.org/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 31231231244,
+                            title: 'CSS Tricks',
+                            url: 'https://css-tricks.com',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://css-tricks.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
                         }
                     ]
                 }
@@ -244,6 +538,167 @@ document.addEventListener('DOMContentLoaded', function() {
                             active: false,
                             pinned: false,
                             favicon: 'https://amazon.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 41231231232,
+                            title: 'eBay',
+                            url: 'https://ebay.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://ebay.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 41231231233,
+                            title: 'Target',
+                            url: 'https://target.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://target.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Electronics',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 41231231234,
+                            title: 'Best Buy',
+                            url: 'https://bestbuy.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://bestbuy.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 41231231235,
+                            title: 'Newegg',
+                            url: 'https://newegg.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://newegg.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 41231231236,
+                            title: 'B&H Photo',
+                            url: 'https://bhphotovideo.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://bhphotovideo.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 41231231237,
+                            title: 'Micro Center',
+                            url: 'https://microcenter.com',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://microcenter.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Fashion',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 41231231238,
+                            title: 'Nike',
+                            url: 'https://nike.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://nike.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 41231231239,
+                            title: 'Zara',
+                            url: 'https://zara.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://zara.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 41231231240,
+                            title: 'H&M',
+                            url: 'https://hm.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://hm.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Home & Garden',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 41231231241,
+                            title: 'Home Depot',
+                            url: 'https://homedepot.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://homedepot.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 41231231242,
+                            title: 'Lowes',
+                            url: 'https://lowes.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://lowes.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 41231231243,
+                            title: 'IKEA',
+                            url: 'https://ikea.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://ikea.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 41231231244,
+                            title: 'Wayfair',
+                            url: 'https://wayfair.com',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://wayfair.com/favicon.ico',
                             muted: false,
                             highlighted: false,
                         }
@@ -272,6 +727,167 @@ document.addEventListener('DOMContentLoaded', function() {
                             favicon: 'https://netflix.com/favicon.ico',
                             muted: false,
                             highlighted: false,
+                        },
+                        {
+                            tabId: 51231231232,
+                            title: 'YouTube',
+                            url: 'https://youtube.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://www.youtube.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 51231231233,
+                            title: 'Disney+',
+                            url: 'https://disneyplus.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://disneyplus.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Streaming Services',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 51231231234,
+                            title: 'Hulu',
+                            url: 'https://hulu.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://hulu.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 51231231235,
+                            title: 'Prime Video',
+                            url: 'https://primevideo.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://primevideo.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 51231231236,
+                            title: 'HBO Max',
+                            url: 'https://hbomax.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://hbomax.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 51231231237,
+                            title: 'Apple TV+',
+                            url: 'https://tv.apple.com',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://tv.apple.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Music',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 51231231238,
+                            title: 'Spotify',
+                            url: 'https://spotify.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://open.spotify.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 51231231239,
+                            title: 'Apple Music',
+                            url: 'https://music.apple.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://music.apple.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 51231231240,
+                            title: 'YouTube Music',
+                            url: 'https://music.youtube.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://music.youtube.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Gaming',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 51231231241,
+                            title: 'Steam',
+                            url: 'https://store.steampowered.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://store.steampowered.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 51231231242,
+                            title: 'Twitch',
+                            url: 'https://twitch.tv',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://twitch.tv/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 51231231243,
+                            title: 'Epic Games',
+                            url: 'https://epicgames.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://epicgames.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 51231231244,
+                            title: 'IGN',
+                            url: 'https://ign.com',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://ign.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
                         }
                     ]
                 }
@@ -296,6 +912,167 @@ document.addEventListener('DOMContentLoaded', function() {
                             active: false,
                             pinned: false,
                             favicon: 'https://x.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 61231231232,
+                            title: 'Facebook',
+                            url: 'https://facebook.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://static.xx.fbcdn.net/rsrc.php/yb/r/hLRJ1GG_y0J.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 61231231233,
+                            title: 'Instagram',
+                            url: 'https://instagram.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://static.cdninstagram.com/rsrc.php/v3/yt/r/30PrGfR3xhH.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Messaging',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 61231231234,
+                            title: 'WhatsApp Web',
+                            url: 'https://web.whatsapp.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://web.whatsapp.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 61231231235,
+                            title: 'Telegram Web',
+                            url: 'https://web.telegram.org',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://web.telegram.org/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 61231231236,
+                            title: 'Discord',
+                            url: 'https://discord.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://discord.com/assets/f9bb9c4af2b9c32a2c5ee0014661546d.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 61231231237,
+                            title: 'Signal',
+                            url: 'https://signal.org',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://signal.org/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Professional',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 61231231238,
+                            title: 'LinkedIn',
+                            url: 'https://linkedin.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://static.licdn.com/aero-v1/sc/h/al2o9zrvru7aqj8e1x2rzsrca',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 61231231239,
+                            title: 'Reddit',
+                            url: 'https://reddit.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://www.redditstatic.com/shreddit/assets/favicon/64x64.png',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 61231231240,
+                            title: 'Slack',
+                            url: 'https://slack.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://a.slack-edge.com/80588/img/icons/favicon-32.png',
+                            muted: false,
+                            highlighted: false,
+                        }
+                    ]
+                },
+                {
+                    name: 'Content Creation',
+                    isDefault: false,
+                    tabs: [
+                        {
+                            tabId: 61231231241,
+                            title: 'TikTok',
+                            url: 'https://tiktok.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://tiktok.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 61231231242,
+                            title: 'Pinterest',
+                            url: 'https://pinterest.com',
+                            index: 1,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://pinterest.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 61231231243,
+                            title: 'Snapchat',
+                            url: 'https://snapchat.com',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://snapchat.com/favicon.ico',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 61231231244,
+                            title: 'Behance',
+                            url: 'https://behance.net',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://behance.net/favicon.ico',
                             muted: false,
                             highlighted: false,
                         }
@@ -344,6 +1121,8 @@ document.addEventListener('DOMContentLoaded', function() {
             UI_DASHBOARD_DATA.loading();
             showScreen('dashboard');
             UI_DASHBOARD_DATA.updateData({userData: CURRENT_USER});
+
+            
 
             setTimeout(() => {
                 UI_DASHBOARD_DATA.updateData({essentials: DUMMY_ESSENTIALS, spaces: DUMMY_SPACES});
@@ -737,23 +1516,35 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (spaces) {
-                // Clear existing skeleton cards and populate with actual spaces
-                if (this.spacesGrid) {
-                    this.spacesGrid.innerHTML = ''; // Clear existing content
+                if (!this.spacesGrid) return;
+                
+                // Store current expansion states
+                const expansionStates = this._getExpansionStates();
+                
+                this.spacesGrid.innerHTML = '';
+                
+                // Render space cards
+                spaces.forEach(space => {
+                    space.isExpanded = expansionStates.spaces[space.id] || false;
                     
-                    // Render each space card
-                    spaces.forEach(space => {
-                        const spaceCard = this._createSpaceCard(space);
-                        this.spacesGrid.appendChild(spaceCard);
-                    });
+                    if (space.folders) {
+                        space.folders.forEach((folder, folderIndex) => {
+                            const folderKey = `${space.id}-${folderIndex}`;
+                            folder.isExpanded = expansionStates.folders[folderKey] !== undefined 
+                                ? expansionStates.folders[folderKey] 
+                                : folder.isDefault;
+                        });
+                    }
                     
-                    // Add "New Space" card at the end
-                    const newSpaceCard = this._createNewSpaceCard();
-                    this.spacesGrid.appendChild(newSpaceCard);
-                    
-                    // Initialize space interactions
-                    this._initializeSpaceInteractions();
-                }
+                    const spaceCard = this._createSpaceCard(space);
+                    this.spacesGrid.appendChild(spaceCard);
+                });
+                
+                // Add "New Space" card
+                this.spacesGrid.appendChild(this._createNewSpaceCard());
+                
+                // Initialize tree interactions
+                this._initializeTreeInteractions();
             }
         },
 
@@ -805,14 +1596,42 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         // spaces helpers
-        
+
+        _getExpansionStates() {
+            const states = { spaces: {}, folders: {} };
+            
+            if (!this.spacesGrid) return states;
+            
+            const existingSpaces = this.spacesGrid.querySelectorAll('.space-card[data-space-id]');
+            existingSpaces.forEach(spaceCard => {
+                const spaceId = spaceCard.getAttribute('data-space-id');
+                const treeElement = spaceCard.querySelector('.space-tree');
+                states.spaces[spaceId] = treeElement && treeElement.style.display !== 'none';
+                
+                const folders = spaceCard.querySelectorAll('.tree-folder');
+                folders.forEach((folder, folderIndex) => {
+                    const folderContent = folder.querySelector('.tree-folder-content');
+                    const folderKey = `${spaceId}-${folderIndex}`;
+                    states.folders[folderKey] = folderContent && folderContent.style.display !== 'none';
+                });
+            });
+            
+            return states;
+        },
+
         _createSpaceCard(space) {
             const card = document.createElement('div');
             card.className = 'space-card';
             card.setAttribute('data-space-id', space.id);
+            card.setAttribute('data-index', this.spaces.findIndex(s => s.id === space.id));
             
             card.innerHTML = `
                 <div class="space-card-header" data-space-id="${space.id}">
+                    <div class="drag-handle" draggable="true" title="Drag to reorder">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+                            <path d="M360-160q-33 0-56.5-23.5T280-240q0-33 23.5-56.5T360-320q33 0 56.5 23.5T440-240q0 33-23.5 56.5T360-160Zm240 0q-33 0-56.5-23.5T520-240q0-33 23.5-56.5T600-320q33 0 56.5 23.5T680-240q0 33-23.5 56.5T600-160ZM360-400q-33 0-56.5-23.5T280-480q0-33 23.5-56.5T360-560q33 0 56.5 23.5T440-480q0 33-23.5 56.5T360-400Zm240 0q-33 0-56.5-23.5T520-480q0-33 23.5-56.5T600-560q33 0 56.5 23.5T680-480q0 33-23.5 56.5T600-400ZM360-640q-33 0-56.5-23.5T280-720q0-33 23.5-56.5T360-800q33 0 56.5 23.5T440-720q0 33-23.5 56.5T360-640Zm240 0q-33 0-56.5-23.5T520-720q0-33 23.5-56.5T600-800q33 0 56.5 23.5T680-720q0 33-23.5 56.5T600-640Z"/>
+                        </svg>
+                    </div>
                     <div class="space-icon">${space.emoji || '📁'}</div>
                     <div class="space-content">
                         <div class="space-name">${space.name}</div>
@@ -825,12 +1644,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         <button class="space-menu-btn" disabled>⋯</button>
                     </div>
                 </div>
-                <div class="space-tree" style="display: none;">
+                <div class="space-tree" style="display: ${space.isExpanded ? 'block' : 'none'};">
                     ${space.folders ? this._createFolderTree(space.folders) : ''}
                 </div>
             `;
             
-            // Apply custom color styling to the space icon
+            // Apply custom color styling
             if (space.color) {
                 const spaceIcon = card.querySelector('.space-icon');
                 if (spaceIcon) {
@@ -842,169 +1661,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            return card;
-        },
-
-        _createFolderTree(folders) {
-            return folders.map((folder, folderIndex) => {
-                const isFolderExpanded = folder.isDefault || false; // Default folders start expanded
-                const folderState = isFolderExpanded ? 'expanded' : 'collapsed';
-                const folderIcon = isFolderExpanded ? 'folder_open' : 'folder';
-                
-                return `
-                    <div class="tree-folder ${folderState}" data-folder="${folderIndex}">
-                        <div class="tree-folder-header" data-drop-zone="folder">
-                            <div class="folder-drag-handle-spacer"></div>
-                            <div class="tree-indent">
-                                <div class="tree-icon">
-                                    <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
-                                        ${folderIcon === 'folder_open' ? 
-                                            '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480l96-320h684L837-217q-8 26-29.5 41.5T760-160H160Z"/>' :
-                                            '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>'
-                                        }
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="tree-label">${folder.name}</div>
-                            <div class="tree-actions">
-                                <button class="tree-action-btn add-tab-btn" title="Add tab to folder">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    </svg>
-                                </button>
-                                <button class="tree-action-btn load-btn" title="Load folder">
-                                    <img src="icons/load_up.svg" width="14" height="14" style="color: currentColor;">
-                                </button>
-                                <button class="tree-action-btn options-btn" title="Folder options">
-                                    <img src="icons/more-vertical.svg" width="14" height="14" style="color: currentColor;">
-                                </button>
-                            </div>
-                        </div>
-                        <div class="tree-folder-content" style="display: ${isFolderExpanded ? 'block' : 'none'};">
-                            ${folder.tabs ? this._createTabList(folder.tabs) : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        },
-
-        _createTabList(tabs) {
-            return tabs.map(tab => `
-                <div class="tree-tab" data-tab-id="${tab.tabId}" data-drop-zone="tab">
-                    <div class="tab-drag-handle-spacer"></div>
-                    <div class="tree-indent">
-                        <div class="tree-icon">
-                            <img src="${tab.favicon}" alt="" width="16" height="16" class="tab-favicon">
-                        </div>
-                    </div>
-                    <div class="tree-label" title="${tab.title}">${tab.title}</div>
-                    <div class="tree-actions">
-                        <button class="tree-action-btn load-btn" title="Load tab">
-                            <img src="icons/load_up.svg" width="14" height="14" style="color: currentColor;">
-                        </button>
-                        <button class="tree-action-btn options-btn" title="Tab options">
-                            <img src="icons/more-vertical.svg" width="14" height="14" style="color: currentColor;">
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        },
-
-        _createNewSpaceCard() {
-            const card = document.createElement('div');
-            card.className = 'space-card new-space-card';
+            // Set expanded class
+            if (space.isExpanded) {
+                card.classList.add('expanded');
+            }
             
-            card.innerHTML = `
-                <div class="new-space-icon">+</div>
-                <div class="new-space-content">
-                    <div class="new-space-title">New Space</div>
-                    <div class="new-space-subtitle">Organize your tabs</div>
-                </div>
-            `;
-            
-            // Add click event listener for creating new space
-            card.addEventListener('click', () => {
-                console.log('Create new space clicked'); // Placeholder for future implementation
+            // Add click handler for expansion
+            const cardHeader = card.querySelector('.space-card-header');
+            cardHeader.addEventListener('click', (e) => {
+                if (e.target.closest('.space-actions') || e.target.closest('.drag-handle')) {
+                    return;
+                }
+                this._toggleSpaceExpansion(card);
             });
             
             return card;
         },
 
-        _initializeSpaceInteractions() {
-            if (!this.spacesGrid) return;
-            
-            // Remove existing event listeners to prevent duplicates
-            if (this.spacesGrid._spaceClickHandler) {
-                this.spacesGrid.removeEventListener('click', this.spacesGrid._spaceClickHandler);
-            }
-            if (this.spacesGrid._spaceErrorHandler) {
-                this.spacesGrid.removeEventListener('error', this.spacesGrid._spaceErrorHandler, true);
-            }
-            
-            // Create new click handler
-            const spaceClickHandler = (e) => {
-                this._handleSpaceClick(e);
-            };
-            
-            // Create error handler for favicon images
-            const spaceErrorHandler = (e) => {
-                if (e.target.classList.contains('tab-favicon')) {
-                    e.target.style.display = 'none';
-                }
-            };
-            
-            // Store handler references for cleanup
-            this.spacesGrid._spaceClickHandler = spaceClickHandler;
-            this.spacesGrid._spaceErrorHandler = spaceErrorHandler;
-            
-            // Add event listeners
-            this.spacesGrid.addEventListener('click', spaceClickHandler);
-            this.spacesGrid.addEventListener('error', spaceErrorHandler, true);
-        },
-
-        _handleSpaceClick(e) {
-            const target = e.target;
-            
-            // Handle space card header clicks for expansion/collapse
-            if (target.closest('.space-card-header') && !target.closest('.space-actions')) {
-                const spaceCard = target.closest('.space-card');
-                if (spaceCard && !spaceCard.classList.contains('new-space-card')) {
-                    this._toggleSpaceExpansion(spaceCard);
-                }
-                return;
-            }
-            
-            // Handle folder header clicks for expansion/collapse
-            if (target.closest('.tree-folder-header') && !target.closest('.tree-actions')) {
-                const folderElement = target.closest('.tree-folder');
-                if (folderElement) {
-                    this._toggleFolderExpansion(folderElement);
-                }
-                return;
-            }
-            
-            // Handle action button clicks
-            if (target.closest('.tree-action-btn')) {
-                e.stopPropagation();
-                this._handleActionButton(target.closest('.tree-action-btn'));
-                return;
-            }
-        },
-
-        _toggleSpaceExpansion(spaceCard) {
-            const treeElement = spaceCard.querySelector('.space-tree');
+        _toggleSpaceExpansion(card) {
+            const treeElement = card.querySelector('.space-tree');
             const isExpanded = treeElement.style.display !== 'none';
             
             if (isExpanded) {
-                // Collapse this space
+                // Collapse
                 treeElement.style.display = 'none';
-                spaceCard.classList.remove('expanded');
+                card.classList.remove('expanded');
             } else {
-                // Collapse all other spaces first
+                // First, collapse all other spaces
                 const allSpaceCards = this.spacesGrid.querySelectorAll('.space-card:not(.new-space-card)');
                 allSpaceCards.forEach(otherCard => {
-                    if (otherCard !== spaceCard) {
+                    if (otherCard !== card) {
                         const otherTreeElement = otherCard.querySelector('.space-tree');
                         if (otherTreeElement && otherTreeElement.style.display !== 'none') {
                             otherTreeElement.style.display = 'none';
@@ -1013,29 +1699,106 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
                 
-                // Expand the clicked space
+                // Then expand the clicked space and reset folder states to initial state
                 treeElement.style.display = 'block';
-                spaceCard.classList.add('expanded');
+                card.classList.add('expanded');
+                
+                // Reset folder expansion states to initial state
+                const spaceId = parseInt(card.getAttribute('data-space-id'));
+                const space = this.spaces.find(s => s.id === spaceId);
+                
+                if (space && space.folders) {
+                    space.folders.forEach(folder => {
+                        // Reset to initial state: default folder expanded, others collapsed
+                        folder.isExpanded = folder.isDefault;
+                    });
+                    
+                    // Update just the tree content without replacing the entire card
+                    treeElement.innerHTML = this._createFolderTree(space.folders);
+                    
+                    // Re-initialize tree interactions for the updated content
+                    this._initializeTreeInteractions();
+                }
             }
         },
 
-        _toggleFolderExpansion(folderElement) {
+        _initializeTreeInteractions() {
+            if (!this.spacesGrid) return;
+            
+            // Remove existing tree click handler to prevent duplicates
+            if (this.spacesGrid.treeClickHandler) {
+                this.spacesGrid.removeEventListener('click', this.spacesGrid.treeClickHandler);
+            }
+            
+            // Create tree click handler
+            const treeClickHandler = (e) => {
+                // Ignore clicks during drag operations
+                if (document.querySelector('.dragging')) {
+                    return;
+                }
+                
+                this._handleTreeClick(e);
+            };
+            
+            // Store handler for cleanup
+            this.spacesGrid.treeClickHandler = treeClickHandler;
+            
+            // Add event listener
+            this.spacesGrid.addEventListener('click', treeClickHandler);
+            
+            // Handle favicon errors
+            const treeErrorHandler = (e) => {
+                if (e.target.classList.contains('tab-favicon')) {
+                    e.target.style.display = 'none';
+                }
+            };
+            
+            this.spacesGrid.addEventListener('error', treeErrorHandler, true);
+        },
+
+        _handleTreeClick(e) {
+            const target = e.target;
+            
+            // Handle folder expansion/collapse
+            if (target.closest('.tree-folder-header') && 
+                !target.closest('.tree-actions') && 
+                !target.closest('.folder-drag-handle')) {
+                
+                this._toggleFolder(target.closest('.tree-folder'));
+                return;
+            }
+            
+            // Handle action buttons
+            if (target.closest('.tree-action-btn')) {
+                e.stopPropagation();
+                this._handleActionButton(target.closest('.tree-action-btn'));
+                return;
+            }
+        },
+
+        _toggleFolder(folderElement) {
+            if (!folderElement) return;
+            
             const folderContent = folderElement.querySelector('.tree-folder-content');
             const folderIcon = folderElement.querySelector('.tree-icon svg');
             const isExpanded = folderContent.style.display !== 'none';
             
             if (isExpanded) {
-                // Collapse folder
+                // Collapse
                 folderContent.style.display = 'none';
                 folderElement.classList.remove('expanded');
                 folderElement.classList.add('collapsed');
-                folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>';
+                if (folderIcon) {
+                    folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>';
+                }
             } else {
-                // Expand folder
+                // Expand
                 folderContent.style.display = 'block';
                 folderElement.classList.remove('collapsed');
                 folderElement.classList.add('expanded');
-                folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480l96-320h684L837-217q-8 26-29.5 41.5T760-160H160Z"/>';
+                if (folderIcon) {
+                    folderIcon.innerHTML = '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480l96-320h684L837-217q-8 26-29.5 41.5T760-160H160Z"/>';
+                }
             }
         },
 
@@ -1074,6 +1837,95 @@ document.addEventListener('DOMContentLoaded', function() {
                     // TODO: Implement tab options menu
                 }
             }
+        },
+
+        _createFolderTree(folders) {
+            return folders.map((folder, folderIndex) => {
+                const isFolderExpanded = folder.isExpanded !== undefined ? folder.isExpanded : folder.isDefault;
+                const folderState = isFolderExpanded ? 'expanded' : 'collapsed';
+                const folderIcon = isFolderExpanded ? 'folder_open' : 'folder';
+                
+                return `
+                    <div class="tree-folder ${folderState}" data-folder="${folderIndex}">
+                        <div class="tree-folder-header" data-drop-zone="folder">
+                            ${!folder.isDefault ? `
+                            <div class="folder-drag-handle" draggable="true" title="Drag to reorder folder">
+                                <img src="icons/drag_handle.svg" width="16" height="16">
+                            </div>
+                            ` : `
+                            <div class="folder-drag-handle-spacer"></div>
+                            `}
+                            <div class="tree-indent">
+                                <div class="tree-icon">
+                                    <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
+                                        ${folderIcon === 'folder_open' ? 
+                                            '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480l96-320h684L837-217q-8 26-29.5 41.5T760-160H160Z"/>' :
+                                            '<path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640v400q0 33-23.5 56.5T800-160H160Zm0-80h640v-400H447l-80-80H160v480Zm0 0v-480 480Z"/>'
+                                        }
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="tree-label">${folder.name}</div>
+                            <div class="tree-actions">
+                                <button class="tree-action-btn add-tab-btn" title="Add tab to folder">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                                </button>
+                                <button class="tree-action-btn load-btn" title="Load folder">
+                                    <img src="icons/load_up.svg" width="14" height="14" style="color: currentColor;">
+                                </button>
+                                <button class="tree-action-btn options-btn" title="Folder options">
+                                    <img src="icons/more-vertical.svg" width="14" height="14" style="color: currentColor;">
+                                </button>
+                            </div>
+                        </div>
+                        <div class="tree-folder-content" style="display: ${isFolderExpanded ? 'block' : 'none'};">
+                            ${folder.tabs ? this._createTabList(folder.tabs) : ''}
+                        </div>
+                        </div>
+                    `;
+            }).join('');
+        },
+
+        _createTabList(tabs) {
+            return tabs.map(tab => `
+                <div class="tree-tab" data-tab-id="${tab.tabId}" data-drop-zone="tab">
+                    <div class="tab-drag-handle" draggable="true" title="Drag to reorder tab">
+                        <img src="icons/drag_handle.svg" width="16" height="16">
+                    </div>
+                    <div class="tree-indent">
+                        <div class="tree-icon">
+                            <img src="${tab.favicon}" alt="" width="16" height="16" class="tab-favicon">
+                        </div>
+                    </div>
+                    <div class="tree-label" title="${tab.title}">${tab.title}</div>
+                    <div class="tree-actions">
+                        <button class="tree-action-btn load-btn" title="Load tab">
+                            <img src="icons/load_up.svg" width="14" height="14" style="color: currentColor;">
+                        </button>
+                        <button class="tree-action-btn options-btn" title="Tab options">
+                            <img src="icons/more-vertical.svg" width="14" height="14" style="color: currentColor;">
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        },
+
+        _createNewSpaceCard() {
+            const card = document.createElement('div');
+            card.className = 'space-card new-space-card';
+            
+            card.innerHTML = `
+                <div class="new-space-icon">+</div>
+                <div class="new-space-content">
+                    <div class="new-space-title">New Space</div>
+                    <div class="new-space-subtitle">Organize your tabs</div>
+                </div>
+            `;
+            
+            return card;
         }
     }
 });
