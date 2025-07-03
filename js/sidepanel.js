@@ -420,15 +420,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Add essential items
                     essentials.forEach(essential => {
+                        // Only proceed if we have the required fields
+                        if (!essential.url || !essential.favicon) return;
+                        
                         const essentialItem = document.createElement('div');
                         essentialItem.className = 'essential-item';
                         essentialItem.setAttribute('data-url', essential.url);
-                        essentialItem.setAttribute('title', essential.title);
+                        
+                        // Extract domain from URL for title and fallback
+                        let displayTitle = essential.url;
+                        let fallbackText = 'ES';
+                        
+                        try {
+                            const url = new URL(essential.url);
+                            displayTitle = url.hostname.replace('www.', '');
+                            fallbackText = displayTitle.substring(0, 2).toUpperCase();
+                        } catch (e) {
+                            // If URL parsing fails, use the original URL
+                            fallbackText = essential.url.substring(0, 2).toUpperCase();
+                        }
+                        
+                        essentialItem.setAttribute('title', displayTitle);
                         
                         essentialItem.innerHTML = `
                             <div class="essential-icon">
-                                <img src="${essential.favicon}" alt="${essential.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <div class="fallback-icon" style="display: none;">${essential.title.substring(0, 2).toUpperCase()}</div>
+                                <img src="${essential.favicon}" alt="${displayTitle}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="fallback-icon" style="display: none;">${fallbackText}</div>
                             </div>
                         `;
                         
@@ -1020,18 +1037,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (response.success) {
                     MessageBanner.success('Essential added successfully!');
-                    
-                    setTimeout(() => {
-                        this.hide();
-                        MessageBanner.hide();
-                    }, 1500);
+
+                    // get dashboard data
+                    const dashboardData = await chrome.runtime.sendMessage({ type: 'getDashboardData', fresh: true });
+                    if (dashboardData.success) {
+                        UI_DASHBOARD_DATA.updateData(dashboardData.data);
+                    }
                 } else {
                     MessageBanner.error(response.error || 'Failed to add essential');
-                    
-                    if (this.submitBtn) {
-                        this.submitBtn.disabled = false;
-                        this.submitBtn.textContent = 'Add Essential';
-                    }
                 }
             } catch (error) {
                 console.error('Add essential error:', error);
@@ -1041,6 +1054,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     this.submitBtn.disabled = false;
                     this.submitBtn.textContent = 'Add Essential';
                 }
+            } finally {
+                setTimeout(async () => {
+                    this.hide();
+                    MessageBanner.hide();
+
+                    if (this.submitBtn) {
+                        this.submitBtn.disabled = false;
+                        this.submitBtn.textContent = 'Add Essential';
+                    }
+                }, 1500);
             }
         },
 
