@@ -998,6 +998,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!this.urlInput) return;
 
             const url = this.urlInput.value.trim();
+            const favicon = this.faviconImg.src;
             
             if (!this._validateUrl()) {
                 return;
@@ -1013,7 +1014,8 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const response = await chrome.runtime.sendMessage({
                     type: 'addEssential',
-                    url: url
+                    url: url,
+                    favicon: favicon
                 });
 
                 if (response.success) {

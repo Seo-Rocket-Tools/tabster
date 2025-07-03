@@ -1184,7 +1184,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return true; // Keep message channel open for async response
             
         case 'addEssential':
-            handleAddEssentialSubmit(message.url, sendResponse);
+            handleAddEssentialSubmit(message.url, message.favicon, sendResponse);
             return true; // Keep message channel open for async response
             
         case 'getDashboardData':
@@ -1368,7 +1368,7 @@ async function handleStartup() {
     await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 }
 
-async function handleAddEssentialSubmit(url, sendResponse) {
+async function handleAddEssentialSubmit(url, favicon, sendResponse) {
     try {
         // Get current user ID
         const userId = await getCurrentUserId();
@@ -1394,6 +1394,7 @@ async function handleAddEssentialSubmit(url, sendResponse) {
         const essential = {
             user_id: userId,
             url: url,
+            favicon: favicon,
             display_order: displayOrder,
             is_active: true,
             created_at: new Date().toISOString(),
@@ -1657,15 +1658,25 @@ async function getUserData(userId) {
 
 // get all essentials for user
 async function getUserEssentials(userId) {
-    // load dummy data for now
-    return new Promise(resolve => {
-        setTimeout(() => {
-            resolve({
-                success: true,
-                data: DUMMY_ESSENTIALS
-            });
-        }, 1000);
-    });
+    try {
+        const { data, error } = await supabase
+            .from('essentials')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
+        
+        if (error) {
+            console.error('Get user essentials error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        return { success: true, data: data || [] };
+        
+    } catch (error) {
+        console.error('Get user essentials exception:', error);
+        return { success: false, error: error.message };
+    }
 }
 
 // get all spaces for user
