@@ -1187,8 +1187,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             handleAddEssentialSubmit(message.url, message.favicon, sendResponse);
             return true; // Keep message channel open for async response
             
-        case 'getDashboardData':
-            getDashboardData(sendResponse, message.fresh);
+        case 'refreshTabData':
+            refreshTabData(message.fresh);
             return true; // Keep message channel open for async response
 
             default:
@@ -1423,7 +1423,7 @@ async function handleAddEssentialSubmit(url, favicon, sendResponse) {
     }
 }
 
-async function getDashboardData(sendResponse, fresh = false) {
+async function refreshTabData(fresh = false) {
     try {
         // Get user ID from Chrome storage
         const userId = await getCurrentUserId();
@@ -1489,7 +1489,9 @@ async function getDashboardData(sendResponse, fresh = false) {
             }
         }
 
-        sendResponse({
+        // Send data to sidepanel
+        chrome.runtime.sendMessage({
+            type: 'tabDataRefreshed',
             success: true,
             data: {
                 essentials: essentials,
@@ -1498,10 +1500,12 @@ async function getDashboardData(sendResponse, fresh = false) {
         });
 
     } catch (error) {
-        console.error('getDashboardData error:', error);
-        sendResponse({
+        console.error('refreshTabData error:', error);
+        // Send error to sidepanel
+        chrome.runtime.sendMessage({
+            type: 'tabDataRefreshed',
             success: false,
-            error: error.message || 'Failed to get dashboard data'
+            error: error.message || 'Failed to refresh tab data'
         });
     }
 }
@@ -1823,6 +1827,14 @@ chrome.runtime.onInstalled.addListener(async (details) => {
         attemptSessionRecovery();
         handleStartup();
     }
+
+    // Add context menu item for adding tabs as essentials
+    chrome.contextMenus.create({
+        id: 'add-tab-to-essentials',
+        title: 'Add to Essentials',
+        contexts: ['page'],
+        documentUrlPatterns: ['http://*/*', 'https://*/*']
+    });
 });
 
 // Handle window creation / Browser startup
@@ -1870,3 +1882,12 @@ async function attemptSessionRecovery() {
         console.error('Session recovery error:', error);
     }
 }
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === 'add-tab-to-essentials') {
+        // TODO: Connect to handleAddEssentialSubmit function
+        console.log('Add to essentials clicked for tab:', tab.url, tab.title);
+    }
+});
+

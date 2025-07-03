@@ -6,6 +6,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let CURRENT_USER = null;
 
+    // Listen for tab data refresh messages from background script
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.type === 'tabDataRefreshed') {
+            if (message.success) {
+                UI_DASHBOARD_DATA.updateData(message.data);
+            } else {
+                console.error('Tab data refresh error:', message.error);
+            }
+        }
+    });
+
     /* SECTION POPUP INITIALIZATION */
     async function initializePopup() {
         if (await checkUserAuth()) {
@@ -14,10 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
             UI_DASHBOARD_DATA.updateData({userData: CURRENT_USER});
 
             // get dashboard data
-            const dashboardData = await chrome.runtime.sendMessage({ type: 'getDashboardData' });
-            if (dashboardData.success) {
-                UI_DASHBOARD_DATA.updateData(dashboardData.data);
-            }
+            chrome.runtime.sendMessage({ type: 'refreshTabData' });
             
         } else {
             showScreen('welcome');
@@ -260,10 +268,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 CURRENT_USER = response.userData;
 
                 // get dashboard data
-                const dashboardData = await chrome.runtime.sendMessage({ type: 'getDashboardData', fresh: true });
-                if (dashboardData.success) {
-                    UI_DASHBOARD_DATA.updateData(dashboardData.data);
-                }
+                chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
 
                 
                 MessageBanner.hide(); // Hide banner when switching screens
@@ -1039,10 +1044,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     MessageBanner.success('Essential added successfully!');
 
                     // get dashboard data
-                    const dashboardData = await chrome.runtime.sendMessage({ type: 'getDashboardData', fresh: true });
-                    if (dashboardData.success) {
-                        UI_DASHBOARD_DATA.updateData(dashboardData.data);
-                    }
+                    chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
                 } else {
                     MessageBanner.error(response.error || 'Failed to add essential');
                 }

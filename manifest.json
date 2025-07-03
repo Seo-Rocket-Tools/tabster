@@ -36,7 +36,8 @@
     "tabs",
     "scripting",
     "tabGroups",
-    "sidePanel"
+    "sidePanel",
+    "contextMenus"
   ],
   "web_accessible_resources": [
     {
