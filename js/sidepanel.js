@@ -15,12 +15,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     console.error('Tab data refresh error:', message.error);
                 }
-                return false; // Indicate no async response needed
+                break;
+
+            case 'newEssentialFromContextMenu':
+                handleNewEssentialFromContextMenu(message.tab);
+                break;
                 
             default:
                 // Handle unknown message types if needed
                 break;
         }
+        return false; // Always indicate no async response needed
     });
 
     /* SECTION POPUP INITIALIZATION */
@@ -1049,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!this.urlInput) return;
 
             const url = this.urlInput.value.trim();
-            const favicon = this.faviconImg.src;
+            const favIconUrl = this.faviconImg.src;
             
             if (!this._validateUrl()) {
                 return;
@@ -1065,8 +1070,7 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const response = await chrome.runtime.sendMessage({
                     type: 'addEssential',
-                    url: url,
-                    favicon: favicon
+                    tab: {url, favIconUrl}
                 });
 
                 if (response.success) {
@@ -1413,5 +1417,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     UI_NEW_ESSENTIAL_MODAL.init();
-    
+
+    // create new space submit
+    document.getElementById('create-space-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // CONTINUE_HERE
+    });
+
+    function handleNewEssentialFromContextMenu(tab) {
+        
+    }
 });

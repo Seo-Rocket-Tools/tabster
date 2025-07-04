@@ -1184,7 +1184,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return true; // Keep message channel open for async response
             
         case 'addEssential':
-            handleAddEssentialSubmit(message.url, message.favicon, sendResponse);
+            handleAddEssentialSubmit(message.tab, sendResponse);
             return true; // Keep message channel open for async response
             
         case 'refreshTabData':
@@ -1368,7 +1368,7 @@ async function handleStartup() {
     await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 }
 
-async function handleAddEssentialSubmit(url, favicon, sendResponse) {
+async function handleAddEssentialSubmit(tab, sendResponse) {
     try {
         // Get current user ID
         const userId = await getCurrentUserId();
@@ -1393,9 +1393,17 @@ async function handleAddEssentialSubmit(url, favicon, sendResponse) {
         // Create essential object
         const essential = {
             user_id: userId,
-            url: url,
-            favicon: favicon,
+            tab_id: tab.id || null,
+            title: tab.title || null,
+            url: tab.url,
+            favicon: tab.favIconUrl,
+            pinned: tab.pinned || false,
+            muted: tab.mutedInfo?.muted || false,
             display_order: displayOrder,
+            folder_id: null,
+            tags: null,
+            clicks: 0,
+            last_accessed_at: null,
             is_active: true,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -1919,10 +1927,16 @@ async function attemptSessionRecovery() {
 }
 
 // Handle context menu clicks
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (info.menuItemId === 'add-tab-to-essentials') {
-        // TODO: Connect to handleAddEssentialSubmit function
-        console.log('Add to essentials clicked for tab:', tab.url, tab.title);
+        // open the sidepanel
+        await chrome.sidePanel.open({ windowId: tab.windowId });
+
+        // send message request to sidepanel js message type 'newEssentialFromContextMenu'
+        chrome.runtime.sendMessage({
+            type: 'newEssentialFromContextMenu',
+            tab: tab
+        });
     }
 });
 
