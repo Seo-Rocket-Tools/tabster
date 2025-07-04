@@ -8,12 +8,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Listen for tab data refresh messages from background script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        if (message.type === 'tabDataRefreshed') {
-            if (message.success) {
-                UI_DASHBOARD_DATA.updateData(message.data);
-            } else {
-                console.error('Tab data refresh error:', message.error);
-            }
+        switch (message.type) {
+            case 'tabDataRefreshed':
+                if (message.success) {
+                    UI_DASHBOARD_DATA.updateData(message.data);
+                } else {
+                    console.error('Tab data refresh error:', message.error);
+                }
+                return false; // Indicate no async response needed
+                
+            default:
+                // Handle unknown message types if needed
+                break;
         }
     });
 
@@ -231,6 +237,15 @@ document.addEventListener('DOMContentLoaded', function() {
     ].forEach(nav => {
         nav.addEventListener('click', () => {
             showScreen('welcome');
+        });
+    });
+
+    const toDashboardNavs = [
+        document.getElementById('cancel-create-space'),
+        document.getElementById('cancel-create-space-btn'),
+    ].forEach(nav => {
+        nav.addEventListener('click', () => {
+            showScreen('dashboard');
         });
     });
 
@@ -889,6 +904,9 @@ document.addEventListener('DOMContentLoaded', function() {
         _createNewSpaceCard() {
             const card = document.createElement('div');
             card.className = 'space-card new-space-card';
+            card.addEventListener('click', () => {
+                showScreen('create-space-screen');
+            });
             
             card.innerHTML = `
                 <div class="new-space-icon">+</div>
@@ -1394,7 +1412,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-
     UI_NEW_ESSENTIAL_MODAL.init();
-
+    
 });
