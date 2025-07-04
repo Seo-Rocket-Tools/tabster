@@ -76,28 +76,28 @@ const DUMMY_SPACES = [
                         muted: false,
                         highlighted: false,
                     },
-                    {
-                        tabId: 11231231236,
-                        title: 'Jira - Alpha Board',
-                        url: 'https://company.atlassian.net/jira/software/projects/ALPHA',
-                        index: 2,
-                        active: false,
-                        pinned: false,
-                        favicon: 'https://company.atlassian.net/favicon.ico',
-                        muted: false,
-                        highlighted: false,
-                    },
-                    {
-                        tabId: 11231231237,
-                        title: 'Confluence - Alpha Docs',
-                        url: 'https://company.atlassian.net/wiki/spaces/ALPHA',
-                        index: 3,
-                        active: false,
-                        pinned: false,
-                        favicon: 'https://company.atlassian.net/favicon.ico',
-                        muted: false,
-                        highlighted: false,
-                    }
+                                            {
+                            tabId: 11231231236,
+                            title: 'Jira - Alpha Board',
+                            url: 'https://company.atlassian.net/jira/software/projects/ALPHA',
+                            index: 2,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://www.google.com/s2/favicons?domain=atlassian.com&sz=64',
+                            muted: false,
+                            highlighted: false,
+                        },
+                        {
+                            tabId: 11231231237,
+                            title: 'Confluence - Alpha Docs',
+                            url: 'https://company.atlassian.net/wiki/spaces/ALPHA',
+                            index: 3,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://www.google.com/s2/favicons?domain=atlassian.com&sz=64',
+                            muted: false,
+                            highlighted: false,
+                        }
                 ]
             },
             {
@@ -191,17 +191,17 @@ const DUMMY_SPACES = [
                 name: 'Finance',
                 isDefault: false,
                 tabs: [
-                    {
-                        tabId: 21231231235,
-                        title: 'Bank Account',
-                        url: 'https://online.mybank.com',
-                        index: 0,
-                        active: false,
-                        pinned: false,
-                        favicon: 'https://online.mybank.com/favicon.ico',
-                        muted: false,
-                        highlighted: false,
-                    },
+                                            {
+                            tabId: 21231231235,
+                            title: 'Bank Account',
+                            url: 'https://online.mybank.com',
+                            index: 0,
+                            active: false,
+                            pinned: false,
+                            favicon: 'https://www.google.com/s2/favicons?domain=chase.com&sz=64',
+                            muted: false,
+                            highlighted: false,
+                        },
                     {
                         tabId: 21231231236,
                         title: 'Credit Card Portal',
@@ -533,7 +533,7 @@ const DUMMY_SPACES = [
                         index: 0,
                         active: false,
                         pinned: false,
-                        favicon: 'https://amazon.com/favicon.ico',
+                        favicon: 'https://www.google.com/s2/favicons?domain=amazon.com&sz=64',
                         muted: false,
                         highlighted: false,
                     },
@@ -720,7 +720,7 @@ const DUMMY_SPACES = [
                         index: 0,
                         active: false,
                         pinned: false,
-                        favicon: 'https://netflix.com/favicon.ico',
+                        favicon: 'https://www.google.com/s2/favicons?domain=netflix.com&sz=64',
                         muted: false,
                         highlighted: false,
                     },
@@ -907,7 +907,7 @@ const DUMMY_SPACES = [
                         index: 0,
                         active: false,
                         pinned: false,
-                        favicon: 'https://x.com/favicon.ico',
+                        favicon: 'https://www.google.com/s2/favicons?domain=x.com&sz=64',
                         muted: false,
                         highlighted: false,
                     },
@@ -1057,18 +1057,18 @@ const DUMMY_SPACES = [
                         index: 2,
                         active: false,
                         pinned: false,
-                        favicon: 'https://snapchat.com/favicon.ico',
+                        favicon: 'https://www.google.com/s2/favicons?domain=snapchat.com&sz=64',
                         muted: false,
                         highlighted: false,
                     },
                     {
                         tabId: 61231231244,
                         title: 'Behance',
-                        url: 'https://behance.net',
+                        url: 'https://www.behance.net',
                         index: 3,
                         active: false,
                         pinned: false,
-                        favicon: 'https://behance.net/favicon.ico',
+                        favicon: 'https://www.google.com/s2/favicons?domain=behance.net&sz=64',
                         muted: false,
                         highlighted: false,
                     }
@@ -1082,13 +1082,13 @@ const DUMMY_ESSENTIALS = [
     {
         url: 'https://google.com',
         title: 'Google',
-        favicon: 'https://www.google.com/favicon.ico',
+        favicon: 'https://www.google.com/s2/favicons?domain=google.com&sz=64',
         fallback: 'G'
     },
     {
         url: 'https://github.com',
         title: 'GitHub', 
-        favicon: 'https://github.com/favicon.ico',
+        favicon: 'https://www.google.com/s2/favicons?domain=github.com&sz=64',
         fallback: 'GH'
     },
     {
@@ -1100,13 +1100,13 @@ const DUMMY_ESSENTIALS = [
     {
         url: 'https://youtube.com',
         title: 'YouTube',
-        favicon: 'https://www.youtube.com/favicon.ico',
+        favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=64',
         fallback: 'YT'
     },
     {
         url: 'https://stackoverflow.com',
         title: 'Stack Overflow',
-        favicon: 'https://cdn.sstatic.net/Sites/stackoverflow/Img/favicon.ico',
+        favicon: 'https://www.google.com/s2/favicons?domain=stackoverflow.com&sz=64',
         fallback: 'SO'
     }
 ]
@@ -1432,72 +1432,107 @@ async function refreshTabData(fresh = false) {
             throw new Error('No authenticated user found');
         }
 
-        let essentials, spaces;
-
         if (fresh) {
-            // Fresh data requested - get from DB and update storage
-            
-            // Get fresh essentials from DB
-            const essentialsResult = await getUserEssentials(userId);
-            if (essentialsResult.success) {
-                essentials = essentialsResult.data;
-                await chrome.storage.local.set({ tabster_essentials: essentials });
-            } else {
+            // Fresh data requested - get from DB, send to sidepanel, then save to storage
+            const [essentialsResult, spacesResult] = await Promise.all([
+                getUserEssentials(userId),
+                getUserSpaces(userId)
+            ]);
+
+            if (!essentialsResult.success) {
                 throw new Error('Failed to get user essentials');
             }
-
-            // Get fresh spaces from DB
-            const spacesResult = await getUserSpaces(userId);
-            if (spacesResult.success) {
-                spaces = spacesResult.data;
-                await chrome.storage.local.set({ tabster_spaces: spaces });
-            } else {
+            if (!spacesResult.success) {
                 throw new Error('Failed to get user spaces');
             }
 
-        } else {
-            // Use cached data if available, fallback to DB
+            // Send fresh data to sidepanel
+            chrome.runtime.sendMessage({
+                type: 'tabDataRefreshed',
+                success: true,
+                data: {
+                    essentials: essentialsResult.data,
+                    spaces: spacesResult.data
+                }
+            });
 
-            // Check Chrome storage for essentials
-            const essentialsStorage = await chrome.storage.local.get(['tabster_essentials']);
-            if (essentialsStorage.tabster_essentials) {
-                essentials = essentialsStorage.tabster_essentials;
+            // Save to storage
+            await chrome.storage.local.set({
+                tabster_essentials: essentialsResult.data,
+                tabster_spaces: spacesResult.data
+            });
+
+        } else {
+            // Check local storage first
+            const storageData = await chrome.storage.local.get(['tabster_essentials', 'tabster_spaces']);
+            const hasEssentials = storageData.tabster_essentials && storageData.tabster_essentials.length > 0;
+            const hasSpaces = storageData.tabster_spaces && storageData.tabster_spaces.length > 0;
+
+            if (hasEssentials && hasSpaces) {
+                // Send cached data to sidepanel immediately
+                chrome.runtime.sendMessage({
+                    type: 'tabDataRefreshed',
+                    success: true,
+                    data: {
+                        essentials: storageData.tabster_essentials,
+                        spaces: storageData.tabster_spaces
+                    }
+                });
+
+                // In parallel, get fresh data from DB
+                const [essentialsResult, spacesResult] = await Promise.all([
+                    getUserEssentials(userId),
+                    getUserSpaces(userId)
+                ]);
+
+                if (essentialsResult.success && spacesResult.success) {
+                    // Send fresh data to sidepanel as follow-up
+                    chrome.runtime.sendMessage({
+                        type: 'tabDataRefreshed',
+                        success: true,
+                        data: {
+                            essentials: essentialsResult.data,
+                            spaces: spacesResult.data
+                        }
+                    });
+
+                    // Save fresh data to storage
+                    await chrome.storage.local.set({
+                        tabster_essentials: essentialsResult.data,
+                        tabster_spaces: spacesResult.data
+                    });
+                }
             } else {
-                // Call getUserEssentials and save to storage
-                const essentialsResult = await getUserEssentials(userId);
-                if (essentialsResult.success) {
-                    essentials = essentialsResult.data;
-                    await chrome.storage.local.set({ tabster_essentials: essentials });
-                } else {
+                // No cached data - get from DB, send to sidepanel, then save to storage
+                const [essentialsResult, spacesResult] = await Promise.all([
+                    getUserEssentials(userId),
+                    getUserSpaces(userId)
+                ]);
+
+                if (!essentialsResult.success) {
                     throw new Error('Failed to get user essentials');
                 }
-            }
-
-            // Check Chrome storage for spaces
-            const spacesStorage = await chrome.storage.local.get(['tabster_spaces']);
-            if (spacesStorage.tabster_spaces) {
-                spaces = spacesStorage.tabster_spaces;
-            } else {
-                // Call getUserSpaces and save to storage
-                const spacesResult = await getUserSpaces(userId);
-                if (spacesResult.success) {
-                    spaces = spacesResult.data;
-                    await chrome.storage.local.set({ tabster_spaces: spaces });
-                } else {
+                if (!spacesResult.success) {
                     throw new Error('Failed to get user spaces');
                 }
+
+                // Send data to sidepanel
+                chrome.runtime.sendMessage({
+                    type: 'tabDataRefreshed',
+                    success: true,
+                    data: {
+                        essentials: essentialsResult.data,
+                        spaces: spacesResult.data
+                    }
+                });
+
+                // Save to storage
+                await chrome.storage.local.set({
+                    tabster_essentials: essentialsResult.data,
+                    tabster_spaces: spacesResult.data
+                });
             }
         }
-
-        // Send data to sidepanel
-        chrome.runtime.sendMessage({
-            type: 'tabDataRefreshed',
-            success: true,
-            data: {
-                essentials: essentials,
-                spaces: spaces
-            }
-        });
 
     } catch (error) {
         console.error('refreshTabData error:', error);

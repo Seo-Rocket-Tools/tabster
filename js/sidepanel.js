@@ -449,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         essentialItem.innerHTML = `
                             <div class="essential-icon">
-                                <img src="${essential.favicon}" alt="${displayTitle}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <img src="${essential.favicon}" alt="${displayTitle}" class="essential-favicon">
                                 <div class="fallback-icon" style="display: none;">${fallbackText}</div>
                             </div>
                         `;
@@ -473,6 +473,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     `;
                     
                     this.essentialsGrid.appendChild(addEssentialItem);
+                    
+                    // Add error handling for essential favicons
+                    this.essentialsGrid.addEventListener('error', (e) => {
+                        if (e.target.classList.contains('essential-favicon')) {
+                            e.target.style.display = 'none';
+                            const fallbackIcon = e.target.nextElementSibling;
+                            if (fallbackIcon && fallbackIcon.classList.contains('fallback-icon')) {
+                                fallbackIcon.style.display = 'flex';
+                            }
+                        }
+                    }, true);
                 }
             }
 
