@@ -1932,11 +1932,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         // open the sidepanel
         await chrome.sidePanel.open({ windowId: tab.windowId });
 
-        // send message request to sidepanel js message type 'newEssentialFromContextMenu'
-        chrome.runtime.sendMessage({
-            type: 'newEssentialFromContextMenu',
-            tab: tab
-        });
+        setTimeout(() => {
+            // send message request to sidepanel js message type 'newEssentialFromContextMenu'
+            chrome.runtime.sendMessage({
+                type: 'newEssentialFromContextMenu',
+                tab: tab
+            });
+        }, 500);
     }
 });
 

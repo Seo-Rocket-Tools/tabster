@@ -1425,7 +1425,31 @@ document.addEventListener('DOMContentLoaded', function() {
         // CONTINUE_HERE
     });
 
-    function handleNewEssentialFromContextMenu(tab) {
-        
+    async function handleNewEssentialFromContextMenu(tab) {
+        MessageBanner.loading('Adding essential...');
+
+        try {
+            const response = await chrome.runtime.sendMessage({
+                type: 'addEssential',
+                tab: tab
+            });
+
+            if (response.success) {
+                MessageBanner.success('Essential added successfully!');
+
+                // get dashboard data
+                chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
+            } else {
+                MessageBanner.error(response.error || 'Failed to add essential');
+            }
+        } catch (error) {
+            console.error('Add essential error:', error);
+            MessageBanner.error('Failed to add essential. Please try again.');
+        } finally {
+            setTimeout(() => {
+                MessageBanner.hide();
+                window.close();
+            }, 1500);
+        }
     }
 });
