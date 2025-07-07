@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
 
             case 'newEssentialFromContextMenu':
-                handleNewEssentialFromContextMenu(message.tab);
+                EssentialsData.addNewEssential(message.tab);
                 break;
                 
             default:
@@ -138,6 +138,195 @@ document.addEventListener('DOMContentLoaded', function() {
             this.show(message, 'loading', 0); // No auto-hide for loading
         }
     };
+
+    /* SECTION CONTEXT MENU */
+    const ContextMenu = {
+        element: null,
+        currentType: null,
+        
+        init() {
+            this.element = document.getElementById('context-menu');
+            if (!this.element) {
+                console.error('Context menu element not found');
+                return;
+            }
+            
+            // Hide context menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (this.element && !this.element.contains(e.target)) {
+                    this.hide();
+                }
+            });
+            
+            // Hide context menu on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this.element && this.element.style.display !== 'none') {
+                    this.hide();
+                }
+            });
+        },
+        
+        show(type, x = 0, y = 0, data = null) {
+            if (!this.element) this.init();
+            
+            this.currentType = type;
+            
+            // Clear existing content
+            this.element.innerHTML = '';
+            
+            // Filter type and initialize appropriate context menu
+            switch (type) {
+                case 'essential':
+                    this._initializeEssentialContextMenu(data);
+                    break;
+                default:
+                    console.warn(`Unknown context menu type: ${type}`);
+                    return;
+            }
+            
+            // Show the context menu temporarily to get dimensions
+            this.element.style.display = 'block';
+            this.element.style.left = '0px';
+            this.element.style.top = '0px';
+            
+            // Get menu and viewport dimensions
+            const menuRect = this.element.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // Calculate adjusted position to prevent overflow
+            let adjustedX = x;
+            let adjustedY = y;
+            
+            // Check horizontal overflow
+            if (x + menuRect.width > viewportWidth) {
+                adjustedX = viewportWidth - menuRect.width - 5; // 5px margin from edge
+            }
+            
+            // Check vertical overflow
+            if (y + menuRect.height > viewportHeight) {
+                adjustedY = viewportHeight - menuRect.height - 5; // 5px margin from edge
+            }
+            
+            // Ensure menu doesn't go off the left or top edge
+            if (adjustedX < 5) adjustedX = 5;
+            if (adjustedY < 5) adjustedY = 5;
+            
+            // Position and show the context menu
+            this.element.style.left = `${adjustedX}px`;
+            this.element.style.top = `${adjustedY}px`;
+        },
+        
+        hide() {
+            if (this.element) {
+                this.element.style.display = 'none';
+                this.element.innerHTML = '';
+                this.currentType = null;
+            }
+        },
+        
+        _setContextMenuItems(menuItems) {
+            if (!this.element) return;
+            
+            menuItems.forEach(item => {
+                const menuItem = document.createElement('div');
+                menuItem.className = 'context-menu-item';
+                
+                // Add type-based styling
+                const itemType = item.type || 'regular';
+                if (itemType !== 'regular') {
+                    menuItem.classList.add(`context-menu-item-${itemType}`);
+                }
+                
+                // Check if icon is a file path (SVG) or emoji/text
+                const isIconFile = item.icon.startsWith('./') || item.icon.startsWith('/') || item.icon.includes('.');
+                
+                menuItem.innerHTML = `
+                    <span class="context-menu-icon">
+                        ${isIconFile ? `<img src="${item.icon}" alt="${item.text}" />` : item.icon}
+                    </span>
+                    <span class="context-menu-text">${item.text}</span>
+                `;
+                
+                menuItem.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    item.action();
+                    this.hide();
+                });
+                
+                this.element.appendChild(menuItem);
+            });
+        },
+        
+        _initializeEssentialContextMenu(essential) {
+            if (!this.element) return;
+            
+            const menuItems = [
+                {
+                    text: 'Delete Essential',
+                    icon: './icons/delete.svg',
+                    type: 'danger',
+                    action: async () => {
+                        await EssentialsData.removeEssential(essential);
+                    }
+                }
+            ];
+            
+            this._setContextMenuItems(menuItems);
+        }
+    }
+
+    /* SECTION Essentials */
+    const EssentialsData = {
+        async addNewEssential(essential) {
+            MessageBanner.loading('Adding essential...');
+
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    type: 'addEssential',
+                    tab: essential
+                });
+
+                if (response.success) {
+                    MessageBanner.success('Essential added successfully!');
+
+                    // get dashboard data
+                    chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
+                } else {
+                    MessageBanner.error(response.error || 'Failed to add essential');
+                }
+            } catch (error) {
+                console.error('Add essential error:', error);
+                MessageBanner.error('Failed to add essential. Please try again.');
+                throw error; // Re-throw so calling code can handle it
+            }
+        },
+
+        async removeEssential(essential) {
+            // Send delete request to background script
+            MessageBanner.loading('Deleting essential...');
+            
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    type: 'deleteEssential',
+                    essentialId: essential.id
+                });
+                
+                if (response.success) {
+                    MessageBanner.success('Essential deleted successfully!');
+                    
+                    // Request fresh data refresh
+                    chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
+                } else {
+                    MessageBanner.error(response.error || 'Failed to delete essential');
+                }
+            } catch (error) {
+                console.error('Delete essential error:', error);
+                MessageBanner.error('Failed to delete essential. Please try again.');
+            }
+        }
+    }
 
     /* SECTION SCREEN MANAGEMENT */
     function showScreen(screenName) {
@@ -451,6 +640,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         const essentialItem = document.createElement('div');
                         essentialItem.className = 'essential-item';
                         essentialItem.setAttribute('data-url', essential.url);
+
+                        essentialItem.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                            ContextMenu.show('essential', e.clientX, e.clientY, essential);
+                        });
                         
                         // Extract domain from URL for title and fallback
                         let displayTitle = essential.url;
@@ -957,9 +1151,41 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             // Handle form submission
-            this.form.addEventListener('submit', (e) => {
+            this.form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                this._handleSubmit();
+                
+                if (!this.urlInput) return;
+
+                const url = this.urlInput.value.trim();
+                const favIconUrl = this.faviconImg.src;
+                
+                if (!this._validateUrl()) {
+                    return;
+                }
+
+                if (this.submitBtn) {
+                    this.submitBtn.disabled = true;
+                    this.submitBtn.textContent = 'Adding...';
+                }
+
+                try {
+                    await EssentialsData.addNewEssential({ url, favIconUrl });
+                } catch (error) {
+                    if (this.submitBtn) {
+                        this.submitBtn.disabled = false;
+                        this.submitBtn.textContent = 'Add Essential';
+                    }
+                } finally {
+                    setTimeout(async () => {
+                        this.hide();
+                        MessageBanner.hide();
+
+                        if (this.submitBtn) {
+                            this.submitBtn.disabled = false;
+                            this.submitBtn.textContent = 'Add Essential';
+                        }
+                    }, 1500);
+                }
             });
 
             // Real-time URL validation and favicon loading
@@ -1050,57 +1276,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
 
-        async _handleSubmit() {
-            if (!this.urlInput) return;
 
-            const url = this.urlInput.value.trim();
-            const favIconUrl = this.faviconImg.src;
-            
-            if (!this._validateUrl()) {
-                return;
-            }
-
-            if (this.submitBtn) {
-                this.submitBtn.disabled = true;
-                this.submitBtn.textContent = 'Adding...';
-            }
-            
-            MessageBanner.loading('Adding essential...');
-
-            try {
-                const response = await chrome.runtime.sendMessage({
-                    type: 'addEssential',
-                    tab: {url, favIconUrl}
-                });
-
-                if (response.success) {
-                    MessageBanner.success('Essential added successfully!');
-
-                    // get dashboard data
-                    chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
-                } else {
-                    MessageBanner.error(response.error || 'Failed to add essential');
-                }
-            } catch (error) {
-                console.error('Add essential error:', error);
-                MessageBanner.error('Failed to add essential. Please try again.');
-                
-                if (this.submitBtn) {
-                    this.submitBtn.disabled = false;
-                    this.submitBtn.textContent = 'Add Essential';
-                }
-            } finally {
-                setTimeout(async () => {
-                    this.hide();
-                    MessageBanner.hide();
-
-                    if (this.submitBtn) {
-                        this.submitBtn.disabled = false;
-                        this.submitBtn.textContent = 'Add Essential';
-                    }
-                }, 1500);
-            }
-        },
 
         _debouncedLoadFavicon() {
             if (this._faviconLoadTimeout) {
@@ -1424,32 +1600,4 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // CONTINUE_HERE
     });
-
-    async function handleNewEssentialFromContextMenu(tab) {
-        MessageBanner.loading('Adding essential...');
-
-        try {
-            const response = await chrome.runtime.sendMessage({
-                type: 'addEssential',
-                tab: tab
-            });
-
-            if (response.success) {
-                MessageBanner.success('Essential added successfully!');
-
-                // get dashboard data
-                chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
-            } else {
-                MessageBanner.error(response.error || 'Failed to add essential');
-            }
-        } catch (error) {
-            console.error('Add essential error:', error);
-            MessageBanner.error('Failed to add essential. Please try again.');
-        } finally {
-            setTimeout(() => {
-                MessageBanner.hide();
-                window.close();
-            }, 1500);
-        }
-    }
 });

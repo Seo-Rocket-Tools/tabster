@@ -1190,6 +1190,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'refreshTabData':
             refreshTabData(message.fresh);
             return true; // Keep message channel open for async response
+            
+        case 'deleteEssential':
+            handleDeleteEssential(message.essentialId, sendResponse);
+            return true; // Keep message channel open for async response
 
             default:
             console.log('Background: Unknown message type:', message.type);
@@ -1428,6 +1432,31 @@ async function handleAddEssentialSubmit(tab, sendResponse) {
     } catch (error) {
         console.error('Background: Add essential exception:', error);
         sendResponse({ success: false, error: error.message || 'Failed to add essential' });
+    }
+}
+
+async function handleDeleteEssential(essentialId, sendResponse) {
+    try {
+        // Delete essential from database
+        const deleteResult = await deleteEssentialFromDb(essentialId);
+        
+        if (!deleteResult.success) {
+            console.error('Background: Failed to delete essential:', deleteResult.error);
+            sendResponse({ success: false, error: deleteResult.error });
+            return;
+        }
+        
+        console.log('Background: Essential deleted successfully');
+        
+        // Send success response
+        sendResponse({
+            success: true,
+            message: 'Essential deleted successfully'
+        });
+        
+    } catch (error) {
+        console.error('Background: Delete essential exception:', error);
+        sendResponse({ success: false, error: error.message || 'Failed to delete essential' });
     }
 }
 
@@ -1761,6 +1790,28 @@ async function saveEssentialToDb(essential) {
     }
 }
 
+// delete essential from database
+async function deleteEssentialFromDb(essentialId) {
+    try {
+        const { data, error } = await supabase
+            .from('essentials')
+            .delete()
+            .eq('id', essentialId)
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('Delete essential error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        return { success: true, data: data };
+        
+    } catch (error) {
+        console.error('Delete essential exception:', error);
+        return { success: false, error: error.message };
+    }
+}
 
 /* SECTION Session Recovery Functions */
 
