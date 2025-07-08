@@ -2,11 +2,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('SIDEPANEL LOADED...')
 
-    /* SECTION INITIALIZATION */
 
-    let CURRENT_USER = null;
-
-    // Listen for tab data refresh messages from background script
+    // Message Handlers
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         switch (message.type) {
             case 'tabDataRefreshed':
@@ -28,12 +25,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return false; // Always indicate no async response needed
     });
 
+
     /* SECTION POPUP INITIALIZATION */
     async function initializePopup() {
         if (await Authentication.checkUserAuth()) {
             DashboardDataDisplay.loading();
             showScreen('dashboard');
-            DashboardDataDisplay.updateData({userData: CURRENT_USER});
+            DashboardDataDisplay.updateData({userData: Authentication.currentUser});
 
             // get dashboard data
             chrome.runtime.sendMessage({ type: 'refreshTabData' });
@@ -1397,14 +1395,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    const NewSpaceForm = {
+        
+    }
+
 
     /* SECTION Data Handlers */
 
     const Authentication = {
+        currentUser: null,
+
         async checkUserAuth() {
             try {
                 const response = await chrome.runtime.sendMessage({ type: 'checkAuth' });
-                CURRENT_USER = response.userData;
+                this.currentUser = response.userData;
                 return response.success && response.authenticated;
             } catch (error) {
                 console.error('Auth check error:', error);
@@ -1435,7 +1439,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     showScreen('dashboard');
                     DashboardDataDisplay.updateData({userData: response.userData});
 
-                    CURRENT_USER = response.userData;
+                    this.currentUser = response.userData;
 
                     // get dashboard data
                     chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
