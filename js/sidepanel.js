@@ -899,9 +899,7 @@ document.addEventListener('DOMContentLoaded', function() {
         _createNewSpaceCard() {
             const card = document.createElement('div');
             card.className = 'space-card new-space-card';
-            card.addEventListener('click', () => {
-                showScreen('create-space-screen');
-            });
+            card.addEventListener('click', () => NewSpaceForm.show());
             
             card.innerHTML = `
                 <div class="new-space-icon">+</div>
@@ -1396,6 +1394,219 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const NewSpaceForm = {
+        form: null,
+        emojiInput: null,
+        emojiDropdown: null,
+        colorDropdown: null,
+        initialized: false,
+        
+        init () {
+            if (this.initialized) return;
+            
+            this.form = document.getElementById('create-space-form');
+            
+            // Cache element references
+            this.emojiInput = document.getElementById('space-emoji');
+            this.emojiDropdown = document.getElementById('emoji-dropdown');
+            this.colorDropdown = document.getElementById('color-dropdown');
+            
+            // Set default emoji value
+            if (this.emojiInput && !this.emojiInput.value) {
+                this.emojiInput.value = '📦';
+            }
+            
+            // Add click event listener to emoji input
+            if (this.emojiInput) {
+                this.emojiInput.addEventListener('click', () => {
+                    this._showIconPicker();
+                });
+            }
+            
+            // Add click event listener to color input
+            const colorInput = document.getElementById('space-color');
+            if (colorInput) {
+                colorInput.addEventListener('click', () => {
+                    this._showColorPicker();
+                });
+            }
+            
+            // Add outside click handler
+            document.addEventListener('click', (e) => {
+                const emojiContainer = e.target.closest('.emoji-input-container');
+                const colorContainer = e.target.closest('.color-input-container');
+                
+                if (!emojiContainer && this.emojiDropdown?.style.display === 'block') {
+                    this._hideIconPicker();
+                }
+                
+                if (!colorContainer && this.colorDropdown?.style.display === 'block') {
+                    this._hideColorPicker();
+                }
+            });
+            
+            // Add ESC key handler
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (this.emojiDropdown?.style.display === 'block') {
+                        this._hideIconPicker();
+                    }
+                    if (this.colorDropdown?.style.display === 'block') {
+                        this._hideColorPicker();
+                    }
+                }
+            });
+            
+            // Add emoji option click handlers once
+            const emojiOptions = this.emojiDropdown?.querySelectorAll('.emoji-option');
+            if (emojiOptions) {
+                emojiOptions.forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        const selectedEmoji = option.getAttribute('data-emoji');
+                        if (this.emojiInput) {
+                            this.emojiInput.value = selectedEmoji;
+                        }
+                        this._hideIconPicker();
+                    });
+                });
+            }
+            
+            // Add color option click handlers once
+            const colorOptions = this.colorDropdown?.querySelectorAll('.color-option');
+            const colorPreview = document.getElementById('color-preview');
+            const colorLabel = document.getElementById('color-label');
+            
+            if (colorOptions) {
+                colorOptions.forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        const selectedColor = option.getAttribute('data-color');
+                        const selectedName = option.getAttribute('data-name');
+                        
+                        if (colorPreview) {
+                            colorPreview.style.background = selectedColor;
+                        }
+                        if (colorLabel) {
+                            colorLabel.textContent = selectedName;
+                        }
+                        
+                        this._hideColorPicker();
+                    });
+                });
+            }
+
+            // listen for cancel button click
+            [
+                document.getElementById('cancel-create-space'),
+                document.getElementById('cancel-create-space-btn'), 
+            ].forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this.hide();
+                });
+            });
+
+            // listen for submit button click
+            const submitBtn = document.getElementById('create-space-submit-btn');
+            if (submitBtn) {
+                submitBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    // tirgger native validation
+                    this.form.reportValidity();
+
+                    // if form is valid, submit
+                    if (this.form.checkValidity()) {
+                        this._handleSubmit();
+                    }
+                });
+            }
+            
+            this.initialized = true;
+        },
+
+        show () {
+            this.init();
+            showScreen('create-space-screen');
+        },
+
+        hide () {
+            showScreen('dashboard');
+            this._resetForm();
+        },
+        
+        _handleSubmit() {
+            // get the form data
+            const formData = new FormData(this.form);
+            
+            // get color from custom element (not in FormData)
+            const colorPreview = document.getElementById('color-preview');
+            const selectedColor = colorPreview?.style.background || null;
+
+            const spaceData = {
+                name: formData.get('spaceName'),
+                description: formData.get('spaceDescription'),
+                emoji: formData.get('spaceEmoji'),
+                color: selectedColor,
+                includeCurrentTabs: formData.get('includeCurrentTabs') === 'on',
+            }
+
+            console.log(spaceData);
+            // CONTINUE_HERE send to background script
+        },
+
+        _resetForm() {
+            // Reset all standard form inputs
+            if (this.form) {
+                this.form.reset();
+            }
+            
+            // Reset emoji input (not a standard form input)
+            if (this.emojiInput) {
+                this.emojiInput.value = '';
+            }
+            
+            // Reset color picker state (custom UI elements)
+            const colorPreview = document.getElementById('color-preview');
+            const colorLabel = document.getElementById('color-label');
+            
+            if (colorPreview) {
+                colorPreview.style.background = '';
+            }
+            
+            if (colorLabel) {
+                colorLabel.textContent = 'Choose a color';
+            }
+            
+            // Hide any open dropdowns
+            this._hideIconPicker();
+            this._hideColorPicker();
+        },
+
+        _showIconPicker() {
+            if (!this.initialized) this.init();
+            if (!this.emojiDropdown) return;
+            
+            // Show the dropdown
+            this.emojiDropdown.style.display = 'block';
+        },
+
+        _hideIconPicker() {
+            if (this.emojiDropdown) {
+                this.emojiDropdown.style.display = 'none';
+            }
+        },
+
+        _showColorPicker() {
+            if (!this.initialized) this.init();
+            if (!this.colorDropdown) return;
+            
+            // Show the dropdown
+            this.colorDropdown.style.display = 'block';
+        },
+
+        _hideColorPicker() {
+            if (this.colorDropdown) {
+                this.colorDropdown.style.display = 'none';
+            }
+        },
         
     }
 
@@ -1596,14 +1807,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    const toDashboardNavs = [
-        document.getElementById('cancel-create-space'),
-        document.getElementById('cancel-create-space-btn'),
-    ].forEach(nav => {
-        nav.addEventListener('click', () => {
-            showScreen('dashboard');
-        });
-    });
 
     // Authentication
 
