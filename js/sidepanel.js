@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
         switch (message.type) {
             case 'tabDataRefreshed':
                 if (message.success) {
-                    UI_DASHBOARD_DATA.updateData(message.data);
+                    DashboardDataDisplay.updateData(message.data);
                 } else {
                     console.error('Tab data refresh error:', message.error);
                 }
@@ -30,10 +30,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /* SECTION POPUP INITIALIZATION */
     async function initializePopup() {
-        if (await checkUserAuth()) {
-            UI_DASHBOARD_DATA.loading();
+        if (await Authentication.checkUserAuth()) {
+            DashboardDataDisplay.loading();
             showScreen('dashboard');
-            UI_DASHBOARD_DATA.updateData({userData: CURRENT_USER});
+            DashboardDataDisplay.updateData({userData: CURRENT_USER});
 
             // get dashboard data
             chrome.runtime.sendMessage({ type: 'refreshTabData' });
@@ -43,10 +43,65 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    initializePopup();
+    
 
+    /* SECTION UI HANDLERS */
 
-    /* SECTION MESSAGE BANNER SYSTEM */
+    // Show a specific screen
+    function showScreen(screenName) {
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const loginScreen = document.getElementById('login-screen');
+        const signupScreen = document.getElementById('signup-screen');
+        const forgotPasswordScreen = document.getElementById('forgot-password-screen');
+        const dashboardScreen = document.getElementById('dashboard-screen');
+        const createSpaceScreen = document.getElementById('create-space-screen');
+        const editSpaceScreen = document.getElementById('edit-space-screen');
+        const screens = [welcomeScreen, loginScreen, signupScreen, forgotPasswordScreen, dashboardScreen, createSpaceScreen, editSpaceScreen];
+        
+        screens.forEach(screen => {
+            if (screen) {
+                screen.classList.remove('active');
+                screen.style.display = 'none';
+            }
+        });
+
+        let targetScreen;
+        switch (screenName) {
+            case 'welcome':
+                targetScreen = welcomeScreen;
+                break;
+            case 'login':
+                targetScreen = loginScreen;
+                break;
+            case 'signup':
+                targetScreen = signupScreen;
+                break;
+            case 'forgot-password':
+                targetScreen = forgotPasswordScreen;
+                break;
+            case 'dashboard':
+                targetScreen = dashboardScreen;
+                break;
+            case 'create-space-screen':
+                targetScreen = createSpaceScreen;
+                break;
+            case 'edit-space-screen':
+                targetScreen = editSpaceScreen;
+                break;
+            default:
+                targetScreen = welcomeScreen;
+                screenName = 'welcome';
+        }
+
+        if (targetScreen) {
+            targetScreen.style.display = 'flex';
+            targetScreen.classList.add('active');
+        }
+
+        localStorage.setItem('tabster-current-screen', screenName);
+    }
+
+    // Message Banner System
     const MessageBanner = {
         element: null,
         iconElement: null,
@@ -139,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    /* SECTION CONTEXT MENU */
+    // Context Menu System
     const ContextMenu = {
         element: null,
         currentType: null,
@@ -179,6 +234,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 case 'essential':
                     this._initializeEssentialContextMenu(data);
                     break;
+
+                case 'user-menu':
+                    this._initializeUserMenu();
+                    break;
+
                 default:
                     console.warn(`Unknown context menu type: ${type}`);
                     return;
@@ -238,13 +298,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     menuItem.classList.add(`context-menu-item-${itemType}`);
                 }
                 
-                // Check if icon is a file path (SVG) or emoji/text
-                const isIconFile = item.icon.startsWith('./') || item.icon.startsWith('/') || item.icon.includes('.');
+                // Add no-icon class if there's no icon
+                if (!item.icon) {
+                    menuItem.classList.add('context-menu-item-no-icon');
+                }
+                
+                // Check if icon exists and is a file path (SVG) or emoji/text
+                const hasIcon = item.icon && item.icon.trim();
+                const isIconFile = hasIcon && (item.icon.startsWith('./') || item.icon.startsWith('/') || item.icon.includes('.'));
                 
                 menuItem.innerHTML = `
-                    <span class="context-menu-icon">
+                    ${hasIcon ? `<span class="context-menu-icon">
                         ${isIconFile ? `<img src="${item.icon}" alt="${item.text}" />` : item.icon}
-                    </span>
+                    </span>` : ''}
                     <span class="context-menu-text">${item.text}</span>
                 `;
                 
@@ -274,295 +340,27 @@ document.addEventListener('DOMContentLoaded', function() {
             ];
             
             this._setContextMenuItems(menuItems);
-        }
-    }
-
-    /* SECTION Essentials */
-    const EssentialsData = {
-        async addNewEssential(essential) {
-            MessageBanner.loading('Adding essential...');
-
-            try {
-                const response = await chrome.runtime.sendMessage({
-                    type: 'addEssential',
-                    tab: essential
-                });
-
-                if (response.success) {
-                    MessageBanner.success('Essential added successfully!');
-
-                    // get dashboard data
-                    chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
-                } else {
-                    MessageBanner.error(response.error || 'Failed to add essential');
-                }
-            } catch (error) {
-                console.error('Add essential error:', error);
-                MessageBanner.error('Failed to add essential. Please try again.');
-                throw error; // Re-throw so calling code can handle it
-            }
         },
 
-        async removeEssential(essential) {
-            // Send delete request to background script
-            MessageBanner.loading('Deleting essential...');
-            
-            try {
-                const response = await chrome.runtime.sendMessage({
-                    type: 'deleteEssential',
-                    essentialId: essential.id
-                });
-                
-                if (response.success) {
-                    MessageBanner.success('Essential deleted successfully!');
-                    
-                    // Request fresh data refresh
-                    chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
-                } else {
-                    MessageBanner.error(response.error || 'Failed to delete essential');
+        _initializeUserMenu() {
+            if (!this.element) return;
+
+            const menuItems = [
+                {
+                    text: 'Logout',
+                    type: 'danger',
+                    action: async () => {
+                        await Authentication.signout();
+                    }
                 }
-            } catch (error) {
-                console.error('Delete essential error:', error);
-                MessageBanner.error('Failed to delete essential. Please try again.');
-            }
+            ];
+
+            this._setContextMenuItems(menuItems);
         }
     }
-
-    /* SECTION SCREEN MANAGEMENT */
-    function showScreen(screenName) {
-        const welcomeScreen = document.getElementById('welcome-screen');
-        const loginScreen = document.getElementById('login-screen');
-        const signupScreen = document.getElementById('signup-screen');
-        const forgotPasswordScreen = document.getElementById('forgot-password-screen');
-        const dashboardScreen = document.getElementById('dashboard-screen');
-        const createSpaceScreen = document.getElementById('create-space-screen');
-        const editSpaceScreen = document.getElementById('edit-space-screen');
-        const screens = [welcomeScreen, loginScreen, signupScreen, forgotPasswordScreen, dashboardScreen, createSpaceScreen, editSpaceScreen];
-        
-        screens.forEach(screen => {
-            if (screen) {
-                screen.classList.remove('active');
-                screen.style.display = 'none';
-            }
-        });
-
-        let targetScreen;
-        switch (screenName) {
-            case 'welcome':
-                targetScreen = welcomeScreen;
-                break;
-            case 'login':
-                targetScreen = loginScreen;
-                break;
-            case 'signup':
-                targetScreen = signupScreen;
-                break;
-            case 'forgot-password':
-                targetScreen = forgotPasswordScreen;
-                break;
-            case 'dashboard':
-                targetScreen = dashboardScreen;
-                break;
-            case 'create-space-screen':
-                targetScreen = createSpaceScreen;
-                break;
-            case 'edit-space-screen':
-                targetScreen = editSpaceScreen;
-                break;
-            default:
-                targetScreen = welcomeScreen;
-                screenName = 'welcome';
-        }
-
-        if (targetScreen) {
-            targetScreen.style.display = 'flex';
-            targetScreen.classList.add('active');
-        }
-
-        localStorage.setItem('tabster-current-screen', screenName);
-    }
-
-    /* SECTION AUTHENTICATION */
-    async function checkUserAuth() {
-        try {
-            const response = await chrome.runtime.sendMessage({ type: 'checkAuth' });
-            CURRENT_USER = response.userData;
-            return response.success && response.authenticated;
-        } catch (error) {
-            console.error('Auth check error:', error);
-            return false;
-        }
-    }
-
-    /* SECTION NAVIGATION HANDLERS */
-
-    const loginNavs = [
-        document.getElementById('login-btn'),
-        document.getElementById('goto-login'),
-        document.getElementById('back-to-login')
-    ].forEach(nav => {
-        nav.addEventListener('click', () => {
-            showScreen('login');
-        });
-    });
-
-    const signupNavs = [
-        document.getElementById('signup-btn'),
-        document.getElementById('goto-signup'),
-        document.getElementById('back-to-welcome-2')
-    ].forEach(nav => {
-        nav.addEventListener('click', () => {
-            showScreen('signup');
-        });
-    });
-    
-    const resetPasswordNavs = [
-        document.getElementById('forgot-password-link')
-    ].forEach(nav => {
-        nav.addEventListener('click', () => {
-            showScreen('forgot-password');
-        });
-    });
-
-    const backToWelcomeNavs = [
-        document.getElementById('back-to-welcome'),
-        document.getElementById('back-to-welcome-2'),
-        document.getElementById('back-to-welcome-3')
-    ].forEach(nav => {
-        nav.addEventListener('click', () => {
-            showScreen('welcome');
-        });
-    });
-
-    const toDashboardNavs = [
-        document.getElementById('cancel-create-space'),
-        document.getElementById('cancel-create-space-btn'),
-    ].forEach(nav => {
-        nav.addEventListener('click', () => {
-            showScreen('dashboard');
-        });
-    });
-
-
-    /* SECTION AUTHENTICATION */
-
-    // handle login
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        
-        // Show loading banner and disable button
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        MessageBanner.loading('Signing in...');
-
-
-        try {
-            // Send login credentials to background script
-            const response = await chrome.runtime.sendMessage({
-                type: 'signin',
-                email: email,
-                password: password
-            });
-            
-            if (response.success) {
-                MessageBanner.success('Sign in successful! Welcome back.');
-                
-                // Small delay to show success message before switching screens
-                UI_DASHBOARD_DATA.loading();
-                showScreen('dashboard');
-                UI_DASHBOARD_DATA.updateData({userData: response.userData});
-
-                CURRENT_USER = response.userData;
-
-                // get dashboard data
-                chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
-
-                
-                MessageBanner.hide(); // Hide banner when switching screens
-            } else {
-                MessageBanner.error(response.error || 'Sign in failed. Please try again.');
-            }
-        } catch (error) {
-            MessageBanner.error('Connection error. Please try again.');
-        } finally {
-            // Reset button state
-            submitBtn.disabled = false;
-        }
-    });
-
-    // handle logout
-    document.getElementById('logout-btn-dropdown').addEventListener('click', async (e) => {
-        e.preventDefault();
-        await chrome.runtime.sendMessage({ type: 'signout' });
-        MessageBanner.success('Signed out successfully.');
-        showScreen('welcome');
-    });
-
-    // handle signup
-    document.getElementById('signup-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('signup-email').value;
-        const password = document.getElementById('signup-password').value;
-        const fullName = document.getElementById('signup-name').value;
-
-        // Show loading banner and disable button
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        MessageBanner.loading('Signing up...');
-
-        try {
-            // Send signup credentials to background script
-            const response = await chrome.runtime.sendMessage({
-                type: 'signup',
-                email: email,
-                password: password,
-                fullName: fullName
-            });
-
-            if (response.success) {
-                MessageBanner.success(response.message);
-                
-                // Small delay to show success message before switching screens
-                setTimeout(() => {
-                    showScreen('login');
-                    MessageBanner.hide(); // Hide banner when switching screens
-                }, 2000);
-            } else {
-                MessageBanner.error(response.error || 'Sign up failed. Please try again.');
-            }
-        } catch (error) {
-            MessageBanner.error('Connection error. Please try again.');
-        } finally {
-            // Reset button state
-            submitBtn.disabled = false;
-        }
-    });
-    
-
-    /* SECTION MINOR UI HANDLERS */
-
-    // Toggle dropdown when avatar is clicked
-    const UI_USER_AVATAR = document.getElementById('user-avatar');
-    const UI_USER_MENU = document.getElementById('dropdown-menu');
-    if (UI_USER_AVATAR && UI_USER_MENU) {
-        UI_USER_AVATAR.addEventListener('click', (e) => {
-            e.stopPropagation();
-            UI_USER_MENU.classList.toggle('show');
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!UI_USER_AVATAR.contains(e.target) && !UI_USER_MENU.contains(e.target)) {
-                UI_USER_MENU.classList.remove('show');
-            }
-        });
-    }
-
 
     // Dashboard data handlers
-    const UI_DASHBOARD_DATA = {
+    const DashboardDataDisplay = {
         welcomeMessage: document.getElementById('welcome-message'),
         avatarInitials: document.getElementById('avatar-initials'),
         essentialsGrid: document.getElementById('essentials-grid'),
@@ -675,7 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const addEssentialItem = document.createElement('div');
                     addEssentialItem.className = 'essential-item add-essential';
                     addEssentialItem.setAttribute('title', 'Add Essential');
-                    addEssentialItem.addEventListener('click', UI_NEW_ESSENTIAL_MODAL.show);
+                    addEssentialItem.addEventListener('click', () => NewEssentialModal.show());
                     
                     addEssentialItem.innerHTML = `
                         <div class="essential-icon add-icon">
@@ -1120,8 +918,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // new essential modal handlers
-    const UI_NEW_ESSENTIAL_MODAL = {
-        modal: document.getElementById('add-essential-modal'),
+    const NewEssentialModal = {
+        modal: null,
         form: document.getElementById('add-essential-form'),
         urlInput: document.getElementById('essential-url'),
         urlError: document.getElementById('url-error'),
@@ -1135,6 +933,8 @@ document.addEventListener('DOMContentLoaded', function() {
         _faviconCache: new Map(),
 
         init() {
+
+            this.modal = document.getElementById('add-essential-modal');
 
             // Hide modal when cancel button is clicked
             if (this.cancelBtn) {
@@ -1214,7 +1014,11 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         show() {
-            document.getElementById('add-essential-modal').style.display = 'flex';
+            if (!this.modal) this.init();
+
+            this.modal.style.display = 'flex';
+
+            // document.getElementById('add-essential-modal').style.display = 'flex';
 
             setTimeout(() => {
                 if (this.urlInput) {
@@ -1466,7 +1270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const testImg = new Image();
                 testImg.onload = function() {
                     if (this.width > 0 && this.height > 0) {
-                        UI_NEW_ESSENTIAL_MODAL._setFaviconLoaded(faviconServices[serviceIndex]);
+                        NewEssentialModal._setFaviconLoaded(faviconServices[serviceIndex]);
                     } else {
                         serviceIndex++;
                         tryNextService();
@@ -1592,12 +1396,248 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    UI_NEW_ESSENTIAL_MODAL.init();
 
-    // create new space submit
-    document.getElementById('create-space-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // CONTINUE_HERE
+
+    /* SECTION Data Handlers */
+
+    const Authentication = {
+        async checkUserAuth() {
+            try {
+                const response = await chrome.runtime.sendMessage({ type: 'checkAuth' });
+                CURRENT_USER = response.userData;
+                return response.success && response.authenticated;
+            } catch (error) {
+                console.error('Auth check error:', error);
+                return false;
+            }
+        },
+
+        async signin(email, password) {
+            // Show loading banner and disable button
+            const submitBtn = document.getElementById('login-submit-btn');
+            submitBtn.disabled = true;
+            MessageBanner.loading('Signing in...');
+
+
+            try {
+                // Send login credentials to background script
+                const response = await chrome.runtime.sendMessage({
+                    type: 'signin',
+                    email: email,
+                    password: password
+                });
+                
+                if (response.success) {
+                    MessageBanner.success('Sign in successful! Welcome back.');
+                    
+                    // Small delay to show success message before switching screens
+                    DashboardDataDisplay.loading();
+                    showScreen('dashboard');
+                    DashboardDataDisplay.updateData({userData: response.userData});
+
+                    CURRENT_USER = response.userData;
+
+                    // get dashboard data
+                    chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
+                } else {
+                    MessageBanner.error(response.error || 'Sign in failed. Please try again.');
+                }
+            } catch (error) {
+                MessageBanner.error('Connection error. Please try again.');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                setTimeout(() => {
+                    MessageBanner.hide(); // Hide banner when switching screens
+                    
+                }, 2000);
+
+            }
+        },
+
+        async signup(email, password, fullName) {
+            // Show loading banner and disable button
+            const submitBtn = document.getElementById('signup-submit-btn');
+            submitBtn.disabled = true;
+            MessageBanner.loading('Signing up...');
+
+            try {
+                // Send signup credentials to background script
+                const response = await chrome.runtime.sendMessage({
+                    type: 'signup',
+                    email: email,
+                    password: password,
+                    fullName: fullName
+                });
+
+                if (response.success) {
+                    MessageBanner.success(response.message);
+                    
+                    // Small delay to show success message before switching screens
+                    setTimeout(() => {
+                        showScreen('login');
+                        MessageBanner.hide(); // Hide banner when switching screens
+                    }, 2000);
+                } else {
+                    MessageBanner.error(response.error || 'Sign up failed. Please try again.');
+                }
+            } catch (error) {
+                MessageBanner.error('Connection error. Please try again.');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+            }
+        },
+
+        async signout() {
+            await chrome.runtime.sendMessage({ type: 'signout' });
+            MessageBanner.success('Signed out successfully.');
+            showScreen('welcome');
+        },
+    }
+
+    const EssentialsData = {
+        async addNewEssential(essential) {
+            MessageBanner.loading('Adding essential...');
+
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    type: 'addEssential',
+                    tab: essential
+                });
+
+                if (response.success) {
+                    MessageBanner.success('Essential added successfully!');
+
+                    // get dashboard data
+                    chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
+                } else {
+                    MessageBanner.error(response.error || 'Failed to add essential');
+                }
+            } catch (error) {
+                console.error('Add essential error:', error);
+                MessageBanner.error('Failed to add essential. Please try again.');
+                throw error; // Re-throw so calling code can handle it
+            }
+        },
+
+        async removeEssential(essential) {
+            // Send delete request to background script
+            MessageBanner.loading('Deleting essential...');
+            
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    type: 'deleteEssential',
+                    essentialId: essential.id
+                });
+                
+                if (response.success) {
+                    MessageBanner.success('Essential deleted successfully!');
+                    
+                    // Request fresh data refresh
+                    chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
+                } else {
+                    MessageBanner.error(response.error || 'Failed to delete essential');
+                }
+            } catch (error) {
+                console.error('Delete essential error:', error);
+                MessageBanner.error('Failed to delete essential. Please try again.');
+            }
+        }
+    }
+
+    const SpaceData = {}
+
+
+
+    /* SECTION UI Event Handlers */
+
+    // Navigations
+    
+    const loginNavs = [
+        document.getElementById('login-btn'),
+        document.getElementById('goto-login'),
+        document.getElementById('back-to-login')
+    ].forEach(nav => {
+        nav.addEventListener('click', () => {
+            showScreen('login');
+        });
     });
+
+    const signupNavs = [
+        document.getElementById('signup-btn'),
+        document.getElementById('goto-signup'),
+        document.getElementById('back-to-welcome-2')
+    ].forEach(nav => {
+        nav.addEventListener('click', () => {
+            showScreen('signup');
+        });
+    });
+    
+    const resetPasswordNavs = [
+        document.getElementById('forgot-password-link')
+    ].forEach(nav => {
+        nav.addEventListener('click', () => {
+            showScreen('forgot-password');
+        });
+    });
+
+    const backToWelcomeNavs = [
+        document.getElementById('back-to-welcome'),
+        document.getElementById('back-to-welcome-2'),
+        document.getElementById('back-to-welcome-3')
+    ].forEach(nav => {
+        nav.addEventListener('click', () => {
+            showScreen('welcome');
+        });
+    });
+
+    const toDashboardNavs = [
+        document.getElementById('cancel-create-space'),
+        document.getElementById('cancel-create-space-btn'),
+    ].forEach(nav => {
+        nav.addEventListener('click', () => {
+            showScreen('dashboard');
+        });
+    });
+
+    // Authentication
+
+    // login form submit
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        Authentication.signin(email, password);
+    });
+
+    // signup form submit
+    document.getElementById('signup-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        const fullName = document.getElementById('signup-name').value;
+        Authentication.signup(email, password, fullName);
+    });
+
+
+    // Others
+
+    // avatar click
+    document.getElementById('user-avatar').addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        // get the position of the avatar
+        const avatar = document.getElementById('user-avatar');
+        const avatarRect = avatar.getBoundingClientRect();
+
+        ContextMenu.show('user-menu', avatarRect.left, avatarRect.top + avatarRect.height + 10);        
+    });
+
+
+
+
+
+    // Initialize the popup
+    initializePopup();
 });
