@@ -497,6 +497,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
+            console.log('SPACES!!!', spaces);
+
             if (spaces) {
                 if (!this.spacesGrid) return;
                 

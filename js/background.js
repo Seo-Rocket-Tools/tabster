@@ -1808,15 +1808,47 @@ async function getUserEssentials(userId) {
 
 // get all spaces for user
 async function getUserSpaces(userId) {
-    // return dummy data for now
-    return new Promise(resolve => {
-        setTimeout(() => {
-            resolve({
-                success: true,
-                data: DUMMY_SPACES
-            });
-        }, 1000);
-    });
+    try {
+        // Call the Supabase function to get spaces with folders and tabs
+        const { data, error } = await supabase.rpc('get_user_spaces_with_data', {
+            p_user_id: userId
+        });
+        
+        if (error) {
+            console.error('Get user spaces error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        // Clean up the data to match structure
+        const transformedSpaces = data.map(space => ({
+            id: space.space_id,
+            name: space.space_name,
+            description: space.space_description,
+            emoji: space.space_emoji,
+            color: space.space_color,
+            folders: space.folders_data.map(folder => ({
+                name: folder.name,
+                isDefault: folder.isDefault,
+                tabs: folder.tabs.map((tab, index) => ({
+                    tabId: tab.tabId,
+                    title: tab.title,
+                    url: tab.url,
+                    index: tab.display_order || index,
+                    active: false,
+                    pinned: tab.pinned || false,
+                    favicon: tab.favicon,
+                    muted: tab.muted || false,
+                    highlighted: false
+                }))
+            }))
+        }));
+        
+        return { success: true, data: transformedSpaces };
+        
+    } catch (error) {
+        console.error('Get user spaces exception:', error);
+        return { success: false, error: error.message };
+    }
 }
 
 // save essential to database
