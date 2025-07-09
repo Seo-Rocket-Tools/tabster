@@ -1194,6 +1194,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'deleteEssential':
             handleDeleteEssential(message.essentialId, sendResponse);
             return true; // Keep message channel open for async response
+            
+        case 'addNewSpace':
+            handleAddNewSpace(message.spaceData, sendResponse);
+            return true; // Keep message channel open for async response
 
             default:
             console.log('Background: Unknown message type:', message.type);
@@ -1457,6 +1461,53 @@ async function handleDeleteEssential(essentialId, sendResponse) {
     } catch (error) {
         console.error('Background: Delete essential exception:', error);
         sendResponse({ success: false, error: error.message || 'Failed to delete essential' });
+    }
+}
+
+async function handleAddNewSpace(spaceData, sendResponse) {
+    try {
+        // Get current user ID
+        const userId = await getCurrentUserId();
+        
+        if (!userId) {
+            console.error('Background: No user ID found');
+            sendResponse({ success: false, error: 'User not authenticated' });
+            return;
+        }
+
+        // Create space object with user ID and additional metadata
+        const space = {
+            user_id: userId,
+            name: spaceData.name,
+            description: spaceData.description,
+            emoji: spaceData.emoji,
+            color: spaceData.color,
+            // TODO Modify the whole process to include current tabs
+            // include_current_tabs: spaceData.includeCurrentTabs,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        // Save space to database
+        const saveResult = await saveSpaceToDb(space);
+        
+        if (!saveResult.success) {
+            console.error('Background: Failed to save space:', saveResult.error);
+            sendResponse({ success: false, error: saveResult.error });
+            return;
+        }
+
+        console.log('Background: Space created successfully');
+        sendResponse({
+            success: true,
+            message: 'Space created successfully',
+            data: saveResult.data
+        });
+
+    } catch (error) {
+        console.error('Background: Add space exception:', error);
+        sendResponse({ success: false, error: error.message || 'Failed to create space' });
     }
 }
 
@@ -1809,6 +1860,27 @@ async function deleteEssentialFromDb(essentialId) {
         
     } catch (error) {
         console.error('Delete essential exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+async function saveSpaceToDb(space) {
+    try {
+        const { data, error } = await supabase
+            .from('spaces')
+            .insert([space])
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('Save space error:', error);
+            return { success: false, error: error.message };
+        }
+        
+        return { success: true, data: data };
+        
+    } catch (error) {
+        console.error('Save space exception:', error);
         return { success: false, error: error.message };
     }
 }

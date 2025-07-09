@@ -1076,8 +1076,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
 
-
-
         _debouncedLoadFavicon() {
             if (this._faviconLoadTimeout) {
                 clearTimeout(this._faviconLoadTimeout);
@@ -1415,6 +1413,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.emojiInput.value = '📦';
             }
             
+            // Set default color state
+            const colorPreviewElement = document.getElementById('color-preview');
+            if (colorPreviewElement && !colorPreviewElement.getAttribute('data-color')) {
+                colorPreviewElement.style.background = 'var(--bg-tertiary)';
+                colorPreviewElement.setAttribute('data-color', 'default');
+            }
+            
             // Add click event listener to emoji input
             if (this.emojiInput) {
                 this.emojiInput.addEventListener('click', () => {
@@ -1482,7 +1487,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         const selectedName = option.getAttribute('data-name');
                         
                         if (colorPreview) {
-                            colorPreview.style.background = selectedColor;
+                            if (selectedColor === 'default') {
+                                colorPreview.style.background = 'var(--bg-tertiary)';
+                                colorPreview.setAttribute('data-color', 'default');
+                            } else {
+                                colorPreview.style.background = selectedColor;
+                                colorPreview.setAttribute('data-color', selectedColor);
+                            }
                         }
                         if (colorLabel) {
                             colorLabel.textContent = selectedName;
@@ -1536,20 +1547,29 @@ document.addEventListener('DOMContentLoaded', function() {
             // get the form data
             const formData = new FormData(this.form);
             
-            // get color from custom element (not in FormData)
+            // get color hex value from data attribute stored on color preview
             const colorPreview = document.getElementById('color-preview');
-            const selectedColor = colorPreview?.style.background || null;
+            const selectedColor = colorPreview?.getAttribute('data-color') || null;
+            
+            // Convert default color to hex value
+            let colorValue = selectedColor;
+            if (selectedColor === 'default') {
+                // Get the computed value of --bg-tertiary CSS variable
+                const computedStyle = getComputedStyle(document.documentElement);
+                colorValue = computedStyle.getPropertyValue('--bg-tertiary').trim();
+            }
 
             const spaceData = {
                 name: formData.get('spaceName'),
                 description: formData.get('spaceDescription'),
                 emoji: formData.get('spaceEmoji'),
-                color: selectedColor,
-                includeCurrentTabs: formData.get('includeCurrentTabs') === 'on',
+                color: colorValue,
+                // TODO Modify the whole process to include current tabs
+                // includeCurrentTabs: formData.get('includeCurrentTabs') === 'on',
             }
 
-            console.log(spaceData);
-            // CONTINUE_HERE send to background script
+            // Send to background script to save
+            SpaceData.addNewSpace(spaceData);
         },
 
         _resetForm() {
@@ -1560,19 +1580,20 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Reset emoji input (not a standard form input)
             if (this.emojiInput) {
-                this.emojiInput.value = '';
+                this.emojiInput.value = '📦';
             }
             
             // Reset color picker state (custom UI elements)
-            const colorPreview = document.getElementById('color-preview');
-            const colorLabel = document.getElementById('color-label');
+            const colorPreviewReset = document.getElementById('color-preview');
+            const colorLabelReset = document.getElementById('color-label');
             
-            if (colorPreview) {
-                colorPreview.style.background = '';
+            if (colorPreviewReset) {
+                colorPreviewReset.style.background = 'var(--bg-tertiary)';
+                colorPreviewReset.setAttribute('data-color', 'default');
             }
             
-            if (colorLabel) {
-                colorLabel.textContent = 'Choose a color';
+            if (colorLabelReset) {
+                colorLabelReset.textContent = 'Default';
             }
             
             // Hide any open dropdowns
@@ -1761,7 +1782,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    const SpaceData = {}
+    const SpaceData = {
+        async addNewSpace(spaceData) {
+            MessageBanner.loading('Creating space...');
+
+            try {
+                const response = await chrome.runtime.sendMessage({
+                    type: 'addNewSpace',
+                    spaceData: spaceData
+                });
+
+                if (response.success) {
+                    MessageBanner.success('Space created successfully!');
+                    
+                    // Hide the form and go back to dashboard
+                    NewSpaceForm.hide();
+                    
+                    // Refresh tab data with fresh data
+                    chrome.runtime.sendMessage({ type: 'refreshTabData', fresh: true });
+                } else {
+                    MessageBanner.error(response.error || 'Failed to create space. Please try again.');
+                }
+            } catch (error) {
+                MessageBanner.error('Connection error. Please try again.');
+                console.error('Add space error:', error);
+            }
+        }
+    }
 
 
 
