@@ -1484,7 +1484,7 @@ async function handleAddNewSpace(spaceData, sendResponse) {
             color: spaceData.color,
             // TODO Modify the whole process to include current tabs
             // include_current_tabs: spaceData.includeCurrentTabs,
-            is_active: true,
+            is_active: false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         };
